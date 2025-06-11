@@ -8,6 +8,20 @@ const selector = (state: RFState) => ({
   setLogs: state.setLogs,
 });
 
+/**
+ * Displays a menu for viewing and managing application logs.
+ *
+ * This component renders a list of log entries, each with a timestamp and message.
+ * Users can remove individual log entries or clear all logs at once.
+ *
+ * @component
+ * @returns {JSX.Element} The rendered LogsMenu component.
+ *
+ * @remarks
+ * - Uses a store hook to access and update the logs state.
+ * - Each log entry can be individually removed by clicking the close icon.
+ * - The "Clear All" button removes all log entries.
+ */
 export default function LogsMenu() {
   const { logs, setLogs } = useStore(selector, shallow);
 
@@ -31,9 +45,7 @@ export default function LogsMenu() {
               <div className="font-bold text-[16px]">LOG {log.time}</div>
               <X
                 className="cursor-pointer ml-auto"
-                onClick={() => {
-                  setLogs(logs.filter((_, i) => i !== index));
-                }}
+                onClick={() => setLogs(logs.filter((_, i) => i !== index))}
               />
             </div>
             <div>{log.message}</div>

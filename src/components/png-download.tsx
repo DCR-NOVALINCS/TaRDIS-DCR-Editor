@@ -11,8 +11,20 @@ const selector = (state: RFState) => ({
 });
 
 /**
- * This component is used to download the current state of the graph as a PNG image.
- * @returns A button that downloads the graph as a PNG image when clicked.
+ * A React component that renders a button to download the current React Flow viewport as a PNG image.
+ *
+ * The component captures the visible nodes, calculates their bounds, and generates a PNG image
+ * of the flow diagram using the specified width and height. The image is then downloaded when the button is clicked.
+ *
+ * @component
+ *
+ * @example
+ * <PngDownload />
+ *
+ * @remarks
+ * - The PNG will be named "reactflow.png".
+ * - The component assumes the presence of a `.react-flow__viewport` element in the DOM.
+ * - Uses `toPng` for image generation and a custom `useStore` selector for node data.
  */
 export default function PngDownload() {
   const { nodes } = useStore(selector, shallow);

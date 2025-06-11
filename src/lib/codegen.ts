@@ -2,6 +2,9 @@ import { Role } from "@/stores/roles-state";
 import { Node, Edge } from "@xyflow/react";
 import { splitArray } from "./utils";
 
+export const simpleInputTypes = ["Integer", "String", "Boolean"];
+export const inputTypes = [...simpleInputTypes, "Record", "Unit"]; // "Reference" type not considered yet
+
 const relationsMap: { [rel: string]: string } = {
   condition: "-->*",
   response: "*-->",
@@ -11,9 +14,11 @@ const relationsMap: { [rel: string]: string } = {
   spawn: "-->>",
 };
 
+export type FieldType = { var: string; type: string };
+
 export type InputType =
   | { type: string }
-  | { type: "Record"; record: { var: string; type: string }[] };
+  | { type: "Record"; record: FieldType[] };
 
 export type MarkingType = {
   included: boolean;
@@ -62,6 +67,19 @@ interface Process {
   parentProcess: string;
 }
 
+/**
+ * Extracts and organizes process-related data from provided nodes and edges.
+ *
+ * This function processes arrays of nodes and edges, categorizing them into events, nests,
+ * subprocesses, and relations. It then groups these elements by their parent relationships,
+ * constructing a hierarchical map of processes. Each process contains its associated events,
+ * relations, nests, and subprocesses, as well as a reference to its parent process.
+ *
+ * @param nodes - An array of node objects representing events, nests, and subprocesses.
+ * @param edges - An array of edge objects representing relations between nodes.
+ * @returns A Map where each key is a process ID and each value is a Process object containing
+ *          the grouped events, relations, nests, subprocesses, and parent process reference.
+ */
 function extractData(nodes: Node[], edges: Edge[]) {
   let parentProcess = new Map<string, Process>();
 
@@ -230,7 +248,6 @@ export function modifyRepresentation(
 ): Map<string, EventType> {
   let newEventMap = new Map<string, EventType>();
   const splitted = code.replace(/[\r\t]/g, "").split("\n");
-  console.log(splitted, splitArray(splitted, ";"));
   const events = splitted.filter((elem) => elem.charAt(0) === "(");
 
   let i = 0;
@@ -245,8 +262,6 @@ export function modifyRepresentation(
       .replace("; ", ";")
       .replace(", ", ",")
       .split(" ");
-
-    console.log(eventSplitted);
 
     const labelName = eventSplitted[0]
       .replace("(", "")
@@ -307,7 +322,22 @@ export function modifyRepresentation(
   return newEventMap;
 }
 
-export default function writeCode(
+/**
+ * Generates code and an event mapping from a set of process nodes, edges, roles, and a security lattice.
+ *
+ * This function traverses the provided process structure, serializes events and relations into a custom
+ * code format, and constructs a mapping from event IDs to their string representations. It also serializes
+ * role definitions and the security lattice.
+ *
+ * @param nodes - The list of process nodes to be included in the code generation.
+ * @param edges - The list of edges representing relations between nodes.
+ * @param roles - The list of roles, each with associated types, to be serialized.
+ * @param lattice - The security lattice definition as a string.
+ * @returns An object containing:
+ *   - `eventMap`: A mapping from event IDs to their string representations.
+ *   - `code`: The generated code as a string.
+ */
+export function writeCode(
   nodes: Node[],
   edges: Edge[],
   roles: Role[],

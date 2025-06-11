@@ -6,45 +6,65 @@ import { shallow } from "zustand/shallow";
 import { SquareMousePointer } from "lucide-react";
 
 import { Node } from "@xyflow/react";
-import { InputType, MarkingType } from "@/lib/codegen";
+import {
+  FieldType,
+  InputType,
+  inputTypes,
+  MarkingType,
+  simpleInputTypes,
+} from "@/lib/codegen";
 
 const selector = (state: RFState) => ({
   nodes: state.nodes,
-  setSelectedElement: state.setSelectedElement,
   updateNode: state.updateNode,
+  documentation: state.documentation,
+  addDocumentation: state.addDocumentation,
 });
 
-const simpleInputTypes = ["Integer", "String", "Boolean"];
-
-const inputTypes = [...simpleInputTypes, "Record", "Unit"]; // "Reference" type not considered yet
-
 /**
- * Component that shows the selected node properties.
- * @returns the node menu component.
+ * Renders a menu for editing the properties of a given node in the editor.
+ *
+ * The `NodeMenu` component provides a user interface for viewing and modifying
+ * various properties of a node, such as initiators, receivers, type, label, event name,
+ * marking status, parent, security, and input or computation expression details.
+ * It also allows editing of node-specific documentation and supports dynamic input types,
+ * including record fields for input nodes.
+ *
+ * @param {Node} node - The node object whose properties are being edited.
+ *
+ * Features:
+ * - Displays and allows editing of node documentation.
+ * - Supports editing of initiators, receivers, type (input or computation), label, event name, marking, parent, and security.
+ * - For input nodes, allows configuration of input type and record fields.
+ * - For computation nodes, allows editing of the computation expression.
+ * - Provides a save button to persist changes to the node.
+ *
+ * @returns {JSX.Element} The rendered node menu component.
  */
-export const NodeMenu = ({ node }: { node: Node }) => {
-  const { nodes, setSelectedElement, updateNode } = useStore(selector, shallow);
+const NodeMenu = ({ node }: { node: Node }) => {
+  const { nodes, updateNode, documentation, addDocumentation } = useStore(
+    selector,
+    shallow
+  );
   const { id, data, parentId } = node;
-
-  const marking = data.marking as MarkingType;
 
   const [initiators, setInitiators] = useState(data.initiators as string[]);
   const [receivers, setReceivers] = useState(data.receivers as string[]);
   const [type, setType] = useState(data.type as string);
   const [label, setLabel] = useState(data.label as string);
   const [name, setName] = useState(data.name as string);
-  const [included, setIncluded] = useState(marking.included as boolean);
-  const [pending, setPending] = useState(marking.pending as boolean);
+  const [marking, setMarking] = useState(data.marking as MarkingType);
   const [parent, setParent] = useState(parentId as string);
   const [security, setSecurity] = useState(data.security as string);
   const [input, setInput] = useState(data.input as InputType);
-  const [recordField, setRecordField] = useState({
-    var: "",
-    type: inputTypes[0],
-  });
   const [expression, setExpression] = useState(
     (data.expression as string) ?? ""
   );
+
+  const [recordField, setRecordField] = useState<FieldType>({
+    var: "",
+    type: inputTypes[0],
+  });
 
   const newData = {
     ...data,
@@ -53,10 +73,7 @@ export const NodeMenu = ({ node }: { node: Node }) => {
     type,
     label,
     name,
-    marking: {
-      included,
-      pending,
-    },
+    marking,
     ...(type === "i" ? { input } : { expression }),
     security,
   };
@@ -72,7 +89,11 @@ export const NodeMenu = ({ node }: { node: Node }) => {
       {/* DOCUMENTATION OF NODE */}
       <div className="flex flex-col p-3 gap-2 border-b-2 border-[#CCCCCC]">
         <div className="font-bold text-[16px]">Documentation</div>
-        <textarea className="bg-white rounded-sm min-h-10 max-h-64 p-1" />
+        <textarea
+          className="bg-white rounded-sm min-h-16 max-h-64 p-1 h-16 text-[14px]"
+          value={documentation.get(id)}
+          onChange={(event) => addDocumentation(id, event.target.value)}
+        />
       </div>
 
       {/* NODE PROPERTIES */}
@@ -83,15 +104,14 @@ export const NodeMenu = ({ node }: { node: Node }) => {
           <textarea
             className="col-span-2 min-h-8 h-8 bg-white rounded-sm p-1 font-mono"
             value={(initiators as string[]).join(", ")}
-            onChange={(event) => {
-              const val = event.target.value;
-
+            placeholder="Initiators"
+            onChange={(event) =>
               setInitiators(
-                val
+                event.target.value
                   .split(", ")
                   .map((val) => val.charAt(0).toUpperCase() + val.slice(1))
-              );
-            }}
+              )
+            }
           />
         </div>
 
@@ -101,15 +121,14 @@ export const NodeMenu = ({ node }: { node: Node }) => {
           <textarea
             className="col-span-2 min-h-8 h-8 bg-white rounded-sm p-1 font-mono"
             value={(receivers as string[]).join(", ")}
-            onChange={(event) => {
-              const val = event.target.value;
-
+            placeholder="Receivers"
+            onChange={(event) =>
               setReceivers(
-                val
+                event.target.value
                   .split(", ")
                   .map((val) => val.charAt(0).toUpperCase() + val.slice(1))
-              );
-            }}
+              )
+            }
           />
         </div>
 
@@ -119,10 +138,7 @@ export const NodeMenu = ({ node }: { node: Node }) => {
           <select
             className="col-span-2 h-8 bg-white rounded-sm font-mono"
             value={type as string}
-            onChange={(event) => {
-              const value = event.target.value;
-              setType(value);
-            }}
+            onChange={(event) => setType(event.target.value)}
           >
             <option value="i">Input</option>
             <option value="c">Computation</option>
@@ -134,10 +150,9 @@ export const NodeMenu = ({ node }: { node: Node }) => {
           <label>Label</label>
           <textarea
             className="col-span-2 min-h-8 h-8 bg-white rounded-sm p-1 font-mono"
+            placeholder="Event label"
             value={label as string}
-            onChange={(event) => {
-              setLabel(event.target.value);
-            }}
+            onChange={(event) => setLabel(event.target.value)}
           />
         </div>
 
@@ -146,10 +161,9 @@ export const NodeMenu = ({ node }: { node: Node }) => {
           <label>Event</label>
           <textarea
             className="col-span-2 min-h-8 h-8 bg-white rounded-sm p-1 font-mono"
+            placeholder="Event name"
             value={name as string}
-            onChange={(event) => {
-              setName(event.target.value);
-            }}
+            onChange={(event) => setName(event.target.value)}
           />
         </div>
 
@@ -160,16 +174,20 @@ export const NodeMenu = ({ node }: { node: Node }) => {
             <label>Pending</label>
             <input
               type="checkbox"
-              checked={pending}
-              onChange={() => setPending(!pending)}
+              checked={marking.pending}
+              onChange={() =>
+                setMarking((prev) => ({ ...prev, pending: !prev.pending }))
+              }
             />
           </div>
           <div className="flex gap-1 items-center">
             <label>Included</label>
             <input
               type="checkbox"
-              checked={included}
-              onChange={() => setIncluded(!included)}
+              checked={marking.included}
+              onChange={() =>
+                setMarking((prev) => ({ ...prev, included: !prev.included }))
+              }
             />
           </div>
         </div>
@@ -180,11 +198,7 @@ export const NodeMenu = ({ node }: { node: Node }) => {
           <select
             className="col-span-2 h-8 bg-white rounded-sm font-mono"
             value={parent as string}
-            onChange={(event) => {
-              const value = event.target.value;
-              console.log(value);
-              setParent(value);
-            }}
+            onChange={(event) => setParent(event.target.value)}
           >
             {nodes
               .filter((n) => n.type === "nest" || n.type === "subprocess")
@@ -202,6 +216,7 @@ export const NodeMenu = ({ node }: { node: Node }) => {
           <label>Security</label>
           <textarea
             className="col-span-2 min-h-8 h-8 bg-white rounded-sm p-1 font-mono"
+            placeholder="Security label"
             value={security as string}
             onChange={(event) => {
               setSecurity(event.target.value);
@@ -219,10 +234,9 @@ export const NodeMenu = ({ node }: { node: Node }) => {
             <select
               className="col-span-2 h-8 bg-white rounded-sm font-mono"
               value={input.type as string}
-              onChange={(event) => {
-                const value = event.target.value;
-                setInput((prev) => ({ ...prev, type: value }));
-              }}
+              onChange={(event) =>
+                setInput((prev) => ({ ...prev, type: event.target.value }))
+              }
             >
               {inputTypes.map((type, index) => (
                 <option key={index} value={type}>
@@ -240,19 +254,23 @@ export const NodeMenu = ({ node }: { node: Node }) => {
                   className="col-span-2 h-8 bg-white rounded-sm font-mono px-1"
                   value={recordField.var}
                   placeholder="Field Name"
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setRecordField((prev) => ({ ...prev, var: value }));
-                  }}
+                  onChange={(event) =>
+                    setRecordField((prev) => ({
+                      ...prev,
+                      var: event.target.value,
+                    }))
+                  }
                 />
                 <label>Type</label>
                 <select
                   className="col-span-2 h-8 bg-white rounded-sm font-mono"
                   value={recordField.type}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setRecordField((prev) => ({ ...prev, type: value }));
-                  }}
+                  onChange={(event) =>
+                    setRecordField((prev) => ({
+                      ...prev,
+                      type: event.target.value,
+                    }))
+                  }
                 >
                   {simpleInputTypes.map((type, index) => (
                     <option key={index} value={type}>
@@ -267,7 +285,7 @@ export const NodeMenu = ({ node }: { node: Node }) => {
                       setInput((prev) => {
                         const recordInput = prev as {
                           type: "Record";
-                          record: { var: string; type: string }[];
+                          record: FieldType[];
                         };
                         return {
                           ...recordInput,
@@ -280,38 +298,36 @@ export const NodeMenu = ({ node }: { node: Node }) => {
                 >
                   Add Field
                 </button>
-                {(input as { type: "Record"; record: any[] }).record ? (
-                  (input as { type: "Record"; record: any[] }).record.map(
-                    (field, index) => (
-                      <div
-                        key={index}
-                        className="col-span-3 flex justify-between items-center"
+                {"record" in input ? (
+                  input.record.map((field, index) => (
+                    <div
+                      key={index}
+                      className="col-span-3 flex justify-between items-center"
+                    >
+                      <label className="font-mono">
+                        {field.var}: {field.type}
+                      </label>
+                      <button
+                        className="bg-red-500 h-8 w-8 rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
+                        onClick={() => {
+                          setInput((prev) => {
+                            const recordInput = prev as {
+                              type: "Record";
+                              record: FieldType[];
+                            };
+                            return {
+                              ...recordInput,
+                              record: recordInput.record.filter(
+                                (_, i) => i !== index
+                              ),
+                            };
+                          });
+                        }}
                       >
-                        <label className="font-mono">
-                          {field.var}: {field.type}
-                        </label>
-                        <button
-                          className="bg-red-500 h-8 w-8 rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
-                          onClick={() => {
-                            setInput((prev) => {
-                              const recordInput = prev as {
-                                type: "Record";
-                                record: { var: string; type: string }[];
-                              };
-                              return {
-                                ...recordInput,
-                                record: recordInput.record.filter(
-                                  (_, i) => i !== index
-                                ),
-                              };
-                            });
-                          }}
-                        >
-                          X
-                        </button>
-                      </div>
-                    )
-                  )
+                        X
+                      </button>
+                    </div>
+                  ))
                 ) : (
                   <></>
                 )}
@@ -326,10 +342,7 @@ export const NodeMenu = ({ node }: { node: Node }) => {
             <textarea
               className="col-span-3 min-h-24 max-h-72 h-24 bg-white rounded-sm p-1 font-mono"
               value={expression}
-              onChange={(event) => {
-                const value = event.target.value;
-                setExpression(value);
-              }}
+              onChange={(event) => setExpression(event.target.value)}
             ></textarea>
           </>
         )}
@@ -339,8 +352,8 @@ export const NodeMenu = ({ node }: { node: Node }) => {
         <button
           className="bg-black min-h-8 w-full rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
           type="button"
-          onClick={() => {
-            const newNode: Node = {
+          onClick={() =>
+            updateNode(id, {
               ...node,
               data: newData,
               selected: true,
@@ -351,10 +364,8 @@ export const NodeMenu = ({ node }: { node: Node }) => {
                     extent: "parent",
                   }
                 : { parentId: "" }),
-            };
-            updateNode(id, newNode);
-            setSelectedElement(newNode);
-          }}
+            })
+          }
         >
           Save Changes
         </button>
@@ -362,3 +373,5 @@ export const NodeMenu = ({ node }: { node: Node }) => {
     </div>
   );
 };
+
+export default NodeMenu;

@@ -8,6 +8,13 @@ import {
 
 import "@/dcr-related/CustomHandles.css";
 
+/**
+ * A draggable React component representing a Nest node.
+ *
+ * @param onDragStart - Callback function triggered when the drag operation starts.
+ * @param onDragEnd - Callback function triggered when the drag operation ends.
+ * @returns A styled div element that can be dragged, displaying a bold "n" label.
+ */
 export const NestModel = ({
   onDragStart,
   onDragEnd,
@@ -28,10 +35,16 @@ export const NestModel = ({
 };
 
 /**
- * `Nest` component for rendering a node with a dashed border and handles.
- * It displays a label, an algorithm type indicator, and a pending indicator.
- * @param props - The props for the `Nest` component.
- * @returns JSX element representing the `Nest` component.
+ * Renders a DCR Nest node component with resizable borders, label, algorithm type indicator,
+ * and connection handles for use in a flow-based editor.
+ *
+ * @param props - The properties for the Nest node, including node data, selection state, and node ID.
+ * @returns A React component representing the Nest node with visual indicators for type and pending state.
+ *
+ * @remarks
+ * - Displays a resizer when the node is selected.
+ * - Shows a label and icons for the nest algorithm type ("choice") and pending state.
+ * - Renders connection handles for source and target edges, with conditional visibility based on connection state.
  */
 export default function Nest(props: NodeProps) {
   const { nestType } = props.data;

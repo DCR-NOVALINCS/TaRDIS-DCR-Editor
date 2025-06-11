@@ -9,6 +9,14 @@ const selector = (state: RFState) => ({
   simulationFlow: state.simulationFlow,
 });
 
+/**
+ * Renders a draggable event model component for DCR graphs.
+ *
+ * @param onDragStart - Callback function triggered when the drag starts.
+ * @param onDragEnd - Callback function triggered when the drag ends.
+ * @param type - The type of the event to display in the model.
+ * @returns A JSX element representing the event model.
+ */
 export const EventModel = ({
   onDragStart,
   onDragEnd,
@@ -40,10 +48,21 @@ export const EventModel = ({
 };
 
 /**
- * `BaseEvent` component that represents a base event in a diagram.
- * It is a wrapper around the [`BaseNode`](../../components/base-node.tsx) component and includes handles for connections.
- * @param props - The properties for the `BaseEvent` component.
- * @returns JSX element representing the `BaseEvent`.
+ * Renders a DCR (Dynamic Condition Response) Event node component.
+ *
+ * This component displays the event's initiators, receivers, type, label, name, and marking state.
+ * It visually indicates the event's inclusion, pending, executable, and executed states,
+ * and adapts its appearance based on simulation flow and connection status.
+ *
+ * @param id - The unique identifier for the node.
+ * @param data - The event data, including initiators, receivers, type, label, name, and marking.
+ * @param props - Additional props passed to the BaseNode component.
+ *
+ * @remarks
+ * - The border color and style reflect the event's inclusion and executability.
+ * - Initiators and receivers are truncated if their string representation exceeds 11 characters.
+ * - Handles are conditionally rendered based on connection and simulation state.
+ * - Marking state controls the display of pending and excluded indicators.
  */
 export default function BaseEvent({ id, data, ...props }: NodeProps) {
   const { simulationFlow } = useStore(selector);

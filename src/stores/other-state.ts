@@ -14,10 +14,77 @@ interface ChoregraphyInfo {
 
 type Element = Node | Edge | undefined;
 
+/**
+ * Represents miscellaneous application state and operations, including documentation,
+ * element selection, simulation flow, security settings, code management, logs, and UI interactions.
+ *
+ * @property {Map<string, string>} documentation - A map storing documentation content keyed by unique IDs.
+ *
+ * @method addDocumentation - Adds or updates documentation for a specific ID.
+ * @param {string} id - The unique identifier for the documentation.
+ * @param {string} doc - The documentation content.
+ * @returns {void}
+ *
+ * @method removeDocumentation - Removes documentation by its ID.
+ * @param {string} id - The ID of the documentation to remove.
+ * @returns {void}
+ *
+ * @property {Element} selectedElement - The currently selected element in the UI.
+ *
+ * @method setSelectedElement - Sets the selected element.
+ * @param {Element} element - The element to set as selected.
+ * @returns {void}
+ *
+ * @property {boolean} simulationFlow - Flag indicating whether the simulation flow is active.
+ *
+ * @method setSimulationFlow - Sets the simulation flow state.
+ * @param {boolean} value - True to activate simulation flow, false to deactivate.
+ * @returns {void}
+ *
+ * @property {string} security - The current security configuration or mode.
+ *
+ * @method setSecurity - Sets the security mode or configuration.
+ * @param {string} security - The security value to set.
+ * @returns {void}
+ *
+ * @property {string} code - The current code content.
+ *
+ * @method setCode - Updates the code content.
+ * @param {string} code - The code string to set.
+ * @returns {void}
+ *
+ * @property {Map<string, string>} eventMap - A map of event identifiers to their associated handlers or metadata.
+ *
+ * @method addToMap - Adds or updates a key-value pair in the event map.
+ * @param {string} key - The key (typically an event ID).
+ * @param {string} value - The associated value or metadata.
+ * @returns {void}
+ *
+ * @method setEventMap - Replaces the current event map with a new one.
+ * @param {Map<string, string>} eventMap - The new event map to set.
+ * @returns {void}
+ *
+ * @property {Log[]} logs - A list of application logs for debugging or tracing.
+ *
+ * @method log - Adds a log message to the log history.
+ * @param {string} message - The message to log.
+ * @returns {void}
+ *
+ * @method setLogs - Replaces the current logs with a new array of log entries.
+ * @param {Log[]} messages - The new array of logs.
+ * @returns {void}
+ *
+ * @method onPaneClick - Handler for pane (canvas/background) click events.
+ * @returns {void}
+ *
+ * @method getChoreographyInfo - Retrieves current choreography-related information.
+ * @returns {ChoregraphyInfo} The current choreography metadata.
+ */
 export type OtherState = {
   /* ------------ DOCUMENTATION -------------- */
-  documentation: string;
-  setDocumentation(documentation: string): void;
+  documentation: Map<string, string>;
+  addDocumentation(id: string, doc: string): void;
+  removeDocumentation(id: string): void;
   /* ----------------------------------------- */
 
   /* ----------- SELECTED ELEMENT ------------ */
@@ -60,10 +127,19 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
   get
 ) => ({
   /* ------------ DOCUMENTATION -------------- */
-  documentation: "",
-  setDocumentation(documentation: string) {
+  documentation: new Map<string, string>([["global", ""]]),
+  addDocumentation(id: string, doc: string) {
+    let newDocumentation = get().documentation;
+    newDocumentation.set(id, doc);
     set({
-      documentation,
+      documentation: newDocumentation,
+    });
+  },
+  removeDocumentation(id: string) {
+    let newDocumentation = get().documentation;
+    newDocumentation.delete(id);
+    set({
+      documentation: newDocumentation,
     });
   },
   /* ----------------------------------------- */
@@ -149,9 +225,7 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
   },
   getChoreographyInfo() {
     return {
-      nodesCount: get().nodes.filter(
-        (node) => node.type !== "nest" && node.type !== "subprocess"
-      ).length,
+      nodesCount: get().nodes.filter((node) => node.type === "event").length,
       roles: get().rolesParticipants.map((role) => role.role),
     };
   },

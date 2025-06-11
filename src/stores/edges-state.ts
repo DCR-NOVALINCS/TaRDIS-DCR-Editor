@@ -16,6 +16,47 @@ interface TempEdge {
   type: string;
 }
 
+/**
+ * Represents the state and operations related to edges within the application.
+ *
+ * @property {Edge[]} edges - The list of all current edges in the state.
+ * @property {Edge[]} edgeToAdd - A temporary list of edges to be added.
+ * @property {string} relationType - The current type of relation used for edge creation or categorization.
+ *
+ * @method addEdge - Adds a new edge to the state.
+ * @param {Edge} edge - The edge to add.
+ * @returns {void}
+ *
+ * @method updateEdge - Updates an existing edge by ID.
+ * @param {string} id - The ID of the edge to update.
+ * @param {Edge} updatedEdge - The updated edge data.
+ * @returns {void}
+ *
+ * @method setEdges - Replaces the current edges with a new array.
+ * @param {Edge[]} newEdges - The new array of edges.
+ * @returns {void}
+ *
+ * @method alreadyExistsEdge - Checks whether a temporary edge already exists in the current edge list.
+ * @param {TempEdge} tempEdge - The temporary edge to check.
+ * @returns {boolean} True if the edge already exists, false otherwise.
+ *
+ * @method deleteEdge - Deletes an edge by ID.
+ * @param {string} edgeId - The ID of the edge to delete.
+ * @returns {Edge} The deleted edge.
+ *
+ * @method setRelationType - Sets the current relation type.
+ * @param {string} type - The relation type to set.
+ * @returns {void}
+ *
+ * @property {OnConnect} onConnect - Handler for when two nodes are connected to form an edge.
+ * @property {OnEdgesChange} onEdgesChange - Handler for edge change events.
+ * @property {OnEdgesDelete} onEdgesDelete - Handler for edge deletion events.
+ *
+ * @method onEdgeClick - Handler for edge click events.
+ * @param {any} event - The click event.
+ * @param {Edge} edge - The edge that was clicked.
+ * @returns {void}
+ */
 export type EdgesState = {
   /* ------------ EDGE OPERATIONS ------------ */
   edges: Edge[];
@@ -79,6 +120,7 @@ const edgesStateSlice: StateCreator<RFState, [], [], EdgesState> = (
     set({
       edges:
         edge.type === "spawn" ? [edge, ...get().edges] : [...get().edges, edge],
+      selectedElement: edge,
     });
   },
   setEdges(newEdges: Edge[]) {
@@ -93,6 +135,7 @@ const edgesStateSlice: StateCreator<RFState, [], [], EdgesState> = (
           return updatedEdge;
         } else return edge;
       }),
+      selectedElement: updatedEdge,
     });
 
     get().log(
@@ -184,6 +227,7 @@ const edgesStateSlice: StateCreator<RFState, [], [], EdgesState> = (
       `Deleted edges: ${deletedEdges.map((node) => node.id).join(", ")}.`
     );
 
+    deletedEdges.forEach((ed) => get().removeDocumentation(ed.id));
     set({
       edges: get().edges.filter(
         (edge) =>

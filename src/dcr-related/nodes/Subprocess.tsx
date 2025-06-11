@@ -9,6 +9,13 @@ import {
 import "@/dcr-related/CustomHandles.css";
 import { BaseNode } from "@/components/base-node";
 
+/**
+ * Renders a draggable subprocess node component with a dashed border.
+ *
+ * @param onDragStart - Callback function triggered when the drag starts.
+ * @param onDragEnd - Callback function triggered when the drag ends.
+ * @returns A JSX element representing the subprocess node.
+ */
 export const SubprocessModel = ({
   onDragStart,
   onDragEnd,
@@ -31,11 +38,13 @@ export const SubprocessModel = ({
 };
 
 /**
- * Subprocess node component similar to a [`Nest`](./Nest.tsx) node.
- * Should be instantiated with a [spawn](../relations/Spawn.tsx) relation (if multiple).
- * @param props - The props for the `Subprocess` component.
- * @returns JSX element representing the `Subprocess` component.
- * @todo this is a temporary subprocess node, it should be replaced with a proper subprocess node in the future.
+ * Renders a custom DCR Subprocess node component for a flow editor.
+ *
+ * This component displays a subprocess node with resizable borders, a label, and connection handles.
+ * Handles are conditionally rendered based on the current connection state.
+ *
+ * @param props - The properties for the node, including id, data, and selection state.
+ * @returns The rendered Subprocess node component.
  */
 export default function Subprocess(props: NodeProps) {
   const connection = useConnection();

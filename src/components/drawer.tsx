@@ -9,9 +9,9 @@ import { ChevronRight } from "lucide-react";
 
 import { motion, AnimatePresence } from "framer-motion";
 import ChoreographyMenu from "./drawer-menus/ChoreographyMenu";
-import { NodeMenu } from "./drawer-menus/NodeMenu";
-import { SubgraphMenu } from "./drawer-menus/SubgraphMenu";
-import { EdgeMenu } from "./drawer-menus/EdgeMenu";
+import NodeMenu from "./drawer-menus/NodeMenu";
+import SubgraphMenu from "./drawer-menus/SubgraphMenu";
+import EdgeMenu from "./drawer-menus/EdgeMenu";
 import LogsMenu from "./drawer-menus/LogsMenu";
 import CodeMenu from "./drawer-menus/CodeMenu";
 
@@ -20,8 +20,17 @@ const selector = (state: RFState) => ({
 });
 
 /**
- * Component that shows the properties of selected element or choreography if no element is selected.
- * @returns the drawer for properties editing.
+ * Drawer component that provides a collapsible side panel with tabbed content.
+ *
+ * The Drawer can be toggled open or closed and displays different menus based on the selected tab:
+ * - Properties: Shows properties of the selected element (node, edge, or choreography).
+ * - Logs: Displays logs related to the selected element.
+ * - Code: Shows code related to the selected element and expands the drawer width.
+ *
+ * The component uses Framer Motion for smooth animations and transitions.
+ * The content displayed is determined by the current selection in the application's store.
+ *
+ * @returns {JSX.Element} The rendered Drawer component.
  */
 export default function Drawer() {
   const { selectedElement } = useStore(selector, shallow);
@@ -103,16 +112,15 @@ export default function Drawer() {
                 <CodeMenu />
               ) : selectedElement ? (
                 isNode(selectedElement) ? (
-                  selectedElement.type === "nest" ||
-                  selectedElement.type === "subprocess" ? (
-                    <SubgraphMenu
-                      key={(selectedElement as Node).id}
-                      nest={selectedElement as Node}
-                    />
-                  ) : (
+                  selectedElement.type === "event" ? (
                     <NodeMenu
                       key={(selectedElement as Node).id}
                       node={selectedElement as Node}
+                    />
+                  ) : (
+                    <SubgraphMenu
+                      key={(selectedElement as Node).id}
+                      nest={selectedElement as Node}
                     />
                   )
                 ) : (

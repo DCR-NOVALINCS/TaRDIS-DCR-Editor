@@ -8,9 +8,12 @@ const selector = (state: RFState) => ({
 });
 
 /**
- * The main application component.
- * This component serves as the entry point for the application.
- * @returns The main application component.
+ * The main application component for the TaRDIS-DCR-Editor.
+ *
+ * Renders the primary layout, including the `Flow` component and, conditionally,
+ * the `ToolPallete` and `Drawer` components based on the current simulation state.
+ *
+ * @returns {JSX.Element} The root JSX element for the application.
  */
 export default function App() {
   const { simulationFlow } = useStore(selector);

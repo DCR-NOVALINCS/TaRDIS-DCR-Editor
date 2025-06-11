@@ -22,10 +22,20 @@ export interface RelationProperties extends EdgeProps {
 }
 
 /**
- * `BaseRelation` component that represents a base relation in a diagram.
- * It is a wrapper around the `BaseEdge` component and includes handles for connections.
- * @param props - The properties for the `BaseRelation` component.
- * @returns JSX element representing the `BaseRelation`.
+ * Renders a customizable edge (relation) between two nodes in a flow diagram.
+ *
+ * The `BaseRelation` component supports both custom and default edge paths, and allows
+ * interactive manipulation of edge control points when the edge is selected and not in simulation mode.
+ *
+ * - If a `relationPath` is provided, it renders the edge using that path.
+ * - Otherwise, it computes a default path between the source and target nodes, supporting both normal and self-loop edges.
+ * - When selected (and not in simulation mode), draggable control points are rendered for interactive editing.
+ * - Supports adding new points by double-clicking on a control point.
+ * - Supports dragging points with mouse, and axis-locked dragging with the Shift key.
+ *
+ * @param relationPath Optional custom SVG path string for the edge.
+ * @param props Additional properties describing the relation, including source/target node IDs, markers, selection state, and style.
+ * @returns A React component rendering the edge and, if applicable, its draggable control points.
  */
 export default function BaseRelation({
   relationPath,
@@ -177,5 +187,3 @@ export default function BaseRelation({
     </>
   );
 }
-
-BaseRelation.displayName = "BaseRelation";

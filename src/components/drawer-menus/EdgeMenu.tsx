@@ -9,15 +9,27 @@ import { shallow } from "zustand/shallow";
 const selector = (state: RFState) => ({
   updateEdge: state.updateEdge,
   setSelectedElement: state.setSelectedElement,
-  log: state.log,
+  documentation: state.documentation,
+  addDocumentation: state.addDocumentation,
 });
 
 /**
- * Component that shows the selected edge properties.
- * @returns the edge menu component.
+ * EdgeMenu component provides a UI for editing the properties of an edge in a graph.
+ *
+ * @param {Edge} edge - The edge object to be edited, containing its id and data.
+ *
+ * Features:
+ * - Displays the edge's identifier.
+ * - Allows editing and saving of the edge's guard property.
+ * - Displays and updates documentation associated with the edge.
+ * - Uses a store for state management, including updating the edge and documentation.
+ *
+ * @remarks
+ * This component assumes the presence of a global store (via `useStore`) for managing edges and their documentation.
  */
-export const EdgeMenu = ({ edge }: { edge: Edge }) => {
-  const { updateEdge, setSelectedElement, log } = useStore(selector, shallow);
+const EdgeMenu = ({ edge }: { edge: Edge }) => {
+  const { updateEdge, setSelectedElement, documentation, addDocumentation } =
+    useStore(selector, shallow);
   const { id, data } = edge as { id: string; data: Record<string, string> };
   const [guard, setGuard] = useState(data.guard);
 
@@ -32,7 +44,11 @@ export const EdgeMenu = ({ edge }: { edge: Edge }) => {
       {/* DOCUMENTATION OF EDGE */}
       <div className="flex flex-col p-3 gap-2 border-b-2 border-[#CCCCCC]">
         <div className="font-bold text-[16px]">Documentation</div>
-        <textarea className="bg-white rounded-sm min-h-10 max-h-64 p-1" />
+        <textarea
+          className="bg-white rounded-sm min-h-16 max-h-64 p-1 h-16 text-[14px]"
+          value={documentation.get(id)}
+          onChange={(event) => addDocumentation(id, event.target.value)}
+        />
       </div>
       <div className="flex flex-col p-3 gap-3">
         {/* GUARD */}
@@ -41,21 +57,15 @@ export const EdgeMenu = ({ edge }: { edge: Edge }) => {
           <textarea
             className="col-span-2 min-h-8 h-8 bg-white rounded-sm p-1 font-mono"
             value={guard}
-            onChange={(event) => {
-              const val = event.target.value;
-              setGuard(val);
-            }}
+            onChange={(event) => setGuard(event.target.value)}
           />
         </div>
         <button
           className="bg-black h-8 w-full rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
           type="button"
-          onClick={() => {
-            const newEdge = { ...edge, data: { guard }, selected: true };
-            updateEdge(id, newEdge);
-            setSelectedElement(newEdge);
-            log(`Edge ${id} updated.`);
-          }}
+          onClick={() =>
+            updateEdge(id, { ...edge, data: { guard }, selected: true })
+          }
         >
           Save Changes
         </button>
@@ -63,3 +73,5 @@ export const EdgeMenu = ({ edge }: { edge: Edge }) => {
     </div>
   );
 };
+
+export default EdgeMenu;

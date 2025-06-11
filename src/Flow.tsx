@@ -97,8 +97,6 @@ function FlowWithoutProvider() {
     simulationFlow,
     setNodes,
     addNode,
-    getNode,
-    updateNode,
     setEdges,
     setSimulationFlow,
     onNodesChange,

@@ -4,19 +4,29 @@ import { twMerge } from "tailwind-merge";
 import { Node, Position } from "@xyflow/react";
 
 /**
- * Utility function to merge class names using clsx and tailwind-merge.
- * @param inputs - Class names to be merged.
- * @returns Merged class names.
+ * Combines multiple class name values into a single string, filtering out falsy values,
+ * and merges Tailwind CSS classes intelligently to avoid conflicts.
+ *
+ * @param inputs - An array of class values (strings, arrays, or objects) to be combined.
+ * @returns A single string of merged class names.
+ *
+ * @remarks
+ * This function uses `clsx` to filter and join class names, and `twMerge` to resolve Tailwind CSS class conflicts.
  */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 /**
- * Returns the intersection point of two nodes.
- * @param intersectionNode - The node that is being intersected.
- * @param targetNode - The node that is being intersected with.
- * @returns The intersection point of the two nodes.
+ * Calculates the intersection point on the boundary of the `intersectionNode` where a line from its center
+ * towards the center of the `targetNode` would exit. This is typically used for drawing edges between nodes
+ * in a diagram, ensuring the edge connects at the border of the node shape.
+ *
+ * @param intersectionNode - The node whose boundary intersection point is to be calculated. Must contain `measured` (with `width` and `height`)
+ * and `internals.positionAbsolute` (with `x` and `y`).
+ * @param targetNode - The node towards which the intersection is calculated. Must contain `measured` (with `width` and `height`)
+ * and `internals.positionAbsolute` (with `x` and `y`).
+ * @returns An object with `x` and `y` properties representing the intersection point on the boundary of `intersectionNode`.
  */
 function getNodeIntersection(intersectionNode: any, targetNode: any) {
   const { width: intersectionNodeWidth, height: intersectionNodeHeight } =
@@ -47,10 +57,15 @@ function getNodeIntersection(intersectionNode: any, targetNode: any) {
 }
 
 /**
- * Returns the edge position of a node based on the intersection point.
- * @param node - The node for which the edge position is being calculated.
- * @param intersectionPoint  - The intersection point of the node and the target node.
- * @returns The edge position of the node.
+ * Determines the edge position (Left, Right, Top, or Bottom) of a node
+ * relative to a given intersection point.
+ *
+ * The function compares the intersection point's coordinates to the node's
+ * absolute position and dimensions to infer which edge the point is closest to.
+ *
+ * @param node - The node object, expected to have `internals.positionAbsolute`, `x`, `y`, and `measured.width`/`measured.height` properties.
+ * @param intersectionPoint - The point of intersection, with `x` and `y` coordinates.
+ * @returns The edge position as a value of the `Position` enum (Left, Right, Top, or Bottom).
  */
 function getEdgePosition(node: any, intersectionPoint: any) {
   const n = { ...node.internals.positionAbsolute, ...node };
@@ -76,10 +91,20 @@ function getEdgePosition(node: any, intersectionPoint: any) {
 }
 
 /**
- * Returns the edge parameters for a connection line between two nodes.
- * @param source - The source node.
- * @param target - The target node.
- * @returns An object containing the edge parameters.
+ * Calculates the parameters required to draw an edge between two nodes.
+ *
+ * Determines the intersection points between the source and target nodes,
+ * as well as the positions on the edges of the nodes where the connection should be made.
+ *
+ * @param source - The source node object.
+ * @param target - The target node object.
+ * @returns An object containing:
+ *   - `sx`: The x-coordinate of the intersection point on the source node.
+ *   - `sy`: The y-coordinate of the intersection point on the source node.
+ *   - `tx`: The x-coordinate of the intersection point on the target node.
+ *   - `ty`: The y-coordinate of the intersection point on the target node.
+ *   - `sourcePos`: The edge position on the source node.
+ *   - `targetPos`: The edge position on the target node.
  */
 export function getEdgeParams(source: any, target: any) {
   const sourceIntersectionPoint = getNodeIntersection(source, target);
@@ -99,57 +124,25 @@ export function getEdgeParams(source: any, target: any) {
 }
 
 /**
- * Returns the relative position of a node with respect to another node.
- * @param source - The source node.
- * @param target - The target node.
- * @returns The relative position of the source node with respect to the target node.
+ * Returns a promise that resolves after a specified number of milliseconds.
+ *
+ * @param ms - The number of milliseconds to delay.
+ * @returns A promise that resolves after the specified delay.
  */
-export function getNodeRelativePosition(source: Node, target: Node) {
-  const { x: sx, y: sy } = source.position;
-  const { x: tx, y: ty } = target.position;
-
-  if (sy + 100 < ty) return Position.Top;
-  else if (ty + 100 < sy) return Position.Bottom;
-  else if (sx + 100 < tx) return Position.Left;
-  else return Position.Right;
-}
-
-export function calcSubgraphArgs(
-  children: { x: number; y: number; width: number; height: number }[]
-) {
-  let maxX = -1000000,
-    maxY = -1000000;
-  let minX = 1000000,
-    minY = 1000000;
-  let maxWidth = -1000000,
-    maxHeight = -1000000;
-
-  children.forEach((child) => {
-    if (child.x > maxX) maxX = child.x;
-    if (child.x < minX) minX = child.x;
-    if (child.y > maxY) maxY = child.y;
-    if (child.y < minY) minY = child.y;
-    if (child.width > maxWidth) maxWidth = child.width;
-    if (child.height > maxHeight) maxHeight = child.height;
-  });
-
-  const x = Math.trunc(minX + (maxX - minX) / 2);
-  const y = Math.trunc(minY + (maxY - minY) / 2);
-  const width = Math.trunc(maxX - minX + maxWidth + 50);
-  const height = Math.trunc(maxY - minY + maxHeight + 150);
-
-  return {
-    x,
-    y,
-    width,
-    height,
-  };
-}
-
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Splits an array of strings into subarrays using a specified delimiter string.
+ *
+ * Iterates through the input array and creates a new subarray each time the delimiter string is encountered.
+ * The delimiter itself is not included in the resulting subarrays.
+ *
+ * @param array - The array of strings to be split.
+ * @param regex - The delimiter string used to split the array.
+ * @returns An array of string arrays, where each subarray contains the elements between delimiters.
+ */
 export function splitArray(array: string[], regex: string): string[][] {
   let stringStringArr: string[][] = [];
   let stringArr: string[] = [];

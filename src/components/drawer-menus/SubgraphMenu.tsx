@@ -3,77 +3,79 @@ import { Group } from "lucide-react";
 
 import { Node } from "@xyflow/react";
 import useStore, { RFState } from "@/stores/store";
+import { MarkingType } from "@/lib/codegen";
 
 const selector = (state: RFState) => ({
   nodes: state.nodes,
-  setSelectedElement: state.setSelectedElement,
   updateNode: state.updateNode,
-  getNode: state.getNode,
   addEdge: state.addEdge,
   edges: state.edges,
   setEdges: state.setEdges,
   getFamily: state.getFamily,
+  documentation: state.documentation,
+  addDocumentation: state.addDocumentation,
+  updateNodeInfo: state.updateNodeInfo,
 });
 
 /**
- * Component that shows the selected subgraph properties.
- * @returns the subgraph menu component.
+ * Renders a menu for editing the properties of a subgraph node (nest or subprocess) in the graph editor.
+ *
+ * @param nest - The node object representing the subgraph to be edited.
+ *
+ * The menu allows users to:
+ * - Edit the label, type (nest or subprocess), nest type (group or choice), parent, and marking (pending/included) of the node.
+ * - View and edit the documentation associated with the node.
+ * - Save changes, which updates the node and its children, and manages edges according to the selected nest type.
+ *
+ * Uses application state from `useStore` for node and edge management.
  */
-export const SubgraphMenu = ({ nest }: { nest: Node }) => {
+const SubgraphMenu = ({ nest }: { nest: Node }) => {
   const {
     nodes,
-    setSelectedElement,
     updateNode,
-    getNode,
     addEdge,
     edges,
     setEdges,
     getFamily,
+    documentation,
+    addDocumentation,
+    updateNodeInfo,
   } = useStore(selector);
   const { id, data, parentId } = nest;
 
-  const { marking } = data as { marking: Record<string, boolean> };
-
   const [type, setType] = useState(nest.type as string);
   const [label, setLabel] = useState(data.label as string);
-  const [included, setIncluded] = useState(marking.included as boolean);
-  const [pending, setPending] = useState(marking.pending as boolean);
+  const [marking, setMarking] = useState(data.marking as MarkingType);
   const [nestType, setNestType] = useState(data.nestType as string);
   const [parent, setParent] = useState(parentId as string);
   const newData = {
     label,
     nestType,
-    marking: {
-      included,
-      pending,
-    },
+    marking,
   };
 
   const family = getFamily(id);
 
   const onClick = () => {
-    const newNode: Node = {
-      ...getNode(id),
+    const newId = updateNode(id, {
+      ...nest,
       type,
       data: newData,
       ...(parent
         ? { parentId: parent, expandParent: true, extent: "parent" }
         : { parentId: "" }),
-    };
-
-    const newId = updateNode(id, newNode);
+    });
     const children = nodes.filter((nd) => nd.parentId && nd.parentId === id);
 
     children.forEach((child) => {
-      updateNode(child.id, {
-        ...child,
-        data: {
-          ...child.data,
-          marking: {
-            included,
-            pending,
-          },
-        },
+      updateNodeInfo(child.id, {
+        id: "",
+        initiators: [],
+        label: "",
+        marking,
+        name: "",
+        security: "",
+        parent: newId,
       });
       if (type === "nest") {
         if (nestType === "choice") {
@@ -99,7 +101,6 @@ export const SubgraphMenu = ({ nest }: { nest: Node }) => {
         }
       }
     });
-    setSelectedElement(getNode(newId));
   };
 
   return (
@@ -113,7 +114,11 @@ export const SubgraphMenu = ({ nest }: { nest: Node }) => {
       {/* DOCUMENTATION OF NODE */}
       <div className="flex flex-col p-3 gap-2 border-b-2 border-[#CCCCCC]">
         <div className="font-bold text-[16px]">Documentation</div>
-        <textarea className="bg-white rounded-sm min-h-10 max-h-64 px-1" />
+        <textarea
+          className="bg-white rounded-sm min-h-16 max-h-64 p-1 h-16 text-[14px]"
+          value={documentation.get(id)}
+          onChange={(event) => addDocumentation(id, event.target.value)}
+        />
       </div>
 
       {/* NODE PROPERTIES */}
@@ -124,9 +129,7 @@ export const SubgraphMenu = ({ nest }: { nest: Node }) => {
           <input
             className="col-span-2 h-8 bg-white rounded-sm px-1 font-mono"
             value={label as string}
-            onChange={(event) => {
-              setLabel(event.target.value);
-            }}
+            onChange={(event) => setLabel(event.target.value)}
           />
         </div>
 
@@ -136,10 +139,7 @@ export const SubgraphMenu = ({ nest }: { nest: Node }) => {
           <select
             className="col-span-2 h-8 bg-white rounded-sm font-mono"
             value={type as string}
-            onChange={(event) => {
-              const value = event.target.value;
-              setType(value);
-            }}
+            onChange={(event) => setType(event.target.value)}
           >
             <option value="nest">Nest</option>
             <option value="subprocess">Subprocess</option>
@@ -167,10 +167,7 @@ export const SubgraphMenu = ({ nest }: { nest: Node }) => {
           <select
             className="col-span-2 h-8 bg-white rounded-sm font-mono"
             value={parent as string}
-            onChange={(event) => {
-              const value = event.target.value;
-              setParent(value);
-            }}
+            onChange={(event) => setParent(event.target.value)}
           >
             {nodes
               .filter(
@@ -194,16 +191,20 @@ export const SubgraphMenu = ({ nest }: { nest: Node }) => {
               <label>Pending</label>
               <input
                 type="checkbox"
-                checked={pending}
-                onChange={() => setPending(!pending)}
+                checked={marking.pending}
+                onChange={() =>
+                  setMarking((prev) => ({ ...prev, pending: !prev.pending }))
+                }
               />
             </div>
             <div className="flex gap-1 items-center">
               <label>Included</label>
               <input
                 type="checkbox"
-                checked={included}
-                onChange={() => setIncluded(!included)}
+                checked={marking.included}
+                onChange={() =>
+                  setMarking((prev) => ({ ...prev, included: !prev.included }))
+                }
               />
             </div>
           </div>
@@ -221,3 +222,5 @@ export const SubgraphMenu = ({ nest }: { nest: Node }) => {
     </div>
   );
 };
+
+export default SubgraphMenu;

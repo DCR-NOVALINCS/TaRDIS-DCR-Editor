@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { JSX, useState } from "react";
 
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
 
 import { Workflow } from "lucide-react";
+import { FieldType, simpleInputTypes } from "@/lib/codegen";
 
 const selector = (state: RFState) => ({
   getChoreographyInfo: state.getChoreographyInfo,
@@ -11,16 +12,23 @@ const selector = (state: RFState) => ({
   setSecurity: state.setSecurity,
   addRole: state.addRole,
   removeRole: state.removeRole,
-  addParticipant: state.addParticipant,
-  removeParticipant: state.removeParticipant,
-  rolesParticipants: state.rolesParticipants,
+  documentation: state.documentation,
+  addDocumentation: state.addDocumentation,
 });
 
-const types = ["Integer", "String", "Boolean"];
-
 /**
- * Component that shows the current choreography documentation.
- * @returns the current choreography menu component.
+ * Renders the main menu for managing choreography metadata, roles, and security in the TaRDIS DCR Editor.
+ *
+ * This component provides:
+ * - Display of current choreography information (number of events, roles).
+ * - Editing of global documentation and security properties.
+ * - Management of roles, including adding and removing roles with parameters.
+ * - (Commented out) Management of participants associated with roles.
+ *
+ * Uses state from a global store via `useStore` and provides a UI for interacting with choreography data.
+ *
+ * @component
+ * @returns {JSX.Element} The rendered choreography menu UI.
  */
 export default function ChoreographyMenu() {
   const {
@@ -29,27 +37,45 @@ export default function ChoreographyMenu() {
     setSecurity,
     addRole,
     removeRole,
-    addParticipant,
-    removeParticipant,
-    rolesParticipants,
+    documentation,
+    addDocumentation,
   } = useStore(selector, shallow);
+
   const { nodesCount, roles } = getChoreographyInfo();
-
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
-  const [participantMenuOpen, setParticipantMenuOpen] = useState(false);
 
+  /**
+   * RoleMenu is a React functional component that provides a user interface for managing roles within a choreography editor.
+   *
+   * Features:
+   * - Allows users to add a new role by specifying a role name, label, and a list of parameter types.
+   * - Supports dynamic addition and removal of parameter types for each role.
+   * - Provides validation feedback for required fields (role name and label).
+   * - Enables users to remove existing roles from a dropdown selection.
+   *
+   * State Management:
+   * - Manages local state for the role name, label, parameter types, and the currently selected role for removal.
+   *
+   * Props/Dependencies:
+   * - Expects `roles` (array of role names), `addRole` (function to add a role), `removeRole` (function to remove a role),
+   *   `setRoleMenuOpen` (function to control menu visibility), and `simpleInputTypes` (array of available parameter types) to be available in the parent scope.
+   *
+   * UI:
+   * - Divided into sections for adding and removing roles, with clear labels and interactive controls.
+   *
+   * @component
+   * @returns {JSX.Element} - The renderent role menu component.
+   */
   const RoleMenu = () => {
     const [roleAdd, setRoleAdd] = useState("");
     const [roleAbbrv, setRoleAbbrv] = useState("");
-    const [roleTypes, setRoleTypes] = useState<{ var: string; type: string }[]>(
-      []
-    );
-    const [roleTypesInput, setRoleTypesInput] = useState({
+    const [roleTypes, setRoleTypes] = useState<FieldType[]>([]);
+    const [roleTypesInput, setRoleTypesInput] = useState<FieldType>({
       var: "",
-      type: types[0],
+      type: simpleInputTypes[0],
     });
-
     const [roleRemove, setRoleRemove] = useState(roles[0]);
+
     return (
       <>
         <div className="grid grid-cols-3 gap-2 p-3 border-t-2 border-[#CCCCCC] items-center h-full">
@@ -87,25 +113,25 @@ export default function ChoreographyMenu() {
             className={`col-span-2 h-8 bg-white rounded-sm px-1 font-mono`}
             value={roleTypesInput.var}
             placeholder="Parameter name"
-            onChange={(event) => {
+            onChange={(event) =>
               setRoleTypesInput((prev) => ({
                 ...prev,
                 var: event.target.value,
-              }));
-            }}
+              }))
+            }
           />
           <label>Type</label>
           <select
             className="col-span-2 h-8 bg-white rounded-sm font-mono"
             value={roleTypesInput.type}
-            onChange={(event) => {
+            onChange={(event) =>
               setRoleTypesInput((prev) => ({
                 ...prev,
                 type: event.target.value,
-              }));
-            }}
+              }))
+            }
           >
-            {types.map((type, index) => (
+            {simpleInputTypes.map((type, index) => (
               <option key={index} value={type}>
                 {type}
               </option>
@@ -115,7 +141,7 @@ export default function ChoreographyMenu() {
             onClick={() => {
               if (roleTypesInput.var) {
                 setRoleTypes((prev) => [...prev, roleTypesInput]);
-                setRoleTypesInput({ var: "", type: types[0] });
+                setRoleTypesInput({ var: "", type: simpleInputTypes[0] });
               }
             }}
             className="bg-black col-span-3 h-8 rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
@@ -131,9 +157,9 @@ export default function ChoreographyMenu() {
                 {type.var}: {type.type}
               </label>
               <button
-                onClick={() => {
-                  setRoleTypes((prev) => prev.filter((_, i) => i !== index));
-                }}
+                onClick={() =>
+                  setRoleTypes((prev) => prev.filter((_, i) => i !== index))
+                }
                 className="bg-red-500 h-8 w-8 rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
               >
                 X
@@ -168,9 +194,7 @@ export default function ChoreographyMenu() {
           <label>Role</label>
           <select
             className="col-span-2 h-8 bg-white rounded-sm font-mono"
-            onChange={(event) => {
-              setRoleRemove(event.target.value);
-            }}
+            onChange={(event) => setRoleRemove(event.target.value)}
           >
             {roles.map((role, index) => (
               <option key={index} value={role}>
@@ -393,7 +417,11 @@ export default function ChoreographyMenu() {
       {/* DOCUMENTATION OF CHOREOGRAPHY */}
       <div className="flex flex-col p-3 gap-2 border-b-2 border-[#CCCCCC] ">
         <div className="font-bold text-[16px]">Documentation</div>
-        <textarea className="bg-white rounded-sm min-h-10 max-h-64 p-1" />
+        <textarea
+          className="bg-white rounded-sm min-h-16 max-h-64 p-1 h-16 text-[14px]"
+          value={documentation.get("global")}
+          onChange={(event) => addDocumentation("global", event.target.value)}
+        />
       </div>
 
       {/* CHOREOGRAPHY INFO */}
@@ -425,10 +453,7 @@ export default function ChoreographyMenu() {
 
           <div className="flex gap-2 justify-end w-full">
             <button
-              onClick={() => {
-                setRoleMenuOpen(!roleMenuOpen);
-                setParticipantMenuOpen(false);
-              }}
+              onClick={() => setRoleMenuOpen(!roleMenuOpen)}
               className="bg-black h-8 w-full rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
             >
               Roles

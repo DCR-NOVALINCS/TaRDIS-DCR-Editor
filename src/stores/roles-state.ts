@@ -26,6 +26,28 @@ export interface Role extends SimpleRole {
   participants: string[];
 }
 
+/**
+ * Represents the state and operations related to roles and participants within the application.
+ *
+ * @property {Role[]} rolesParticipants - A list of roles, each containing associated participants.
+ *
+ * @method addRole - Adds a new role to the state.
+ * @param {SimpleRole} role - The role to add.
+ * @returns {void}
+ *
+ * @method removeRole - Removes a role from the state.
+ * @param {string} role - The name or ID of the role to remove.
+ * @returns {void}
+ *
+ * @method addParticipant - Adds a participant to an existing role.
+ * @param {Participant} participant - The participant to add.
+ * @returns {void}
+ *
+ * @method removeParticipant - Removes a participant from a specific role.
+ * @param {string} role - The name or ID of the role.
+ * @param {string} participant - The identifier of the participant to remove.
+ * @returns {void}
+ */
 export type RolesState = {
   /* ------------ ROLE OPERATIONS ------------ */
   rolesParticipants: Role[];

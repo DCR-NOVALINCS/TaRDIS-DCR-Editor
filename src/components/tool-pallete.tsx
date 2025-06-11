@@ -35,8 +35,17 @@ interface RelationProps {
 }
 
 /**
- * Tool pallete component containing the events and relations.
- * @returns tool pallete component.
+ * ToolPallete is a React component that provides a draggable and selectable tool palette
+ * for a graphical editor interface. It allows users to:
+ * - Drag and drop event and subgraph types (such as events, nests, and subprocesses) onto a canvas.
+ * - Select relation types (such as condition, response, include, exclude, milestone, and spawn) for further actions.
+ * - Toggle the visibility of the palette for a more compact UI.
+ *
+ * The component manages the current drag type and selected relation type using a shared store and local state.
+ * It uses Framer Motion for animated transitions and supports both drag-and-drop and click interactions.
+ *
+ * @component
+ * @returns {JSX.Element} The rendered tool palette UI.
  */
 export default function ToolPallete() {
   const { setEventType, setRelationType, setSubgraphType } = useStore(
@@ -45,9 +54,13 @@ export default function ToolPallete() {
   );
 
   /**
-   * Sets the event type for the drag and drop event.
-   * @param event - The drag event.
-   * @param type - The type of the event.
+   * Handles the drag start event for draggable items in the tool palette.
+   * Sets the appropriate type (event or subgraph) based on the provided type string,
+   * and configures the drag-and-drop effect.
+   *
+   * @param event - The drag event triggered when the user starts dragging an item.
+   * @param type - The type identifier for the dragged item. If the string length is 1,
+   *               it is considered an event type; otherwise, it is treated as a subgraph type.
    */
   const onDragStart = (event: any, type: string) => {
     if (type.length === 1) setEventType(type);
@@ -55,6 +68,14 @@ export default function ToolPallete() {
     event.dataTransfer.effectAllowed = "move";
   };
 
+  /**
+   * Handles the drag end event by resetting the event and subgraph types after a short delay.
+   * This ensures that any UI updates dependent on these states are properly triggered.
+   *
+   * @remarks
+   * The function uses an asynchronous reset with a 10ms delay to avoid potential race conditions
+   * or UI glitches that may occur if the state is reset immediately.
+   */
   const onDragEnd = () => {
     const reset = async () => {
       await delay(10);

@@ -11,7 +11,7 @@ import {
 import { StateCreator } from "zustand/vanilla";
 import { RFState } from "@/stores/store";
 
-import { calcSubgraphArgs, delay } from "@/lib/utils";
+import { delay } from "@/lib/utils";
 import { EventType } from "@/lib/codegen";
 
 export interface Child {
@@ -22,6 +22,84 @@ export interface Child {
   height: number;
 }
 
+/**
+ * Represents the state and operations related to nodes within the application.
+ *
+ * @property {Node[]} nodes - The list of all nodes in the current state.
+ * @property {number[]} nextNodeId - The next available node IDs for new nodes.
+ * @property {number[]} nextGroupId - The next available group IDs for new groups.
+ * @property {number[]} nextSubprocessId - The next available subprocess IDs for new subprocesses.
+ * @property {string} eventType - The current event type associated with node operations.
+ * @property {string} subgraphType - The current subgraph type in use.
+ * @property {OnNodesChange} onNodesChange - Handler for node change events.
+ * @property {OnNodesDelete} onNodesDelete - Handler for node deletion events.
+ *
+ * @method addNode - Adds a new node to the state.
+ * @param node - The node to add.
+ * @returns The ID of the newly added node.
+ *
+ * @method updateNode - Updates an existing node by ID.
+ * @param id - The ID of the node to update.
+ * @param updatedNode - The updated node data.
+ * @returns The ID of the updated node.
+ *
+ * @method updateNodeInfo - Updates information of a node based on an event.
+ * @param id - The ID of the node to update.
+ * @param event - The event data to apply.
+ *
+ * @method setNodes - Replaces the current nodes with a new array.
+ * @param newNodes - The new array of nodes.
+ *
+ * @method getNode - Retrieves a node by its ID.
+ * @param id - The ID of the node to retrieve.
+ * @returns The node with the specified ID.
+ *
+ * @method getFamily - Retrieves the family (related node IDs) of a node.
+ * @param id - The ID of the node.
+ * @returns An array of related node IDs.
+ *
+ * @method updateParenting - Updates the parent-child relationships for a node.
+ * @param updatedNode - The node with updated parenting information.
+ *
+ * @method parentInFront - Determines if a parent node is visually in front of a child node.
+ * @param parentId - The ID of the parent node.
+ * @param childId - The ID of the child node.
+ * @returns True if the parent is in front, false otherwise.
+ *
+ * @method setIds - Sets the next available IDs for nodes, groups, and subprocesses.
+ * @param nodeId - The next node IDs.
+ * @param groupId - The next group IDs.
+ * @param subprocessId - The next subprocess IDs.
+ *
+ * @method setEventType - Sets the current event type.
+ * @param type - The event type to set.
+ *
+ * @method setSubgraphType - Sets the current subgraph type.
+ * @param type - The subgraph type to set.
+ *
+ * @method onNodeClick - Handler for node click events.
+ * @param event - The click event.
+ * @param node - The node that was clicked.
+ *
+ * @method onNodeDoubleClick - Handler for node double-click events.
+ * @param event - The double-click event.
+ * @param node - The node that was double-clicked.
+ *
+ * @method onNodeDragStart - Handler for the start of a node drag event.
+ * @param event - The drag start event.
+ * @param node - The node being dragged.
+ *
+ * @method onNodeDragStop - Handler for the end of a node drag event.
+ * @param event - The drag stop event.
+ * @param node - The node that was dragged.
+ *
+ * @method onDragOver - Handler for drag-over events on the node area.
+ * @param event - The drag-over event.
+ *
+ * @method onDrop - Handler for drop events on the node area.
+ * @param event - The drop event.
+ * @param screenToFlowPosition - Function or data to convert screen position to flow position.
+ */
 export type NodesState = {
   /* ---------- NODES AND PARENTING ---------- */
   nodes: Node[];
@@ -224,6 +302,7 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
       nodes: get().nodes.map((node) => {
         if (node.id === id) {
           if (node.type === "nest" && updatedNode.type === "subprocess") {
+            get().removeDocumentation(node.id);
             const subprocessId = "s" + get().nextSubprocessId[0];
             const nextNestId = parseInt(node.id.substring(1));
             const nexts = get().nextSubprocessId.slice(1);
@@ -245,6 +324,7 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
             node.type === "subprocess" &&
             updatedNode.type === "nest"
           ) {
+            get().removeDocumentation(node.id);
             const nestId = "n" + get().nextGroupId[0];
             const nextSubprocessId = parseInt(node.id.substring(1));
             const nexts = get().nextGroupId.slice(1);
@@ -314,21 +394,23 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
             receivers,
             input,
             expression,
+            parent,
           } = event;
 
           return {
             ...nd,
             data: {
               ...nd.data,
-              label,
-              name,
-              security,
-              initiators,
+              ...(label && { label }),
+              ...(name && { name }),
+              ...(security && { security }),
+              ...(initiators.length > 0 && { initiators }),
               marking,
               ...(receivers && { receivers }),
               ...(input && { input }),
               ...(expression && { expression }),
             },
+            ...(parent && { parentId: parent }),
           };
         } else return nd;
       }),
@@ -360,10 +442,7 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
 
       if (updatedNode.type !== "event") {
         const childrenNodes = get().nodes.filter(
-          (nd) =>
-            nd.parentId &&
-            nd.parentId === updatedNode.id &&
-            !get().parentInFront(updatedNode.id, nd.id)
+          (nd) => nd.parentId && nd.parentId === updatedNode.id
         );
 
         const childrenIds = childrenNodes.map((nd) => nd.id);
@@ -480,6 +559,8 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
     get().log(
       `Deleted nodes: ${deletedNodes.map((node) => node.id).join(", ")}.`
     );
+
+    deletedNodes.forEach((nd) => get().removeDocumentation(nd.id));
     set({
       nodes: get().nodes.filter((node) => {
         return !deletedNodes.some((deletedNode) => deletedNode.id === node.id);

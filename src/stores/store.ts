@@ -5,7 +5,13 @@ import rolesStateSlice, { RolesState } from "./roles-state";
 import otherStateSlice, { OtherState } from "./other-state";
 
 /**
- * Zustand store for managing the state of the DCR Graph.
+ * Represents the combined state of the application, including nodes, edges, roles, and other relevant state properties.
+ *
+ * This type is a composition of:
+ * - `NodesState`: State related to nodes.
+ * - `EdgesState`: State related to edges.
+ * - `RolesState`: State related to user or system roles.
+ * - `OtherState`: Any additional state required by the application.
  */
 export type RFState = NodesState & EdgesState & RolesState & OtherState;
 

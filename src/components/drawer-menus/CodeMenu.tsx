@@ -1,4 +1,4 @@
-import writeCode, { InputType, modifyRepresentation } from "@/lib/codegen";
+import { writeCode } from "@/lib/codegen";
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
 
@@ -16,6 +16,25 @@ const selector = (state: RFState) => ({
   updateNodeInfo: state.updateNodeInfo,
 });
 
+/**
+ * `CodeMenu` is a React functional component that provides a code editor interface
+ * for viewing, editing, generating, and downloading code within the application.
+ *
+ * Features:
+ * - Displays a code editor (Monaco Editor) with Python-like syntax highlighting.
+ * - Allows users to generate code based on the current application state (nodes, edges, roles, security).
+ * - Enables users to download the current code as a `.txt` file.
+ * - (Commented out) Option to save changes made in the editor back to the application's visual state.
+ *
+ * State Management:
+ * - Utilizes a custom store via `useStore` to access and update code, event maps, and related data.
+ *
+ * UI:
+ * - Responsive layout with labeled sections and styled buttons for user actions.
+ *
+ * @component
+ * @returns {JSX.Element} The rendered CodeMenu component.
+ */
 export default function CodeMenu() {
   const {
     nodes,
@@ -24,11 +43,16 @@ export default function CodeMenu() {
     security,
     code,
     setCode,
-    eventMap,
     setEventMap,
-    updateNodeInfo,
   } = useStore(selector, shallow);
 
+  /**
+   * Initiates a download of the current code as a plain text file named "regrada.txt".
+   *
+   * This function creates a Blob from the `code` variable, generates a temporary object URL,
+   * and programmatically triggers a download by creating and clicking an anchor element.
+   * After the download is triggered, the anchor is removed from the DOM and the object URL is revoked.
+   */
   const downloadCode = () => {
     const blob = new Blob([code], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
@@ -37,7 +61,6 @@ export default function CodeMenu() {
     a.href = url;
     a.download = "regrada.txt";
 
-    // Append, click, and remove for compatibility
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -64,11 +87,6 @@ export default function CodeMenu() {
           if (newCode) setCode(newCode);
         }}
       />
-      {/*<textarea
-        className="w-full min-h-[350px] max-h-[700px] h-[350px] bg-white rounded-sm p-1 font-mono text-xs"
-        value={code}
-        onChange={(event) => setCode(event.target.value)}
-      />*/}
       <div className="flex gap-2 w-full">
         <button
           className="bg-black h-8 w-full rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
@@ -85,7 +103,7 @@ export default function CodeMenu() {
         >
           Generate Code
         </button>
-        {/*}
+        {/*
         <button
           className="bg-black h-8 w-full rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
           onClick={() => {
