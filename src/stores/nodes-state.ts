@@ -670,7 +670,6 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
         width: 200,
         height: 200,
         data: {
-          children: [],
           ...(subgraphType === "nest" && { nestType: "group" }),
           label: "",
           marking: {

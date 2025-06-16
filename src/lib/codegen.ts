@@ -379,7 +379,7 @@ export function writeCode(
       eventMap.set(e.id, eventContent);
       newContent.push(eventContent);
     });
-    newContent.push(";");
+    if (process.relations.length > 0) newContent.push(";");
 
     process.relations.forEach((r) => {
       if (r.type === "spawn") {

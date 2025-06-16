@@ -1,3 +1,4 @@
+import { delay } from "@/lib/utils";
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
 
@@ -6,6 +7,7 @@ const selector = (state: RFState) => ({
   edges: state.edges,
   rolesParticipants: state.rolesParticipants,
   security: state.security,
+  code: state.code,
 });
 
 /**
@@ -21,7 +23,7 @@ const selector = (state: RFState) => ({
  * <JsonDownload />
  */
 export default function JsonDownload() {
-  const { nodes, edges, rolesParticipants, security } = useStore(
+  const { nodes, edges, rolesParticipants, security, code } = useStore(
     selector,
     shallow
   );
@@ -72,6 +74,7 @@ export default function JsonDownload() {
     };
 
     const jsonString = JSON.stringify(data, null, 2);
+
     const blob = new Blob([jsonString], { type: "application/json" });
 
     const url = URL.createObjectURL(blob);
