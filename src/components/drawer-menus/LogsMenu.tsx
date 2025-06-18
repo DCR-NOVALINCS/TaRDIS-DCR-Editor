@@ -27,7 +27,7 @@ export default function LogsMenu() {
 
   return (
     <>
-      <div className="flex justify-end border-b-2 border-[#CCCCCC]">
+      <div className="flex justify-end border-b-2 border-[#CCCCCC] select-none">
         <button
           className="py-2 mr-6 cursor-pointer hover:underline"
           onClick={() => setLogs([])}
@@ -35,7 +35,7 @@ export default function LogsMenu() {
           Clear All
         </button>
       </div>
-      <div className="h-[calc(100vh-90px)] overflow-y-auto w-[calc(100%-1rem)]">
+      <div className="h-[calc(100vh-90px)] overflow-y-auto w-[calc(100%-1rem)] select-none">
         {logs.map((log, index) => (
           <div
             key={index}

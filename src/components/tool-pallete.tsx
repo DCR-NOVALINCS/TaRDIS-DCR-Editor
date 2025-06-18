@@ -191,7 +191,7 @@ export default function ToolPallete() {
                       onClick={() => onClick(index)}
                       className={`${
                         selected ? "bg-white" : "bg-[#CCCCCC]"
-                      } hover:ring-1 h-8 w-12 flex items-center justify-center rounded-sm cursor-pointer`}
+                      } hover:ring-1 h-8 w-12 flex items-center justify-center rounded-sm cursor-pointer select-none`}
                     >
                       {component}
                     </div>

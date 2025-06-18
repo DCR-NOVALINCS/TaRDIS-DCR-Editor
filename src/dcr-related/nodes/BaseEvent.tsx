@@ -30,7 +30,7 @@ export const EventModel = ({
     <>
       {/* EVENT MODEL */}
       <div
-        className="h-[100px] w-[100px] border-2 border-[#CCCCCC] bg-[#FFF9DD] rounded-[4px] text-[10px] text-black"
+        className="h-[100px] w-[100px] border-2 border-[#CCCCCC] bg-[#FFF9DD] rounded-[4px] text-[10px] text-black select-none"
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         draggable
@@ -66,14 +66,16 @@ export const EventModel = ({
  */
 export default function BaseEvent({ id, data, ...props }: NodeProps) {
   const { simulationFlow } = useStore(selector);
-  const { initiators, receivers, type, label, name, marking } = data as {
-    initiators: string[];
-    receivers: string[];
-    type: string;
-    label: string;
-    name: string;
-    marking: Record<string, boolean>;
-  };
+  const { initiators, receivers, type, label, name, marking, interactionType } =
+    data as {
+      initiators: string[];
+      receivers: string[];
+      type: string;
+      label: string;
+      name: string;
+      marking: Record<string, boolean>;
+      interactionType?: string;
+    };
 
   const { included, pending, executable, executed } = marking as Record<
     string,
@@ -115,7 +117,16 @@ export default function BaseEvent({ id, data, ...props }: NodeProps) {
           } w-full right-0 flex-col`}
         >
           {/* EVENT TYPE */}
-          <div className="px-[2px]">{type as string}</div>
+          {receiversJoined ? (
+            <div className="flex justify-between px-[2px]">
+              <div className="">{type as string}</div>
+              <div className="">
+                {interactionType ? interactionType : "rxtx"}
+              </div>
+            </div>
+          ) : (
+            <div className="px-[2px]">{type as string}</div>
+          )}
 
           {/* EVENT PENDING STATE */}
           <div className="absolute px-[4px] right-0 items-center flex gap-1">

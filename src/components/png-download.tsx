@@ -77,7 +77,7 @@ export default function PngDownload() {
     <>
       {/* PNG DOWNLOAD BUTTON */}
       <button
-        className="bg-black text-white font-semibold px-2 py-1 w-36 rounded-sm m-2 hover:opacity-75 cursor-pointer"
+        className="bg-black select-none text-white font-semibold px-2 py-1 w-36 rounded-sm m-2 hover:opacity-75 cursor-pointer"
         onClick={onClick}
       >
         Download PNG

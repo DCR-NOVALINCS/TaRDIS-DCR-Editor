@@ -17,6 +17,14 @@ import CodeMenu from "./drawer-menus/CodeMenu";
 
 const selector = (state: RFState) => ({
   selectedElement: state.selectedElement,
+  drawerOpen: state.drawerOpen,
+  setDrawerOpen: state.setDrawerOpen,
+  drawerSelectedLogs: state.drawerSelectedLogs,
+  setDrawerSelectedLogs: state.setDrawerSelectedLogs,
+  drawerSelectedCode: state.drawerSelectedCode,
+  setDrawerSelectedCode: state.setDrawerSelectedCode,
+  drawerWidth: state.drawerWidth,
+  setDrawerWidth: state.setDrawerWidth,
 });
 
 /**
@@ -33,30 +41,35 @@ const selector = (state: RFState) => ({
  * @returns {JSX.Element} The rendered Drawer component.
  */
 export default function Drawer() {
-  const { selectedElement } = useStore(selector, shallow);
-
-  const [open, setOpen] = useState(false);
-  const [selectedLogs, setSelectedLogs] = useState(false);
-  const [selectedCode, setSelectedCode] = useState(false);
-  const [width, setWidth] = useState("25%");
+  const {
+    selectedElement,
+    drawerOpen,
+    setDrawerOpen,
+    drawerSelectedLogs,
+    setDrawerSelectedLogs,
+    drawerSelectedCode,
+    setDrawerSelectedCode,
+    drawerWidth,
+    setDrawerWidth,
+  } = useStore(selector, shallow);
 
   return (
     <>
       {/* DRAWER */}
       <motion.div
         initial={{ width: 16 }}
-        animate={{ width: open ? width : 16 }}
+        animate={{ width: drawerOpen ? drawerWidth : 16 }}
         exit={{ width: 16 }}
         transition={{ duration: 0.2, ease: "easeInOut" }}
-        className="absolute h-full right-0 bg-[#D9D9D9] drop-shadow-lg border-l-2 border-[#CCCCCC] overflow-hidden"
+        className="absolute h-full right-0 bg-[#D9D9D9] drop-shadow-lg border-l-2 border-[#CCCCCC] overflow-hidden select-none"
       >
         {/* DRAWER TOGGLE BUTTON */}
         <motion.div
-          onClick={() => setOpen(!open)}
+          onClick={() => setDrawerOpen(!drawerOpen)}
           className="cursor-pointer flex items-center justify-center w-4 h-full border-r-2 border-[#CCCCCC]"
         >
           <motion.div
-            animate={{ rotate: open ? 0 : 180 }}
+            animate={{ rotate: drawerOpen ? 0 : 180 }}
             transition={{ duration: 0.3 }}
           >
             <ChevronRight />
@@ -65,7 +78,7 @@ export default function Drawer() {
 
         {/* DRAWER CONTENT */}
         <AnimatePresence>
-          {open ? (
+          {drawerOpen ? (
             <motion.div
               key="0"
               initial={{ opacity: 0 }}
@@ -78,9 +91,9 @@ export default function Drawer() {
                 <div
                   className="cursor-pointer w-1/3 p-2 border-r-2 border-[#CCCCCC] justify-center flex items-center"
                   onClick={() => {
-                    setSelectedLogs(false);
-                    setWidth("25%");
-                    setSelectedCode(false);
+                    setDrawerSelectedLogs(false);
+                    setDrawerWidth("25%");
+                    setDrawerSelectedCode(false);
                   }}
                 >
                   Properties
@@ -88,9 +101,9 @@ export default function Drawer() {
                 <div
                   className="cursor-pointer w-1/3 p-2 border-r-2 border-[#CCCCCC] justify-center flex items-center"
                   onClick={() => {
-                    setSelectedLogs(true);
-                    setWidth("25%");
-                    setSelectedCode(false);
+                    setDrawerSelectedLogs(true);
+                    setDrawerWidth("25%");
+                    setDrawerSelectedCode(false);
                   }}
                 >
                   Logs
@@ -98,17 +111,17 @@ export default function Drawer() {
                 <div
                   className="cursor-pointer w-1/3 p-2 border-r-2 border-[#CCCCCC] justify-center flex items-center"
                   onClick={() => {
-                    setSelectedCode(true);
-                    setWidth("50%");
-                    setSelectedLogs(false);
+                    setDrawerSelectedCode(true);
+                    setDrawerWidth("50%");
+                    setDrawerSelectedLogs(false);
                   }}
                 >
                   Code
                 </div>
               </div>
-              {selectedLogs ? (
+              {drawerSelectedLogs ? (
                 <LogsMenu />
-              ) : selectedCode ? (
+              ) : drawerSelectedCode ? (
                 <CodeMenu />
               ) : selectedElement ? (
                 isNode(selectedElement) ? (

@@ -11,7 +11,14 @@ export const ExcludeModel = () => {
     <svg width="40" height="20" viewBox="-3 0 30 10">
       <path d="M -5 5 L 12 5" stroke={EXCLUDE_COLOR} strokeWidth="2" />
       <path d="M 10 0 L 20 5 L 10 10 Z" fill={EXCLUDE_COLOR} />
-      <text x="19" y="8" fontSize="9px" fontWeight="bold" fill={EXCLUDE_COLOR}>
+      <text
+        x="19"
+        y="8"
+        fontSize="9px"
+        fontWeight="bold"
+        fill={EXCLUDE_COLOR}
+        className="select-none"
+      >
         %
       </text>
     </svg>

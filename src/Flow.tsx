@@ -10,6 +10,7 @@ import {
   BackgroundVariant,
   type Node,
   Panel,
+  Edge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -33,6 +34,15 @@ import Subprocess from "./dcr-related/nodes/Subprocess";
 
 import JsonDownload from "./components/json-download";
 import PngDownload from "./components/png-download";
+
+type History = {
+  nodes: Node[];
+  edges: Edge[];
+  nextNodeId: number[];
+  nextGroupId: number[];
+  nextSubprocessId: number[];
+  history?: History;
+};
 
 const selector = (state: RFState) => ({
   nodes: state.nodes,
@@ -63,6 +73,8 @@ const selector = (state: RFState) => ({
   onPaneClick: state.onPaneClick,
   setSelectedElement: state.setSelectedElement,
   onEdgesDelete: state.onEdgesDelete,
+  projectionInfo: state.projectionInfo,
+  currentProjection: state.currentProjection,
 });
 
 const nodeOrigin: NodeOrigin = [0.5, 0.5];
@@ -112,6 +124,8 @@ function FlowWithoutProvider() {
     onConnect,
     onPaneClick,
     onEdgesDelete,
+    projectionInfo,
+    currentProjection,
   } = useStore(selector, shallow);
 
   const flowRef = useRef<HTMLDivElement>(null);
@@ -274,7 +288,7 @@ function FlowWithoutProvider() {
     zoomOnDoubleClick: false,
   };
 
-  const [history, setHistory] = useState({
+  const [history, setHistory] = useState<History>({
     nodes,
     edges,
     nextNodeId,
@@ -282,19 +296,21 @@ function FlowWithoutProvider() {
     nextSubprocessId,
   });
   const [toCopyNodes, setToCopyNodes] = useState<Node[]>([]);
+  const [keyPressOn, setKeyPressOn] = useState(true);
 
   const KeyPressListener = () => {
     useEffect(() => {
       const handleKeyDown = (event: KeyboardEvent) => {
         if (event.ctrlKey && event.key.toLowerCase() === "s") {
           event.preventDefault();
-          setHistory({
+          setHistory((prev) => ({
             nodes,
             edges,
             nextNodeId,
             nextGroupId,
             nextSubprocessId,
-          });
+            history: prev,
+          }));
         }
 
         if (event.ctrlKey && event.key.toLowerCase() === "c") {
@@ -322,7 +338,7 @@ function FlowWithoutProvider() {
 
         if (event.ctrlKey && event.key.toLowerCase() === "z") {
           event.preventDefault();
-          setEdges([]);
+          setNodes([]);
         }
       };
 
@@ -336,6 +352,9 @@ function FlowWithoutProvider() {
             history.nextGroupId,
             history.nextSubprocessId
           );
+          if (history.history) {
+            setHistory(history.history);
+          }
         }
 
         if (event.ctrlKey && event.key.toLowerCase() === "v") {
@@ -359,15 +378,21 @@ function FlowWithoutProvider() {
     <ReactFlow
       elevateNodesOnSelect={false}
       {...(simulationFlow ? simulationProps : normalProps)}
+      onPaneMouseEnter={() => {
+        setKeyPressOn(true);
+      }}
+      onPaneMouseLeave={() => {
+        setKeyPressOn(false);
+      }}
     >
-      <KeyPressListener />
+      {keyPressOn && <KeyPressListener />}
       <Controls showInteractive={false} />
       <Background variant={BackgroundVariant.Lines} />
       <Panel position="top-left" style={{ zIndex: 20000 }}>
         <JsonDownload />
         <PngDownload />
         <button
-          className="bg-black text-white font-semibold px-2 py-1 w-36 rounded-sm m-2 hover:opacity-75 cursor-pointer"
+          className="bg-black select-none text-white font-semibold px-2 py-1 w-36 rounded-sm m-2 hover:opacity-75 cursor-pointer"
           onClick={onClickSimulationStart}
         >
           {simulationFlow ? "Stop" : "Start"} Simulation

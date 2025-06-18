@@ -13,6 +13,7 @@ import { RFState } from "@/stores/store";
 
 import { delay } from "@/lib/utils";
 import { EventType } from "@/lib/codegen";
+import { initialNodes } from "@/lib/types";
 
 export interface Child {
   id: string;
@@ -145,78 +146,7 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
   get
 ) => ({
   /* ---------- NODES AND PARENTING ---------- */
-  nodes: [
-    {
-      id: "e0",
-      type: "event",
-      data: {
-        initiators: ["P(id=1)"],
-        receivers: [],
-        type: "i",
-        label: "e0",
-        name: "readDocument",
-        marking: {
-          included: true,
-          pending: false,
-        },
-        input: {
-          type: "Record",
-          record: [
-            { var: "size", type: "Integer" },
-            { var: "name", type: "String" },
-          ],
-        },
-        security: "Public",
-      },
-      parentId: "",
-      position: { x: 100, y: 100 },
-      zIndex: 10000,
-    },
-    {
-      id: "e1",
-      type: "event",
-      data: {
-        initiators: ["P(id=1)"],
-        receivers: ["P(id=2)"],
-        type: "i",
-        label: "e1",
-        name: "submit",
-        marking: {
-          included: true,
-          pending: false,
-        },
-        input: {
-          type: "Unit",
-        },
-        security: "Public",
-      },
-      parentId: "",
-      position: { x: 250, y: 100 },
-      zIndex: 10000,
-    },
-    {
-      id: "e2",
-      type: "event",
-      data: {
-        initiators: ["P(id=2)"],
-        receivers: ["P(id=1)"],
-        type: "i",
-        label: "e2",
-        name: "accept",
-        marking: {
-          included: true,
-          pending: false,
-        },
-        input: {
-          type: "Unit",
-        },
-        security: "Public",
-      },
-      parentId: "",
-      position: { x: 400, y: 100 },
-      zIndex: 10000,
-    },
-  ],
+  nodes: initialNodes,
   addNode(node: Node) {
     let id = "";
     if (node.type === "nest") {
@@ -436,7 +366,6 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
   updateParenting(updatedNode: Node) {
     const updateParent = async () => {
       get().setNodes(get().nodes.filter((nd) => nd.id !== updatedNode.id));
-      console.log(get().nodes);
 
       await delay(10);
 
@@ -599,23 +528,31 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
   onNodeDoubleClick(event: any, node: Node) {
     event.preventDefault();
 
-    const type = get().relationType;
-    if (type !== "exclude") return;
+    if (event.shiftKey) {
+      const type = get().relationType;
+      if (type !== "exclude") return;
 
-    get().log(`Added self-exclusion edge to node ${node.id}`);
+      get().log(`Added self-exclusion edge to node ${node.id}`);
 
-    const edge: Edge = {
-      id: "se-" + node.id,
-      type,
-      source: node.id,
-      target: node.id,
-      zIndex: 200000,
-      data: {
-        guard: "",
-      },
-    };
+      const edge: Edge = {
+        id: "se-" + node.id,
+        type,
+        source: node.id,
+        target: node.id,
+        zIndex: 200000,
+        data: {
+          guard: "",
+        },
+      };
 
-    get().addEdge(edge);
+      get().addEdge(edge);
+    } else {
+      get().setSelectedElement(node);
+      get().setDrawerSelectedLogs(false);
+      get().setDrawerSelectedCode(false);
+      get().setDrawerWidth("25%");
+      get().setDrawerOpen(true);
+    }
   },
   onNodeDragStart(event: any, node: Node) {
     event.preventDefault();

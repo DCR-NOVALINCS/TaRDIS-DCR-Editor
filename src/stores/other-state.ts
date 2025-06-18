@@ -9,10 +9,15 @@ interface Log {
 
 interface ChoregraphyInfo {
   nodesCount: number;
-  roles: string[];
+  roles: { role: string; label: string }[];
 }
 
 type Element = Node | Edge | undefined;
+
+type ProjectionInfo = {
+  nodes: Node[];
+  edges: Edge[];
+};
 
 /**
  * Represents miscellaneous application state and operations, including documentation,
@@ -120,6 +125,23 @@ export type OtherState = {
   onPaneClick(): void;
   getChoreographyInfo(): ChoregraphyInfo;
   /* ----------------------------------------- */
+
+  /* -------------- PROJECTIONS -------------- */
+  projectionInfo: Map<string, ProjectionInfo>;
+  setProjectionInfo(id: string, projectionInfo: ProjectionInfo): void;
+  currentProjection: string;
+  setCurrentProjection(id: string): void;
+  /* ----------------------------------------- */
+
+  drawerOpen: boolean;
+  setDrawerOpen(open: boolean): void;
+  drawerSelectedLogs: boolean;
+  setDrawerSelectedLogs(selected: boolean): void;
+  drawerSelectedCode: boolean;
+  setDrawerSelectedCode(selected: boolean): void;
+  drawerWidth: string;
+  setDrawerWidth(width: string): void;
+  /* ----------------------------------------- */
 };
 
 const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
@@ -226,10 +248,55 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
   getChoreographyInfo() {
     return {
       nodesCount: get().nodes.filter((node) => node.type === "event").length,
-      roles: get().rolesParticipants.map((role) => role.role),
+      roles: get().rolesParticipants.map((role) => ({
+        role: role.role,
+        label: role.label,
+      })),
     };
   },
   /* ----------------------------------------- */
+
+  /* -------------- PROJECTIONS -------------- */
+  projectionInfo: new Map<string, ProjectionInfo>(),
+  setProjectionInfo(id: string, projectionInfo: ProjectionInfo) {
+    let newProjectionInfo = get().projectionInfo;
+    if (newProjectionInfo.has(id)) newProjectionInfo.delete(id);
+    newProjectionInfo.set(id, projectionInfo);
+    set({
+      projectionInfo: newProjectionInfo,
+    });
+  },
+  currentProjection: "",
+  setCurrentProjection(id: string) {
+    set({
+      currentProjection: id,
+    });
+  },
+  /* ----------------------------------------- */
+  drawerOpen: false,
+  setDrawerOpen(open: boolean) {
+    set({
+      drawerOpen: open,
+    });
+  },
+  drawerSelectedLogs: false,
+  setDrawerSelectedLogs(selected: boolean) {
+    set({
+      drawerSelectedLogs: selected,
+    });
+  },
+  drawerSelectedCode: false,
+  setDrawerSelectedCode(selected: boolean) {
+    set({
+      drawerSelectedCode: selected,
+    });
+  },
+  drawerWidth: "25%",
+  setDrawerWidth(width: string) {
+    set({
+      drawerWidth: width,
+    });
+  },
 });
 
 export default otherStateSlice;

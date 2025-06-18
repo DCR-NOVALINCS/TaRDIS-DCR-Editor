@@ -11,7 +11,7 @@ interface Participant {
   inputs: Input[];
 }
 
-interface Parameter {
+export interface Parameter {
   var: string;
   type: string;
 }
@@ -83,12 +83,12 @@ const rolesStateSlice: StateCreator<RFState, [], [], RolesState> = (
     const fixedRole = role.role.charAt(0).toUpperCase() + role.role.slice(1);
     set({
       rolesParticipants: [
-        ...get().rolesParticipants,
         {
           ...role,
           role: fixedRole,
           participants: [],
         },
+        ...get().rolesParticipants,
       ],
     });
   },

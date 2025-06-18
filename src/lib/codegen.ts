@@ -242,86 +242,6 @@ function extractData(nodes: Node[], edges: Edge[]) {
   return parentProcess;
 }
 
-export function modifyRepresentation(
-  code: string,
-  eventMap: Map<string, string>
-): Map<string, EventType> {
-  let newEventMap = new Map<string, EventType>();
-  const splitted = code.replace(/[\r\t]/g, "").split("\n");
-  const events = splitted.filter((elem) => elem.charAt(0) === "(");
-
-  let i = 0;
-  eventMap.forEach((ev, id) => {
-    const event = events[i];
-    let marking: MarkingType = {
-      included: event.includes("%") ? false : true,
-      pending: event.includes("!") ? true : false,
-    };
-
-    const eventSplitted = event
-      .replace("; ", ";")
-      .replace(", ", ",")
-      .split(" ");
-
-    const labelName = eventSplitted[0]
-      .replace("(", "")
-      .replace(")", "")
-      .split(":");
-    const label = labelName[0];
-    const name = labelName[1];
-
-    const security = eventSplitted[1].replace("(", "").replace(")", "");
-
-    let expression: string | undefined = undefined;
-    let input: InputType | undefined = undefined;
-    const inputCompt = eventSplitted[2].replace("[", "").replace("]", "");
-    if (inputCompt.charAt(0) === "?") {
-      if (inputCompt === "?") input = { type: "Unit" };
-      else {
-        const inputString = inputCompt.replace("?:", "");
-        if (inputString.charAt(0) === "{") {
-          const inputRecord = inputString.replace("{", "").replace("}", "");
-          const recFields = inputRecord.split(";").map((rec) => {
-            const recField = rec.split(":");
-            return {
-              var: recField[0],
-              type: recField[1],
-            };
-          });
-          input = { type: "Record", record: recFields };
-        } else input = { type: inputString };
-      }
-    } else expression = inputCompt;
-
-    let initiatorsString = eventSplitted[3];
-    let initiators: string[] = [];
-    let receivers: string[] = [];
-    if (initiatorsString.includes("]"))
-      initiators = initiatorsString
-        .replace("[", "")
-        .replace("]", "")
-        .split(",");
-    else {
-      initiators = initiatorsString.replace("[", "").split(",");
-      receivers = eventSplitted[5].replace("]", "").split(",");
-    }
-
-    newEventMap.set(id, {
-      id: "",
-      label,
-      name,
-      security,
-      ...(input ? { input } : { expression }),
-      initiators,
-      ...(receivers.length > 0 && { receivers }),
-      marking,
-    });
-    i++;
-  });
-
-  return newEventMap;
-}
-
 /**
  * Generates code and an event mapping from a set of process nodes, edges, roles, and a security lattice.
  *
@@ -348,6 +268,7 @@ export function writeCode(
   let content: string[] = [];
 
   function writeProcess(process: Process, numTabs: number): string[] {
+    console.log(process);
     let newContent: string[] = [];
     process.events.forEach((e) => {
       const { included, pending } = e.marking;

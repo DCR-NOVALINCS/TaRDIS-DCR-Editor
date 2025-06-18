@@ -34,7 +34,7 @@ const EdgeMenu = ({ edge }: { edge: Edge }) => {
   const [guard, setGuard] = useState(data.guard);
 
   return (
-    <div className="flex flex-col mr-4 w-full">
+    <div className="flex flex-col mr-4 w-full select-none">
       {/* EDGE WITH RESPECTIVE NODE */}
       <div className="flex items-center gap-5 p-4 border-b-2 border-[#CCCCCC]">
         <MoveRight size={40} />

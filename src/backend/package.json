@@ -1,0 +1,26 @@
+{
+  "name": "backend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "commonjs",
+  "scripts": {
+    "start": "ts-node backend.ts",
+    "build": "tsc",
+    "serve": "node backend.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@xyflow/react": "^12.4.4",
+    "@eslint/js": "^9.21.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.13.10",
+    "globals": "^15.15.0",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "^8.24.1"
+  }
+}

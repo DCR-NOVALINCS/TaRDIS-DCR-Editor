@@ -9,6 +9,7 @@ import {
 } from "@xyflow/react";
 import { StateCreator } from "zustand/vanilla";
 import { RFState } from "./store";
+import { initialEdges } from "@/lib/types";
 
 interface TempEdge {
   source: string;
@@ -86,28 +87,7 @@ const edgesStateSlice: StateCreator<RFState, [], [], EdgesState> = (
   get
 ) => ({
   /* ------------ EDGE OPERATIONS ------------ */
-  edges: [
-    {
-      id: "c-e0-e1",
-      type: "condition",
-      source: "e0",
-      target: "e1",
-      data: {
-        guard: "",
-      },
-      zIndex: 20000,
-    },
-    {
-      id: "r-e1-e2",
-      type: "response",
-      source: "e1",
-      target: "e2",
-      data: {
-        guard: "",
-      },
-      zIndex: 20000,
-    },
-  ],
+  edges: initialEdges,
   edgeToAdd: [],
   addEdge(edge: Edge) {
     const { source, target, type } = edge;

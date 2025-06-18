@@ -104,7 +104,7 @@ const SubgraphMenu = ({ nest }: { nest: Node }) => {
   };
 
   return (
-    <div className="flex flex-col mr-4 w-full">
+    <div className="flex flex-col mr-4 w-full select-none">
       {/* NODE WITH RESPECTIVE ID */}
       <div className="flex items-center gap-5 p-4 border-b-2 border-[#CCCCCC]">
         <Group size={40} />

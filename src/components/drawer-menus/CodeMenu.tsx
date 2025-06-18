@@ -7,6 +7,7 @@ import { delay } from "@/lib/utils";
 
 import { Edge, Node } from "@xyflow/react";
 import { stringify } from "querystring";
+import { visualGen } from "@/lib/visualgen";
 
 type BasicType = "array" | "int" | "string" | "bool" | "void" | "float";
 type EventRelation =
@@ -44,15 +45,22 @@ interface Role {
 }
 
 interface EventRef {
-  value: string; // e.g., "_@self"
+  eventRef: { value: string }; // e.g., "_@eventName"
 }
 
-interface PropBasedExpr {
+interface PropBasedExprSimple {
+  propBasedExpr: PropBasedExpr;
+  prop: string;
+}
+
+interface PropBasedExprComplex {
   propDeref: {
-    propBasedExpr: PropBasedExpr | EventRef;
+    propBasedExpr: PropBasedExpr;
     prop: string;
   };
 }
+
+type PropBasedExpr = PropBasedExprSimple | PropBasedExprComplex | EventRef;
 
 interface BinaryOp {
   expr1: Expression;
@@ -64,7 +72,8 @@ type Value =
   | { intLit: { value: number } }
   | { stringLit: { value: string } }
   | { boolLit: { value: boolean } }
-  | { floatLit: { value: number } };
+  | { floatLit: { value: number } }
+  | PropBasedExpr;
 
 type Expression = { binaryOp: BinaryOp } | { propDeref: PropBasedExpr } | Value;
 
@@ -107,12 +116,31 @@ interface ReceiveEvent {
 
 type Event = InputEvent | ReceiveEvent | ComputationEvent;
 
-interface RoleExpr {
+interface RoleExprSimple {
+  roleLabel: string;
+  params: Param[];
+}
+
+interface RoleExprComplex {
   roleExpr: {
     roleLabel: string;
     params: Param[];
   };
 }
+
+interface InitiatorExpr {
+  initiatorExpr: {
+    eventId: string;
+  };
+}
+
+interface ReceiverExpr {
+  receiverExpr: {
+    eventId: string;
+  };
+}
+
+type RoleExpr = RoleExprSimple | RoleExprComplex | InitiatorExpr | ReceiverExpr;
 
 // Relações
 interface ControlFlowRelation {
@@ -152,16 +180,31 @@ interface ChoreographyModel {
 }
 
 function processRoleExpr(roleExpr: RoleExpr): string {
-  const { roleLabel, params } = roleExpr.roleExpr;
+  console.log(roleExpr);
+  let roleLabel, params;
+  if ("initiatorExpr" in roleExpr)
+    return `@Initiator(${roleExpr.initiatorExpr.eventId})`;
+  else if ("receiverExpr" in roleExpr)
+    return `@Receiver(${roleExpr.receiverExpr.eventId})`;
+  else if ("roleExpr" in roleExpr) {
+    roleLabel = roleExpr.roleExpr.roleLabel;
+    params = roleExpr.roleExpr.params;
+  } else {
+    roleLabel = roleExpr.roleLabel;
+    params = roleExpr.params;
+  }
   const paramsString = params.map((param) => {
     const { name, value } = param;
+    console.log(param);
     if (value) {
-      if ("intLit" in value) return `${name}=${value.intLit.value}`;
+      if ("propDeref" in value)
+        return `${name}=${processPropDeref(value.propDeref)}`;
+      else if ("intLit" in value) return `${name}=${value.intLit.value}`;
       else if ("stringLit" in value)
         return `${name}='${value.stringLit.value}'`;
       else if ("boolLit" in value) return `${name}=${value.boolLit.value}`;
       else if ("floatLit" in value) return `${name}=${value.floatLit.value}`;
-    }
+    } else return `${name}=*`;
   });
 
   return `${roleLabel}(${paramsString.join("; ")})`;
@@ -203,11 +246,18 @@ function processDataType(dataType: DataType) {
 }
 
 function processPropDeref(propDeref: PropBasedExpr): string {
-  const { propBasedExpr, prop } = propDeref.propDeref;
-  let base: string = "";
+  if ("eventRef" in propDeref) return propDeref.eventRef.value;
 
-  if ("propDeref" in propBasedExpr) base = processPropDeref(propBasedExpr);
-  else base = propBasedExpr.value;
+  let propBasedExpr, prop;
+  if ("propDeref" in propDeref) {
+    propBasedExpr = propDeref.propDeref.propBasedExpr;
+    prop = propDeref.propDeref.prop;
+  } else {
+    propBasedExpr = propDeref.propBasedExpr;
+    prop = propDeref.prop;
+  }
+
+  const base = processPropDeref(propBasedExpr);
 
   return `${base}.${prop}`;
 }
@@ -265,11 +315,62 @@ function processDataExpr(dataExpr: Expression): string {
   return "";
 }
 
-function processChoreographyGraph(role: Role, graph: ChoreographyGraph) {
+function processInitRecv(
+  first: Role,
+  second: RoleExpr[],
+  instantiationConstraint?: Expression
+) {
+  const secondMapped = second.map((sec) => processRoleExpr(sec));
+  const hasParam = first.params.map((param) => {
+    if (secondMapped.some((sec) => sec.includes(`params.${param.name}`)))
+      return `#${param.name} as X`;
+    else return `#${param.name}`;
+  });
+  let firstMapped = first.label + "(x)";
+  if (instantiationConstraint) {
+    const insCons = processDataExpr(instantiationConstraint).split(" && ");
+    const newParams = first.params.map((param, index) => {
+      let part: string = "";
+      insCons.forEach((cons) => {
+        const consSplitted = cons.split(" ");
+        if (consSplitted[0].includes(param.name)) {
+          if (consSplitted[1] === "==")
+            part = `${param.name}=${consSplitted[2]}`;
+          else part = hasParam[index];
+        }
+      });
+      return part;
+    });
+    firstMapped = `${first.label}(${newParams.join("; ")})`;
+  } else firstMapped = `${first.label}(${hasParam.join("; ")})`;
+
+  return { first: firstMapped, collection: secondMapped };
+}
+
+function processChoregraphyGraphChildren(graph: ChoreographyGraph) {
   const { events, relations } = graph;
 
-  console.log(events, relations);
+  let length = 0;
+  if (events) length += events.length;
+  if (relations) {
+    relations.forEach((relation) => {
+      if ("spawnRelation" in relation)
+        length += processChoregraphyGraphChildren(relation.spawnRelation.graph);
+    });
+  }
 
+  return length;
+}
+
+function processChoreographyGraph(
+  role: Role,
+  graph: ChoreographyGraph,
+  graphId: number
+) {
+  const { events, relations } = graph;
+
+  let subprocessId = 0;
+  let nextGraphId = graphId;
   let nodes: Node[] =
     events && events.length > 0
       ? events.map((event) => {
@@ -281,15 +382,24 @@ function processChoreographyGraph(role: Role, graph: ChoreographyGraph) {
               dataType,
               label: name,
               marking,
+              instantiationConstraint,
             } = common;
+
+            const { first: inits, collection: recvs } = processInitRecv(
+              role,
+              receivers,
+              instantiationConstraint
+            );
+
+            const input = processDataType(dataType);
 
             return {
               id,
               type: "event",
               position: { x: 0, y: 0 },
               data: {
-                initiators: [role.label + "(x)"],
-                receivers: receivers.map((recv) => processRoleExpr(recv)),
+                initiators: [inits],
+                receivers: recvs,
                 type: "i",
                 label,
                 name,
@@ -297,8 +407,10 @@ function processChoreographyGraph(role: Role, graph: ChoreographyGraph) {
                   included: marking.isIncluded,
                   pending: marking.isPending,
                 },
-                input: processDataType(dataType),
+                ...(input ? input : {}),
+                interactionType: "tx",
               },
+              zIndex: 10000,
             };
           } else if ("receiveEvent" in event) {
             const { common, initiators } = event.receiveEvent;
@@ -308,15 +420,24 @@ function processChoreographyGraph(role: Role, graph: ChoreographyGraph) {
               dataType,
               label: name,
               marking,
+              instantiationConstraint,
             } = common;
+
+            const { first: recvs, collection: inits } = processInitRecv(
+              role,
+              initiators,
+              instantiationConstraint
+            );
+
+            const input = processDataType(dataType);
 
             return {
               id,
               type: "event",
               position: { x: 0, y: 0 },
               data: {
-                initiators: [role.label + "(x)"],
-                receivers: initiators.map((init) => processRoleExpr(init)),
+                initiators: [recvs],
+                receivers: inits,
                 type: "i",
                 label,
                 name,
@@ -324,8 +445,10 @@ function processChoreographyGraph(role: Role, graph: ChoreographyGraph) {
                   included: marking.isIncluded,
                   pending: marking.isPending,
                 },
-                input: processDataType(dataType),
+                ...(input ? input : {}),
+                interactionType: "rx",
               },
+              zIndex: 10000,
             };
           } else {
             const { common, dataExpr, receivers } = event.computationEvent;
@@ -335,17 +458,24 @@ function processChoreographyGraph(role: Role, graph: ChoreographyGraph) {
               dataType,
               label: name,
               marking,
+              instantiationConstraint,
             } = common;
 
-            console.log(dataExpr);
+            const { first: inits, collection: recvs } = processInitRecv(
+              role,
+              receivers,
+              instantiationConstraint
+            );
+
+            const input = processDataType(dataType);
 
             return {
               id,
               type: "event",
               position: { x: 0, y: 0 },
               data: {
-                initiators: [role.label + "(x)"],
-                receivers: receivers.map((recv) => processRoleExpr(recv)),
+                initiators: [inits],
+                receivers: recvs,
                 type: "c",
                 label,
                 name,
@@ -353,9 +483,11 @@ function processChoreographyGraph(role: Role, graph: ChoreographyGraph) {
                   included: marking.isIncluded,
                   pending: marking.isPending,
                 },
-                input: processDataType(dataType),
+                ...(input ? input : {}),
                 expression: processDataExpr(dataExpr),
+                interactionType: "tx",
               },
+              zIndex: 10000,
             };
           }
         })
@@ -370,55 +502,63 @@ function processChoreographyGraph(role: Role, graph: ChoreographyGraph) {
           relationType: type,
           targetId: target,
         } = relation.controlFlowRelation;
-        const { endpointElementUID: id, sourceId: source } = relationCommon;
+        const { sourceId: source } = relationCommon;
 
         edges.push({
-          id,
+          id: `${type.charAt(0)}-${source}-${target}`,
           source,
           target,
           type,
           data: {
             guard: "",
           },
+          zIndex: 20000,
         });
       } else {
-        const { relationCommon, triggerId, graph } = relation.spawnRelation;
-        const { endpointElementUID: id, sourceId: source } = relationCommon;
+        const { relationCommon, graph } = relation.spawnRelation;
+        const { sourceId: source } = relationCommon;
         const { nodes: spawnNodes, edges: spawnEdges } =
-          processChoreographyGraph(role, graph);
+          processChoreographyGraph(role, graph, ++graphId);
 
+        const subId = `s${subprocessId++}-${graphId}`;
+        const childrenLength = processChoregraphyGraphChildren(graph);
         const subprocess: Node = {
-          id: triggerId,
+          id: subId,
           position: { x: 0, y: 0 },
+          width: childrenLength * 150,
+          height: childrenLength * 150,
           type: "subprocess",
           parentId: "",
           data: {
-            label: triggerId,
+            label: subId,
             marking: {
               included: true,
               pending: false,
             },
           },
+          zIndex: 1000,
         };
         nodes = [
           ...nodes,
           subprocess,
           ...spawnNodes.map((nd) => ({
             ...nd,
-            parentId: triggerId,
+            parentId: nd.parentId ? nd.parentId : subprocess.id,
             expandParent: true,
+            extent: "parent" as const,
           })),
         ];
         edges = [
           ...edges,
           {
-            id,
+            id: `s-${source}-${subId}`,
             source,
             target: subprocess.id,
             type: "spawn",
             data: {
               guard: "",
             },
+            zIndex: 20000,
           },
           ...spawnEdges,
         ];
@@ -431,8 +571,9 @@ function processChoreographyGraph(role: Role, graph: ChoreographyGraph) {
 
 function processChoregraphyModel(choregraphy: ChoreographyModel) {
   const { role, graph } = choregraphy;
-  const { nodes, edges } = processChoreographyGraph(role, graph);
+  const { nodes, edges } = processChoreographyGraph(role, graph, 0);
   console.log(nodes, edges);
+  return { nodes, edges };
 }
 
 const selector = (state: RFState) => ({
@@ -447,6 +588,8 @@ const selector = (state: RFState) => ({
   eventMap: state.eventMap,
   setEventMap: state.setEventMap,
   updateNodeInfo: state.updateNodeInfo,
+  projectionInfo: state.projectionInfo,
+  setProjectionInfo: state.setProjectionInfo,
 });
 
 /**
@@ -472,20 +615,20 @@ export default function CodeMenu() {
   const {
     nodes,
     edges,
-    setNodes,
-    setEdges,
     rolesParticipants,
     security,
     code,
     setCode,
     setEventMap,
+    projectionInfo,
+    setProjectionInfo,
   } = useStore(selector, shallow);
 
   const compileCode = () => {
     if (code) {
       let projections: ChoreographyModel[] = [];
       const fetchFun = async () => {
-        fetch("http://localhost:8080/code", {
+        fetch("/api/code", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -499,13 +642,15 @@ export default function CodeMenu() {
 
         await delay(1000);
 
-        const response = await fetch("http://localhost:8080/projections");
+        const response = await fetch("/api/projections");
         projections = await response.json();
 
-        let nodes: Node[] = [];
-        let edges: Edge[] = [];
-
-        projections.forEach((proj) => processChoregraphyModel(proj));
+        projections.forEach((proj) => {
+          if (proj.graph.events && proj.graph.relations) {
+            const result = processChoregraphyModel(proj);
+            setProjectionInfo(proj.role.label, result);
+          }
+        });
       };
       fetchFun();
     }
@@ -535,13 +680,12 @@ export default function CodeMenu() {
 
   return (
     <div
-      className="w-[calc(100%-4px)] overflow-y-auto p-2 flex flex-col items-center justify-center gap-2"
+      className="w-[calc(100%-4px)] overflow-y-auto p-2 flex flex-col items-center justify-center gap-2 select-none"
       style={{ height: "calc(100vh - 50px)" }}
     >
       <label className="text-lg font-bold">Code</label>
       <Editor
         className="w-full h-[500px]"
-        defaultLanguage="python"
         value={code}
         options={{
           minimap: { enabled: false },
@@ -564,6 +708,7 @@ export default function CodeMenu() {
             );
             setEventMap(eventMap);
             setCode(code);
+            visualGen(code);
           }}
         >
           Generate Code

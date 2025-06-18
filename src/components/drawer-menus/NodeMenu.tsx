@@ -67,7 +67,6 @@ const NodeMenu = ({ node }: { node: Node }) => {
   });
 
   const newData = {
-    ...data,
     initiators,
     receivers,
     type,
@@ -79,7 +78,7 @@ const NodeMenu = ({ node }: { node: Node }) => {
   };
 
   return (
-    <div className="flex flex-col mr-4 gap-1 h-[94vh] w-[calc(100%-6px)] overflow-y-auto">
+    <div className="flex flex-col mr-4 gap-1 h-[94vh] w-[calc(100%-6px)] overflow-y-auto select-none">
       {/* NODE WITH RESPECTIVE ID */}
       <div className="flex items-center gap-5 p-4 border-b-2 border-[#CCCCCC]">
         <SquareMousePointer size={40} />

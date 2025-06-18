@@ -24,7 +24,7 @@ export const NestModel = ({
 }) => {
   return (
     <div
-      className="h-[100px] w-[100px] border-black border-1 border-dashed"
+      className="h-[100px] w-[100px] border-black border-1 border-dashed select-none"
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       draggable

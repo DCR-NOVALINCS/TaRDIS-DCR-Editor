@@ -17,6 +17,7 @@ export const IncludeModel = () => {
         fontSize="14px"
         fontWeight="bold"
         fill={INCLUDE_COLOR}
+        className="select-none"
       >
         +
       </text>

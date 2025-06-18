@@ -5,8 +5,11 @@ import { shallow } from "zustand/shallow";
 
 import { Workflow } from "lucide-react";
 import { FieldType, simpleInputTypes } from "@/lib/codegen";
+import { delay } from "@/lib/utils";
 
 const selector = (state: RFState) => ({
+  nodes: state.nodes,
+  edges: state.edges,
   getChoreographyInfo: state.getChoreographyInfo,
   security: state.security,
   setSecurity: state.setSecurity,
@@ -14,6 +17,12 @@ const selector = (state: RFState) => ({
   removeRole: state.removeRole,
   documentation: state.documentation,
   addDocumentation: state.addDocumentation,
+  setNodes: state.setNodes,
+  setEdges: state.setEdges,
+  projectionInfo: state.projectionInfo,
+  setProjectionInfo: state.setProjectionInfo,
+  currentProjection: state.currentProjection,
+  setCurrentProjection: state.setCurrentProjection,
 });
 
 /**
@@ -32,6 +41,8 @@ const selector = (state: RFState) => ({
  */
 export default function ChoreographyMenu() {
   const {
+    nodes,
+    edges,
     getChoreographyInfo,
     security,
     setSecurity,
@@ -39,10 +50,42 @@ export default function ChoreographyMenu() {
     removeRole,
     documentation,
     addDocumentation,
+    setNodes,
+    setEdges,
+    projectionInfo,
+    setProjectionInfo,
+    currentProjection,
+    setCurrentProjection,
   } = useStore(selector, shallow);
 
   const { nodesCount, roles } = getChoreographyInfo();
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
+
+  const changeNodes = async (previous: string, role: string) => {
+    setProjectionInfo(previous, { nodes, edges });
+
+    await delay(10);
+
+    const projection = projectionInfo.get(role);
+    if (projection) {
+      setCurrentProjection(role);
+      setNodes(projection.nodes);
+      setEdges(projection.edges);
+    }
+  };
+
+  const setBackToGlobal = async (previous: string) => {
+    setProjectionInfo(previous, { nodes, edges });
+
+    await delay(10);
+
+    const projection = projectionInfo.get("global");
+    if (projection) {
+      setCurrentProjection("");
+      setNodes(projection.nodes);
+      setEdges(projection.edges);
+    }
+  };
 
   /**
    * RoleMenu is a React functional component that provides a user interface for managing roles within a choreography editor.
@@ -74,11 +117,11 @@ export default function ChoreographyMenu() {
       var: "",
       type: simpleInputTypes[0],
     });
-    const [roleRemove, setRoleRemove] = useState(roles[0]);
+    const [roleRemove, setRoleRemove] = useState(roles[0].role);
 
     return (
       <>
-        <div className="grid grid-cols-3 gap-2 p-3 border-t-2 border-[#CCCCCC] items-center h-full">
+        <div className="grid grid-cols-3 gap-2 p-3 border-t-2 border-[#CCCCCC] items-center h-full select-none">
           <label className="py-1 col-span-3 flex justify-center font-bold">
             Adding a Role
           </label>
@@ -187,7 +230,7 @@ export default function ChoreographyMenu() {
             Add Role
           </button>
         </div>
-        <div className="grid grid-cols-3 gap-2 py-1 border-[#CCCCCC]">
+        <div className="grid grid-cols-3 gap-2 px-3 border-[#CCCCCC] items-center h-full select-none">
           <label className="py-1 col-span-3 flex justify-center font-bold">
             Removing a Role
           </label>
@@ -197,8 +240,8 @@ export default function ChoreographyMenu() {
             onChange={(event) => setRoleRemove(event.target.value)}
           >
             {roles.map((role, index) => (
-              <option key={index} value={role}>
-                {role}
+              <option key={index} value={role.role}>
+                {role.role}
               </option>
             ))}
           </select>
@@ -406,17 +449,20 @@ export default function ChoreographyMenu() {
   */
   }
 
+  const rolesFiltered = roles.filter(
+    (role) => role.label !== currentProjection
+  );
   return (
     <div className="flex flex-col mr-4 w-[calc(100%-6px)] h-[95vh]">
       {/* CURRENT CHOREOGRAPHY */}
-      <div className="flex items-center gap-5 p-4 border-b-2 border-[#CCCCCC]">
+      <div className="flex select-none items-center gap-5 p-4 border-b-2 border-[#CCCCCC]">
         <Workflow size={40} />
         Choreography
       </div>
 
       {/* DOCUMENTATION OF CHOREOGRAPHY */}
       <div className="flex flex-col p-3 gap-2 border-b-2 border-[#CCCCCC] ">
-        <div className="font-bold text-[16px]">Documentation</div>
+        <div className="font-bold text-[16px] select-none">Documentation</div>
         <textarea
           className="bg-white rounded-sm min-h-16 max-h-64 p-1 h-16 text-[14px]"
           value={documentation.get("global")}
@@ -425,41 +471,96 @@ export default function ChoreographyMenu() {
       </div>
 
       {/* CHOREOGRAPHY INFO */}
-      <div className="flex flex-col gap-3 overflow-y-auto h-full">
-        <div className="p-3 flex flex-col gap-3">
-          <p>Currently, the system has {nodesCount} events.</p>
-          <p>
-            There{" "}
-            {roles.length === 1
-              ? "is only " + roles.length + " role"
-              : "are " + roles.length + " roles"}{" "}
-            in the system:
-            {roles.map((role, index) => (
-              <li key={index} className="font-bold italic">
-                {role}
-              </li>
-            ))}
-          </p>
-          <div className="flex flex-col items-center gap-2">
-            <label className="font-bold">Security</label>
-            <textarea
-              className="bg-white rounded-sm min-h-24 max-h-64 px-1 w-full font-mono"
-              value={security}
-              onChange={(event) => {
-                setSecurity(event.target.value);
-              }}
-            />
-          </div>
+      {currentProjection ? (
+        <div className="flex flex-col gap-3 overflow-y-auto h-full">
+          <div className="p-3 flex flex-col gap-3 select-none">
+            <p>Currently representing the {currentProjection} projection.</p>
+            <p>
+              There{" "}
+              {rolesFiltered.length === 1
+                ? "is only 1 more role"
+                : "are " + rolesFiltered.length + " more roles"}{" "}
+              in the system:
+              {rolesFiltered.map((role, index) => {
+                const projection = projectionInfo.get(role.label);
 
-          <div className="flex gap-2 justify-end w-full">
-            <button
-              onClick={() => setRoleMenuOpen(!roleMenuOpen)}
-              className="bg-black h-8 w-full rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
+                return projection ? (
+                  <li
+                    key={index}
+                    className="font-bold italic cursor-pointer select-none hover:underline hover:opacity-75"
+                    onClick={() => changeNodes(currentProjection, role.label)}
+                  >
+                    {role.role}
+                  </li>
+                ) : (
+                  <li key={index} className="font-bold italic">
+                    {role.role}
+                  </li>
+                );
+              })}
+            </p>
+            <p
+              className="font-bold cursor-pointer hover:underline select-none hover:opacity-75"
+              onClick={() => setBackToGlobal(currentProjection)}
             >
-              Roles
-            </button>
+              See global projection.
+            </p>
           </div>
-          {/*
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3 overflow-y-auto h-full">
+          <div className="p-3 flex flex-col gap-3 select-none">
+            <p>Currently, the system has {nodesCount} events.</p>
+            <p>
+              There{" "}
+              {roles.length === 1
+                ? "is only " + roles.length + " role"
+                : "are " + roles.length + " roles"}{" "}
+              in the system:
+              {roles.map((role, index) => {
+                const projection = projectionInfo.get(role.label);
+
+                return projection ? (
+                  <li
+                    key={index}
+                    className="font-bold italic cursor-pointer hover:underline hover:opacity-75 select-none"
+                    draggable={false}
+                    onClick={() =>
+                      changeNodes(
+                        currentProjection ? currentProjection : "global",
+                        role.label
+                      )
+                    }
+                  >
+                    {role.role}
+                  </li>
+                ) : (
+                  <li key={index} className="font-bold italic select-none">
+                    {role.role}
+                  </li>
+                );
+              })}
+            </p>
+            <div className="flex flex-col items-center gap-2">
+              <label className="font-bold select-none">Security</label>
+              <textarea
+                className="bg-white rounded-sm min-h-24 max-h-64 px-1 w-full font-mono"
+                value={security}
+                onChange={(event) => {
+                  setSecurity(event.target.value);
+                }}
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end w-full">
+              <button
+                onClick={() => setRoleMenuOpen(!roleMenuOpen)}
+                className="bg-black h-8 w-full rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
+              >
+                Roles
+              </button>
+            </div>
+            {/*
           <button
             onClick={() => {
               setParticipantMenuOpen(!participantMenuOpen);
@@ -470,10 +571,11 @@ export default function ChoreographyMenu() {
             Participants
           </button>
           */}
+          </div>
+          {/* ROLE MENU */}
+          {roleMenuOpen && <RoleMenu />}
         </div>
-        {/* ROLE MENU */}
-        {roleMenuOpen && <RoleMenu />}
-      </div>
+      )}
 
       {/* PARTICIPANT MENU 
       {participantMenuOpen && <ParticipantMenu />}
