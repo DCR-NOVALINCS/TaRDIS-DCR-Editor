@@ -53,6 +53,7 @@ export type RolesState = {
   rolesParticipants: Role[];
   addRole(role: SimpleRole): void;
   removeRole(role: string): void;
+  setRoles(roles: Role[]): void;
 
   /* --------- PARTICIPANT OPERATIONS -------- */
   addParticipant(participant: Participant): void;
@@ -97,6 +98,11 @@ const rolesStateSlice: StateCreator<RFState, [], [], RolesState> = (
       rolesParticipants: get().rolesParticipants.filter(
         (rl) => rl.role !== role
       ),
+    });
+  },
+  setRoles(roles: Role[]) {
+    set({
+      rolesParticipants: roles,
     });
   },
   /* ----------------------------------------- */

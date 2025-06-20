@@ -318,16 +318,13 @@ function cleanCode(code: string): string {
 export function visualGen(code: string) {
   let result = untilRegex(cleanCode(code), ";");
   const roles: Role[] = result.part.map((role) => genRole(role));
-  console.log(roles);
 
   result = untilRegex(result.code, ";");
   const security = result.part.join("\n");
-  console.log(security);
 
   nodeId = 0;
   subId = 0;
   const { nodes, edges } = genGraph(result.code);
-  console.log(nodes, edges);
 
-  return { nodes, edges };
+  return { roles, security, nodes, edges };
 }

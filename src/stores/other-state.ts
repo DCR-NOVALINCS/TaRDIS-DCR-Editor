@@ -129,6 +129,7 @@ export type OtherState = {
   /* -------------- PROJECTIONS -------------- */
   projectionInfo: Map<string, ProjectionInfo>;
   setProjectionInfo(id: string, projectionInfo: ProjectionInfo): void;
+  clearProjections(): void;
   currentProjection: string;
   setCurrentProjection(id: string): void;
   /* ----------------------------------------- */
@@ -262,6 +263,16 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
     let newProjectionInfo = get().projectionInfo;
     if (newProjectionInfo.has(id)) newProjectionInfo.delete(id);
     newProjectionInfo.set(id, projectionInfo);
+    set({
+      projectionInfo: newProjectionInfo,
+    });
+  },
+  clearProjections() {
+    let newProjectionInfo = get().projectionInfo;
+    get().projectionInfo.forEach((v, k) => {
+      if (newProjectionInfo.has(k) && k !== "global")
+        newProjectionInfo.delete(k);
+    });
     set({
       projectionInfo: newProjectionInfo,
     });

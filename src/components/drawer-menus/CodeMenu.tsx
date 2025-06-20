@@ -589,6 +589,9 @@ const selector = (state: RFState) => ({
   updateNodeInfo: state.updateNodeInfo,
   projectionInfo: state.projectionInfo,
   setProjectionInfo: state.setProjectionInfo,
+  clearProjections: state.clearProjections,
+  setSecurity: state.setSecurity,
+  setRoles: state.setRoles,
 });
 
 /**
@@ -621,8 +624,10 @@ export default function CodeMenu() {
     code,
     setCode,
     setEventMap,
-    projectionInfo,
     setProjectionInfo,
+    clearProjections,
+    setSecurity,
+    setRoles,
   } = useStore(selector, shallow);
 
   const compileCode = () => {
@@ -641,6 +646,7 @@ export default function CodeMenu() {
           .then((res) => res.text())
           .then((data) => console.log(data));
 
+        clearProjections();
         await delay(1000);
 
         const response = await fetch("/api/projections");
@@ -735,10 +741,17 @@ export default function CodeMenu() {
           className="bg-black h-8 w-full rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
           onClick={() => {
             if (code) {
-              const { nodes: newNodes, edges: newEdges } = visualGen(code);
+              const {
+                roles,
+                security,
+                nodes: newNodes,
+                edges: newEdges,
+              } = visualGen(code);
               const { nodes: layoutedNodes, edges: layoutedEdges } =
                 getLayoutedElements(newNodes, newEdges);
 
+              setRoles(roles);
+              setSecurity(security);
               setNodes(layoutedNodes);
               setEdges(layoutedEdges);
             }
