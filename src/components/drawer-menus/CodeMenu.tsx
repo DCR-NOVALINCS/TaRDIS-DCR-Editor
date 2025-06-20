@@ -3,10 +3,9 @@ import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
 
 import Editor from "@monaco-editor/react";
-import { delay } from "@/lib/utils";
+import { delay, getLayoutedElements } from "@/lib/utils";
 
 import { Edge, Node } from "@xyflow/react";
-import { stringify } from "querystring";
 import { visualGen } from "@/lib/visualgen";
 
 type BasicType = "array" | "int" | "string" | "bool" | "void" | "float";
@@ -615,6 +614,8 @@ export default function CodeMenu() {
   const {
     nodes,
     edges,
+    setNodes,
+    setEdges,
     rolesParticipants,
     security,
     code,
@@ -648,7 +649,11 @@ export default function CodeMenu() {
         projections.forEach((proj) => {
           if (proj.graph.events && proj.graph.relations) {
             const result = processChoregraphyModel(proj);
-            setProjectionInfo(proj.role.label, result);
+            const layoutedResult = getLayoutedElements(
+              result.nodes,
+              result.edges
+            );
+            setProjectionInfo(proj.role.label, layoutedResult);
           }
         });
       };
@@ -683,9 +688,8 @@ export default function CodeMenu() {
       className="w-[calc(100%-4px)] overflow-y-auto p-2 flex flex-col items-center justify-center gap-2 select-none"
       style={{ height: "calc(100vh - 50px)" }}
     >
-      <label className="text-lg font-bold">Code</label>
       <Editor
-        className="w-full h-[500px]"
+        className="w-full h-[520px]"
         value={code}
         options={{
           minimap: { enabled: false },
@@ -700,15 +704,14 @@ export default function CodeMenu() {
         <button
           className="bg-black h-8 w-full rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
           onClick={() => {
-            const { eventMap, code } = writeCode(
+            const { eventMap, code: newCode } = writeCode(
               nodes,
               edges,
               rolesParticipants,
               security
             );
             setEventMap(eventMap);
-            setCode(code);
-            visualGen(code);
+            setCode(newCode);
           }}
         >
           Generate Code
@@ -719,21 +722,7 @@ export default function CodeMenu() {
         >
           Compile
         </button>
-        {/*
-        <button
-          className="bg-black h-8 w-full rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
-          onClick={() => {
-            if (code) {
-              const events = modifyRepresentation(code, eventMap);
-              events.forEach((ev, id) => {
-                updateNodeInfo(id, ev);
-              });
-            }
-          }}
-        >
-          Save Changes
-        </button>
-        */}
+
         <button
           className="bg-black h-8 w-full rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
           onClick={() => {
@@ -741,6 +730,21 @@ export default function CodeMenu() {
           }}
         >
           Download Code
+        </button>
+        <button
+          className="bg-black h-8 w-full rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
+          onClick={() => {
+            if (code) {
+              const { nodes: newNodes, edges: newEdges } = visualGen(code);
+              const { nodes: layoutedNodes, edges: layoutedEdges } =
+                getLayoutedElements(newNodes, newEdges);
+
+              setNodes(layoutedNodes);
+              setEdges(layoutedEdges);
+            }
+          }}
+        >
+          Generate Graph
         </button>
       </div>
     </div>

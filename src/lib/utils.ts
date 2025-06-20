@@ -1,7 +1,9 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
-import { Node, Position } from "@xyflow/react";
+import { Node, Position, Edge } from "@xyflow/react";
+
+import dagre from "dagre";
 
 /**
  * Combines multiple class name values into a single string, filtering out falsy values,
@@ -133,27 +135,41 @@ export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * Splits an array of strings into subarrays using a specified delimiter string.
- *
- * Iterates through the input array and creates a new subarray each time the delimiter string is encountered.
- * The delimiter itself is not included in the resulting subarrays.
- *
- * @param array - The array of strings to be split.
- * @param regex - The delimiter string used to split the array.
- * @returns An array of string arrays, where each subarray contains the elements between delimiters.
- */
-export function splitArray(array: string[], regex: string): string[][] {
-  let stringStringArr: string[][] = [];
-  let stringArr: string[] = [];
-  array.forEach((str) => {
-    if (str === regex) {
-      stringStringArr.push(stringArr);
-      stringArr = [];
-    } else stringArr.push(str);
+export function getLayoutedElements(
+  nodes: Node[],
+  edges: Edge[],
+  direction: "TB" | "LR" = "LR"
+) {
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+  dagreGraph.setGraph({ rankdir: direction });
+
+  nodes.forEach((node) => {
+    dagreGraph.setNode(node.id, {
+      width: node.width ? node.width : 100,
+      height: node.height ? node.height : 100,
+    });
   });
 
-  if (stringArr.length > 0) stringStringArr.push(stringArr);
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
 
-  return stringStringArr;
+  dagre.layout(dagreGraph);
+
+  const layoutedNodes = nodes.map((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id);
+    const width = node.width ? node.width / 2 : 50;
+    const height = node.height ? node.height / 2 : 50;
+    return {
+      ...node,
+      position: {
+        x: nodeWithPosition.x - width,
+        y: nodeWithPosition.y - height,
+      },
+    };
+  });
+
+  return { nodes: layoutedNodes, edges };
 }

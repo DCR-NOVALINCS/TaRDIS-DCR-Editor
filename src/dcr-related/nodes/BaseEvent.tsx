@@ -90,7 +90,11 @@ export default function BaseEvent({ id, data, ...props }: NodeProps) {
     simulationFlow && executable ? "border-[#00FF00]" : "border-[#CCCCCC]";
 
   const initiatorsJoined = initiators.join(", ");
-  const receiversJoined = receivers.join(", ");
+  const receiversJoined = receivers ? receivers.join(", ") : "";
+
+  const labelName = label + ": " + name;
+  const fixedLabelName =
+    labelName.length > 20 ? labelName.slice(0, 19) + "..." : labelName;
 
   return (
     <>
@@ -112,21 +116,13 @@ export default function BaseEvent({ id, data, ...props }: NodeProps) {
         <div
           className={`absolute flex ${
             receiversJoined
-              ? "h-[calc(100%-50px)] gap-1 bottom-[25px]"
+              ? "h-[calc(100%-50px)] gap-[0.5px] bottom-[25px]"
               : "h-[calc(100%-25px)] gap-3 bottom-0"
           } w-full right-0 flex-col`}
         >
           {/* EVENT TYPE */}
-          {receiversJoined ? (
-            <div className="flex justify-between px-[2px]">
-              <div className="">{type as string}</div>
-              <div className="">
-                {interactionType ? interactionType : "rxtx"}
-              </div>
-            </div>
-          ) : (
-            <div className="px-[2px]">{type as string}</div>
-          )}
+
+          <div className="px-[2px] ">{type as string}</div>
 
           {/* EVENT PENDING STATE */}
           <div className="absolute px-[4px] right-0 items-center flex gap-1">
@@ -137,7 +133,12 @@ export default function BaseEvent({ id, data, ...props }: NodeProps) {
           </div>
 
           {/* EVENT LABEL PLUS NAME */}
-          <div className="text-center">{label + ": " + name}</div>
+          <div className="text-center">{fixedLabelName}</div>
+          {receiversJoined && (
+            <div className="absolute bottom-[0.5px] right-1">
+              {interactionType ? interactionType : "rxtx"}
+            </div>
+          )}
         </div>
 
         {/* RECEIVERS */}
