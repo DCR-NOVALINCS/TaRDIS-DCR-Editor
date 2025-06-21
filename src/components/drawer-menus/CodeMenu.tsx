@@ -22,6 +22,7 @@ const selector = (state: RFState) => ({
   clearProjections: state.clearProjections,
   setSecurity: state.setSecurity,
   setRoles: state.setRoles,
+  changeNodes: state.changeNodes,
 });
 
 /**
@@ -57,6 +58,7 @@ export default function CodeMenu() {
     clearProjections,
     setSecurity,
     setRoles,
+    changeNodes,
   } = useStore(selector, shallow);
 
   const generateGraph = () => {
@@ -70,10 +72,21 @@ export default function CodeMenu() {
       const { nodes: layoutedNodes, edges: layoutedEdges } =
         getLayoutedElements(newNodes, newEdges);
 
-      setRoles(roles);
-      setSecurity(security);
-      setNodes(layoutedNodes);
-      setEdges(layoutedEdges);
+      const changes = async () => {
+        changeNodes();
+
+        await delay(20);
+
+        clearProjections();
+
+        await delay(10);
+
+        setRoles(roles);
+        setSecurity(security);
+        setNodes(layoutedNodes);
+        setEdges(layoutedEdges);
+      };
+      changes();
     }
   };
 

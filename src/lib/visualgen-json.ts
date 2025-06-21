@@ -184,9 +184,12 @@ function processInitRecv(
       insCons.forEach((cons) => {
         const consSplitted = cons.split(" ");
         if (consSplitted[0].includes(param.name)) {
-          if (consSplitted[1] === "==")
-            part = `${param.name}=${hasParam.get(consSplitted[2])}`;
-          else {
+          if (consSplitted[1] === "==") {
+            const paramMap = hasParam.get(consSplitted[2]);
+            part = paramMap
+              ? `${param.name}=${hasParam.get(consSplitted[2])}`
+              : `${param.name}=${consSplitted[2]}`;
+          } else {
             const hasParamRes = hasParam.get(param.name);
             part = hasParamRes ? hasParamRes : "";
           }

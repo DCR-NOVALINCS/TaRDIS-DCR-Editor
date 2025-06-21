@@ -121,7 +121,7 @@ export type NodesState = {
   setSubgraphType(type: string): void;
 
   /* ------------- FLOW RELATED -------------- */
-  changeNodes(previous: string, role?: string): Promise<void>;
+  changeNodes(previous?: string, role?: string): Promise<void>;
   onNodesChange: OnNodesChange;
   onNodesDelete: OnNodesDelete;
   onNodeClick(event: any, node: Node): void;
@@ -423,10 +423,12 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
   /* ----------------------------------------- */
 
   /* ------------- FLOW RELATED -------------- */
-  async changeNodes(previous: string, role?: string) {
-    const nodes = get().nodes;
-    const edges = get().edges;
-    get().setProjectionInfo(previous, { nodes, edges });
+  async changeNodes(previous?: string, role?: string) {
+    if (previous) {
+      const nodes = get().nodes;
+      const edges = get().edges;
+      get().setProjectionInfo(previous, { nodes, edges });
+    }
 
     await delay(10);
 

@@ -14,7 +14,7 @@ app.post("/code", (req, res) => {
   const { code } = req.body;
   fs.writeFileSync("regrada", code);
   exec("type regrada | node main_js.bc.js", (error, stdout, sterr) => {
-    console.log(stdout, error, sterr);
+    console.log(error, sterr);
     res.send(
       `CODE:\n\n${code}\n\n--------------------------------------------------------------\n\nOUTPUT:\n\n${stdout}`
     );
@@ -37,4 +37,8 @@ app.get("/projections", (req, res) => {
 
     res.json(jsonArray);
   });
+});
+
+app.listen(port, () => {
+  console.log(`Backend running at http://localhost:${port}`);
 });

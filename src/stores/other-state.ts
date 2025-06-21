@@ -237,8 +237,7 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
   clearProjections() {
     let newProjectionInfo = get().projectionInfo;
     get().projectionInfo.forEach((_, k) => {
-      if (newProjectionInfo.has(k) && k !== "global")
-        newProjectionInfo.delete(k);
+      if (newProjectionInfo.has(k)) newProjectionInfo.delete(k);
     });
     set({
       projectionInfo: newProjectionInfo,
