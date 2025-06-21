@@ -135,6 +135,10 @@ export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export function nextChar(c: string): string {
+  return String.fromCharCode(c.charCodeAt(0) + 1);
+}
+
 export function getLayoutedElements(
   nodes: Node[],
   edges: Edge[],

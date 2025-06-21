@@ -7,7 +7,6 @@ import { toPng } from "html-to-image";
 
 const selector = (state: RFState) => ({
   nodes: state.nodes,
-  edges: state.edges,
 });
 
 /**

@@ -1,11 +1,9 @@
 import { Parameter, Role } from "@/stores/roles-state";
 import { Edge, Node } from "@xyflow/react";
-import { FieldType, InputType, MarkingType } from "./codegen";
+import { eventRegex, FieldType, InputType, MarkingType } from "./types";
 
 let nodeId = 0;
 let subId = 0;
-
-const eventRegex = /\(([^)]+)\) \(([^)]+)\) \[([^\]]+)\] \[([^\]]+)\]/;
 
 function untilRegex(
   code: string,
@@ -150,14 +148,14 @@ function genGraph(
           ...(expression && { expression }),
           security: ifc,
         },
-        ...(parentId && { parentId, expandParent: true, extent: "parent" }),
+        ...(parentId
+          ? { parentId, expandParent: true, extent: "parent" }
+          : { parentId: "" }),
         position: { x: 0, y: 0 },
         zIndex: 10000,
       });
     }
   });
-
-  console.log(nodes);
 
   let edges: Edge[] = eds ? eds : [];
   let str = result.code.replace(/[\r\t]/g, "").split("\n");
@@ -195,7 +193,9 @@ function genGraph(
           width: 200,
           height: 200,
           type: "subprocess",
-          ...(parentId && { parentId, expandParent: true, extent: "parent" }),
+          ...(parentId
+            ? { parentId, expandParent: true, extent: "parent" }
+            : { parentId: "" }),
           data: {
             label: subprocessId,
             marking: {

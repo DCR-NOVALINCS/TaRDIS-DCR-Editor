@@ -3,8 +3,6 @@ import { type Node, type Edge, isNode } from "@xyflow/react";
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
 
-import { useState } from "react";
-
 import { ChevronRight } from "lucide-react";
 
 import { motion, AnimatePresence } from "framer-motion";

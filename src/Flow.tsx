@@ -51,12 +51,9 @@ const selector = (state: RFState) => ({
   nextGroupId: state.nextGroupId,
   nextSubprocessId: state.nextSubprocessId,
   setIds: state.setIds,
-  log: state.log,
   simulationFlow: state.simulationFlow,
   setNodes: state.setNodes,
   addNode: state.addNode,
-  updateNode: state.updateNode,
-  getNode: state.getNode,
   setEdges: state.setEdges,
   setSimulationFlow: state.setSimulationFlow,
   onNodesChange: state.onNodesChange,
@@ -67,14 +64,12 @@ const selector = (state: RFState) => ({
   onNodesDelete: state.onNodesDelete,
   onEdgesChange: state.onEdgesChange,
   onEdgeClick: state.onEdgeClick,
+  onEdgeDoubleClick: state.onEdgeDoubleClick,
   onDragOver: state.onDragOver,
   onDrop: state.onDrop,
   onConnect: state.onConnect,
   onPaneClick: state.onPaneClick,
-  setSelectedElement: state.setSelectedElement,
   onEdgesDelete: state.onEdgesDelete,
-  projectionInfo: state.projectionInfo,
-  currentProjection: state.currentProjection,
 });
 
 const nodeOrigin: NodeOrigin = [0.5, 0.5];
@@ -119,13 +114,12 @@ function FlowWithoutProvider() {
     onNodesDelete,
     onEdgesChange,
     onEdgeClick,
+    onEdgeDoubleClick,
     onDragOver,
     onDrop,
     onConnect,
     onPaneClick,
     onEdgesDelete,
-    projectionInfo,
-    currentProjection,
   } = useStore(selector, shallow);
 
   const flowRef = useRef<HTMLDivElement>(null);
@@ -267,6 +261,7 @@ function FlowWithoutProvider() {
     onNodesDelete,
     onEdgesChange,
     onEdgeClick,
+    onEdgeDoubleClick,
     onEdgesDelete,
     onDragOver,
     onDrop: (event: any) => onDrop(event, screenToFlowPosition),
@@ -301,64 +296,58 @@ function FlowWithoutProvider() {
   const KeyPressListener = () => {
     useEffect(() => {
       const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.ctrlKey && event.key.toLowerCase() === "s") {
-          event.preventDefault();
-          setHistory((prev) => ({
-            nodes,
-            edges,
-            nextNodeId,
-            nextGroupId,
-            nextSubprocessId,
-            history: prev,
-          }));
-        }
-
-        if (event.ctrlKey && event.key.toLowerCase() === "c") {
-          event.preventDefault();
-          setToCopyNodes(nodes.filter((nd) => nd.selected));
-        }
-
-        if (event.ctrlKey && event.key.toLowerCase() === "v") {
-          event.preventDefault();
-          toCopyNodes.forEach((nd) => {
-            const { parentId, expandParent, extent, ...rest } = nd;
-            addNode({
-              ...rest,
-              id: "",
-              selected: true,
-              data: {
-                ...nd.data,
-                label: "",
-              },
-              position: { x: nd.position.x + 10, y: nd.position.y + 10 },
-              parentId: "",
-            });
-          });
-        }
-
-        if (event.ctrlKey && event.key.toLowerCase() === "z") {
-          event.preventDefault();
-          setNodes([]);
+        event.preventDefault();
+        if (event.ctrlKey) {
+          switch (event.key.toLowerCase()) {
+            case "s":
+              setHistory((prev) => ({
+                nodes,
+                edges,
+                nextNodeId,
+                nextGroupId,
+                nextSubprocessId,
+                history: prev,
+              }));
+              break;
+            case "c":
+              setToCopyNodes(nodes.filter((nd) => nd.selected));
+              break;
+            case "v":
+              toCopyNodes.forEach((nd) => {
+                addNode({
+                  ...nd,
+                  id: "",
+                  data: {
+                    ...nd.data,
+                    label: "",
+                  },
+                  position: { x: nd.position.x + 10, y: nd.position.y + 10 },
+                });
+              });
+              break;
+            case "z":
+              setNodes([]);
+              break;
+          }
         }
       };
 
       const handleKeyUp = (event: KeyboardEvent) => {
-        if (event.ctrlKey && event.key.toLowerCase() === "z") {
-          event.preventDefault();
-          setNodes(history.nodes);
-          setEdges(history.edges);
-          setIds(
-            history.nextNodeId,
-            history.nextGroupId,
-            history.nextSubprocessId
-          );
-          if (history.history) {
-            setHistory(history.history);
-          }
-        }
+        event.preventDefault();
 
-        if (event.ctrlKey && event.key.toLowerCase() === "v") {
-          event.preventDefault();
+        if (event.ctrlKey) {
+          switch (event.key.toLowerCase()) {
+            case "z":
+              setNodes(history.nodes);
+              setEdges(history.edges);
+              setIds(
+                history.nextNodeId,
+                history.nextGroupId,
+                history.nextSubprocessId
+              );
+              if (history.history) setHistory(history.history);
+              break;
+          }
         }
       };
 
@@ -384,6 +373,7 @@ function FlowWithoutProvider() {
       onPaneMouseLeave={() => {
         setKeyPressOn(false);
       }}
+      className="select-none"
     >
       {keyPressOn && <KeyPressListener />}
       <Controls showInteractive={false} />

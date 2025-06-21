@@ -1,71 +1,13 @@
 import { Role } from "@/stores/roles-state";
 import { Node, Edge } from "@xyflow/react";
-import { splitArray } from "./utils";
-
-export const simpleInputTypes = ["Integer", "String", "Boolean"];
-export const inputTypes = [...simpleInputTypes, "Record", "Unit"]; // "Reference" type not considered yet
-
-const relationsMap: { [rel: string]: string } = {
-  condition: "-->*",
-  response: "*-->",
-  include: "-->+",
-  exclude: "-->%",
-  milestone: "--<>",
-  spawn: "-->>",
-};
-
-export type FieldType = { var: string; type: string };
-
-export type InputType =
-  | { type: string }
-  | { type: "Record"; record: FieldType[] };
-
-export type MarkingType = {
-  included: boolean;
-  pending: boolean;
-};
-
-export type EventType = {
-  id: string;
-  label: string;
-  name: string;
-  security: string;
-  input?: InputType;
-  expression?: string;
-  initiators: string[];
-  receivers?: string[];
-  marking: MarkingType;
-  parent?: string;
-};
-
-export type SubprocessType = {
-  id: string;
-  label: string;
-  children: string[];
-  marking: MarkingType;
-  parent?: string;
-};
-
-export type NestType = SubprocessType & {
-  nestType: string;
-};
-
-export interface RelationType {
-  id: string;
-  source: string;
-  target: string;
-  type: string;
-  parent?: string;
-  guard?: string;
-}
-
-interface Process {
-  events: EventType[];
-  relations: RelationType[];
-  nests?: NestType[];
-  subprocesses?: SubprocessType[];
-  parentProcess: string;
-}
+import {
+  type EventType,
+  type NestType,
+  type SubprocessType,
+  Process,
+  relationsMap,
+  RelationType,
+} from "./types";
 
 /**
  * Extracts and organizes process-related data from provided nodes and edges.
@@ -253,18 +195,15 @@ function extractData(nodes: Node[], edges: Edge[]) {
  * @param edges - The list of edges representing relations between nodes.
  * @param roles - The list of roles, each with associated types, to be serialized.
  * @param lattice - The security lattice definition as a string.
- * @returns An object containing:
- *   - `eventMap`: A mapping from event IDs to their string representations.
- *   - `code`: The generated code as a string.
+ * @returns The generated code as a string.
  */
 export function writeCode(
   nodes: Node[],
   edges: Edge[],
   roles: Role[],
   lattice: string
-): { eventMap: Map<string, string>; code: string } {
+): string {
   const parentProcess = extractData(nodes, edges);
-  let eventMap = new Map<string, string>();
   let content: string[] = [];
 
   function writeProcess(process: Process, numTabs: number): string[] {
@@ -297,7 +236,6 @@ export function writeCode(
         e.receivers ? ` -> ${e.receivers.join(", ")}]` : "]"
       }`;
 
-      eventMap.set(e.id, eventContent);
       newContent.push(eventContent);
     });
     if (process.relations.length > 0) newContent.push(";");
@@ -352,5 +290,5 @@ export function writeCode(
   const globalProcess = parentProcess.get("global");
   if (globalProcess) content.push(writeProcess(globalProcess, 1).join("\n"));
 
-  return { eventMap, code: content.join(`\n`) };
+  return content.join(`\n`);
 }

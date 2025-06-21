@@ -1,23 +1,11 @@
-import { Node, Edge } from "@xyflow/react";
 import { StateCreator } from "zustand/vanilla";
 import { RFState } from "./store";
-
-interface Log {
-  time: string;
-  message: string;
-}
-
-interface ChoregraphyInfo {
-  nodesCount: number;
-  roles: { role: string; label: string }[];
-}
-
-type Element = Node | Edge | undefined;
-
-type ProjectionInfo = {
-  nodes: Node[];
-  edges: Edge[];
-};
+import {
+  ChoregraphyInfo,
+  Log,
+  type ProjectionInfo,
+  type Element,
+} from "@/lib/types";
 
 /**
  * Represents miscellaneous application state and operations, including documentation,
@@ -58,15 +46,9 @@ type ProjectionInfo = {
  * @param {string} code - The code string to set.
  * @returns {void}
  *
- * @property {Map<string, string>} eventMap - A map of event identifiers to their associated handlers or metadata.
- *
  * @method addToMap - Adds or updates a key-value pair in the event map.
  * @param {string} key - The key (typically an event ID).
  * @param {string} value - The associated value or metadata.
- * @returns {void}
- *
- * @method setEventMap - Replaces the current event map with a new one.
- * @param {Map<string, string>} eventMap - The new event map to set.
  * @returns {void}
  *
  * @property {Log[]} logs - A list of application logs for debugging or tracing.
@@ -110,9 +92,6 @@ export type OtherState = {
   /* ------------------ CODE ----------------- */
   code: string;
   setCode(code: string): void;
-  eventMap: Map<string, string>;
-  addToMap(key: string, value: string): void;
-  setEventMap(eventMap: Map<string, string>): void;
   /* ----------------------------------------- */
 
   /* ------------------ LOGS ----------------- */
@@ -134,6 +113,7 @@ export type OtherState = {
   setCurrentProjection(id: string): void;
   /* ----------------------------------------- */
 
+  /* -------------- DRAWER PROPS ------------- */
   drawerOpen: boolean;
   setDrawerOpen(open: boolean): void;
   drawerSelectedLogs: boolean;
@@ -200,19 +180,6 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
       code,
     });
   },
-  eventMap: new Map<string, string>(),
-  addToMap(key: string, value: string) {
-    let newEventMap = get().eventMap;
-    newEventMap.set(key, value);
-    set({
-      eventMap: newEventMap,
-    });
-  },
-  setEventMap(eventMap: Map<string, string>) {
-    set({
-      eventMap,
-    });
-  },
   /* ----------------------------------------- */
 
   /* ------------------ LOGS ----------------- */
@@ -269,7 +236,7 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
   },
   clearProjections() {
     let newProjectionInfo = get().projectionInfo;
-    get().projectionInfo.forEach((v, k) => {
+    get().projectionInfo.forEach((_, k) => {
       if (newProjectionInfo.has(k) && k !== "global")
         newProjectionInfo.delete(k);
     });
@@ -284,6 +251,8 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
     });
   },
   /* ----------------------------------------- */
+
+  /* -------------- DRAWER PROPS ------------- */
   drawerOpen: false,
   setDrawerOpen(open: boolean) {
     set({
@@ -308,6 +277,7 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
       drawerWidth: width,
     });
   },
+  /* ----------------------------------------- */
 });
 
 export default otherStateSlice;

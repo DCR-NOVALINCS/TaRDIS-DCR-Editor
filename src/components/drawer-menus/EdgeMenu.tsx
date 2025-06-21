@@ -8,7 +8,6 @@ import { shallow } from "zustand/shallow";
 
 const selector = (state: RFState) => ({
   updateEdge: state.updateEdge,
-  setSelectedElement: state.setSelectedElement,
   documentation: state.documentation,
   addDocumentation: state.addDocumentation,
 });
@@ -28,8 +27,10 @@ const selector = (state: RFState) => ({
  * This component assumes the presence of a global store (via `useStore`) for managing edges and their documentation.
  */
 const EdgeMenu = ({ edge }: { edge: Edge }) => {
-  const { updateEdge, setSelectedElement, documentation, addDocumentation } =
-    useStore(selector, shallow);
+  const { updateEdge, documentation, addDocumentation } = useStore(
+    selector,
+    shallow
+  );
   const { id, data } = edge as { id: string; data: Record<string, string> };
   const [guard, setGuard] = useState(data.guard);
 

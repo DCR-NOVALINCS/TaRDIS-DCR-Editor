@@ -9,13 +9,7 @@ import {
 } from "@xyflow/react";
 import { StateCreator } from "zustand/vanilla";
 import { RFState } from "./store";
-import { initialEdges } from "@/lib/types";
-
-interface TempEdge {
-  source: string;
-  target: string;
-  type: string;
-}
+import { initialEdges, TempEdge } from "@/lib/types";
 
 /**
  * Represents the state and operations related to edges within the application.
@@ -78,6 +72,7 @@ export type EdgesState = {
   onConnect: OnConnect;
   onEdgesChange: OnEdgesChange;
   onEdgeClick(event: any, edge: Edge): void;
+  onEdgeDoubleClick(event: any, edge: Edge): void;
   onEdgesDelete: OnEdgesDelete;
   /* ----------------------------------------- */
 };
@@ -201,6 +196,15 @@ const edgesStateSlice: StateCreator<RFState, [], [], EdgesState> = (
       }),
       selectedElement: edge,
     });
+  },
+  onEdgeDoubleClick(event: any, edge: Edge) {
+    event.preventDefault();
+
+    get().setSelectedElement(edge);
+    get().setDrawerSelectedLogs(false);
+    get().setDrawerSelectedCode(false);
+    get().setDrawerWidth("25%");
+    get().setDrawerOpen(true);
   },
   onEdgesDelete(deletedEdges: Edge[]) {
     get().log(

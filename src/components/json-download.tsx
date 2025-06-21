@@ -1,4 +1,3 @@
-import { delay } from "@/lib/utils";
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
 
@@ -23,7 +22,7 @@ const selector = (state: RFState) => ({
  * <JsonDownload />
  */
 export default function JsonDownload() {
-  const { nodes, edges, rolesParticipants, security, code } = useStore(
+  const { nodes, edges, rolesParticipants, security } = useStore(
     selector,
     shallow
   );

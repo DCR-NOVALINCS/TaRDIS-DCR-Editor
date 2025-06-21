@@ -12,7 +12,7 @@ import {
   inputTypes,
   MarkingType,
   simpleInputTypes,
-} from "@/lib/codegen";
+} from "@/lib/types";
 
 const selector = (state: RFState) => ({
   nodes: state.nodes,
@@ -49,7 +49,9 @@ const NodeMenu = ({ node }: { node: Node }) => {
   const { id, data, parentId } = node;
 
   const [initiators, setInitiators] = useState(data.initiators as string[]);
-  const [receivers, setReceivers] = useState(data.receivers as string[]);
+  const [receivers, setReceivers] = useState(
+    data.receivers ? (data.receivers as string[]) : [""]
+  );
   const [type, setType] = useState(data.type as string);
   const [label, setLabel] = useState(data.label as string);
   const [name, setName] = useState(data.name as string);

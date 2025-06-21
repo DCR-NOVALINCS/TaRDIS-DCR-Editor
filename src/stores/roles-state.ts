@@ -1,30 +1,6 @@
 import { StateCreator } from "zustand/vanilla";
 import { RFState } from "./store";
-
-interface Input {
-  var: string;
-  input: string;
-}
-
-interface Participant {
-  role: string;
-  inputs: Input[];
-}
-
-export interface Parameter {
-  var: string;
-  type: string;
-}
-
-interface SimpleRole {
-  role: string;
-  label: string;
-  types: Parameter[];
-}
-
-export interface Role extends SimpleRole {
-  participants: string[];
-}
+import { Participant, RoleParticipants as Role, SimpleRole } from "@/lib/types";
 
 /**
  * Represents the state and operations related to roles and participants within the application.

@@ -3,7 +3,7 @@ import { Group } from "lucide-react";
 
 import { Node } from "@xyflow/react";
 import useStore, { RFState } from "@/stores/store";
-import { MarkingType } from "@/lib/codegen";
+import { MarkingType } from "@/lib/types";
 
 const selector = (state: RFState) => ({
   nodes: state.nodes,

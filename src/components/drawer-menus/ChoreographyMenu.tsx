@@ -1,15 +1,12 @@
-import { JSX, useState } from "react";
+import { useState } from "react";
 
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
 
 import { Workflow } from "lucide-react";
-import { FieldType, simpleInputTypes } from "@/lib/codegen";
-import { delay } from "@/lib/utils";
+import { FieldType, simpleInputTypes } from "@/lib/types";
 
 const selector = (state: RFState) => ({
-  nodes: state.nodes,
-  edges: state.edges,
   getChoreographyInfo: state.getChoreographyInfo,
   security: state.security,
   setSecurity: state.setSecurity,
@@ -17,12 +14,9 @@ const selector = (state: RFState) => ({
   removeRole: state.removeRole,
   documentation: state.documentation,
   addDocumentation: state.addDocumentation,
-  setNodes: state.setNodes,
-  setEdges: state.setEdges,
   projectionInfo: state.projectionInfo,
-  setProjectionInfo: state.setProjectionInfo,
   currentProjection: state.currentProjection,
-  setCurrentProjection: state.setCurrentProjection,
+  changeNodes: state.changeNodes,
 });
 
 /**
@@ -41,8 +35,6 @@ const selector = (state: RFState) => ({
  */
 export default function ChoreographyMenu() {
   const {
-    nodes,
-    edges,
     getChoreographyInfo,
     security,
     setSecurity,
@@ -50,42 +42,13 @@ export default function ChoreographyMenu() {
     removeRole,
     documentation,
     addDocumentation,
-    setNodes,
-    setEdges,
     projectionInfo,
-    setProjectionInfo,
     currentProjection,
-    setCurrentProjection,
+    changeNodes,
   } = useStore(selector, shallow);
 
   const { nodesCount, roles } = getChoreographyInfo();
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
-
-  const changeNodes = async (previous: string, role: string) => {
-    setProjectionInfo(previous, { nodes, edges });
-
-    await delay(10);
-
-    const projection = projectionInfo.get(role);
-    if (projection) {
-      setCurrentProjection(role);
-      setNodes(projection.nodes);
-      setEdges(projection.edges);
-    }
-  };
-
-  const setBackToGlobal = async (previous: string) => {
-    setProjectionInfo(previous, { nodes, edges });
-
-    await delay(10);
-
-    const projection = projectionInfo.get("global");
-    if (projection) {
-      setCurrentProjection("");
-      setNodes(projection.nodes);
-      setEdges(projection.edges);
-    }
-  };
 
   /**
    * RoleMenu is a React functional component that provides a user interface for managing roles within a choreography editor.
@@ -501,7 +464,7 @@ export default function ChoreographyMenu() {
             </p>
             <p
               className="font-bold cursor-pointer hover:underline select-none hover:opacity-75"
-              onClick={() => setBackToGlobal(currentProjection)}
+              onClick={() => changeNodes(currentProjection)}
             >
               See global projection.
             </p>

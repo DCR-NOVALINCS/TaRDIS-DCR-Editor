@@ -12,16 +12,7 @@ import { StateCreator } from "zustand/vanilla";
 import { RFState } from "@/stores/store";
 
 import { delay } from "@/lib/utils";
-import { EventType } from "@/lib/codegen";
-import { initialNodes } from "@/lib/types";
-
-export interface Child {
-  id: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+import { initialNodes, type EventType } from "@/lib/types";
 
 /**
  * Represents the state and operations related to nodes within the application.
@@ -130,6 +121,7 @@ export type NodesState = {
   setSubgraphType(type: string): void;
 
   /* ------------- FLOW RELATED -------------- */
+  changeNodes(previous: string, role?: string): Promise<void>;
   onNodesChange: OnNodesChange;
   onNodesDelete: OnNodesDelete;
   onNodeClick(event: any, node: Node): void;
@@ -214,12 +206,11 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
       );
     }
 
-    const newNodes = get().nodes.map((nd) => ({ ...nd, selected: false }));
     set({
-      nodes:
-        nodeToAdd.type === "event"
-          ? [...newNodes, nodeToAdd]
-          : [nodeToAdd, ...newNodes],
+      nodes: [
+        ...get().nodes.map((nd) => ({ ...nd, selected: false })),
+        nodeToAdd,
+      ],
       selectedElement: nodeToAdd,
     });
 
@@ -432,6 +423,22 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
   /* ----------------------------------------- */
 
   /* ------------- FLOW RELATED -------------- */
+  async changeNodes(previous: string, role?: string) {
+    const nodes = get().nodes;
+    const edges = get().edges;
+    get().setProjectionInfo(previous, { nodes, edges });
+
+    await delay(10);
+
+    const projection = role
+      ? get().projectionInfo.get(role)
+      : get().projectionInfo.get("global");
+    if (projection) {
+      get().setCurrentProjection(role ? role : "");
+      get().setNodes(projection.nodes);
+      get().setEdges(projection.edges);
+    }
+  },
   onNodesChange(changes: NodeChange[]) {
     set({
       nodes: applyNodeChanges(changes, get().nodes),
