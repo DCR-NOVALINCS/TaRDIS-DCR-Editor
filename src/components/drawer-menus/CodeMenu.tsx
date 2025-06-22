@@ -2,12 +2,16 @@ import { writeCode } from "@/lib/codegen";
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
 
-import Editor from "@monaco-editor/react";
+import Editor, { useMonaco } from "@monaco-editor/react";
+import * as monacoEditor from "monaco-editor";
 import { delay, getLayoutedElements } from "@/lib/utils";
+
+import { type Node, type Edge } from "@xyflow/react";
 
 import { visualGen } from "@/lib/visualgen-code";
 import { processChoregraphyModel } from "@/lib/visualgen-json";
-import { ChoreographyModel } from "@/lib/types";
+import { ChoreographyModel, CompileError } from "@/lib/types";
+import { useRef } from "react";
 
 const selector = (state: RFState) => ({
   nodes: state.nodes,
@@ -23,6 +27,10 @@ const selector = (state: RFState) => ({
   setSecurity: state.setSecurity,
   setRoles: state.setRoles,
   changeNodes: state.changeNodes,
+  setDrawerSelectedCode: state.setDrawerSelectedCode,
+  setDrawerSelectedLogs: state.setDrawerSelectedLogs,
+  setDrawerWidth: state.setDrawerWidth,
+  log: state.log,
 });
 
 /**
@@ -59,6 +67,10 @@ export default function CodeMenu() {
     setSecurity,
     setRoles,
     changeNodes,
+    setDrawerSelectedCode,
+    setDrawerSelectedLogs,
+    setDrawerWidth,
+    log,
   } = useStore(selector, shallow);
 
   const generateGraph = () => {
@@ -69,6 +81,7 @@ export default function CodeMenu() {
         nodes: newNodes,
         edges: newEdges,
       } = visualGen(code);
+
       const { nodes: layoutedNodes, edges: layoutedEdges } =
         getLayoutedElements(newNodes, newEdges);
 
@@ -92,7 +105,7 @@ export default function CodeMenu() {
 
   const compileCode = () => {
     if (code) {
-      let projections: ChoreographyModel[] = [];
+      let projections: ChoreographyModel[] | CompileError[] = [];
       const fetchFun = async () => {
         fetch("/api/code", {
           method: "POST",
@@ -112,14 +125,25 @@ export default function CodeMenu() {
         const response = await fetch("/api/projections");
         projections = await response.json();
 
-        projections.forEach((proj) => {
-          if (proj.graph.events && proj.graph.relations) {
-            const result = processChoregraphyModel(proj);
-            const layoutedResult = getLayoutedElements(
-              result.nodes,
-              result.edges
-            );
-            setProjectionInfo(proj.role.label, layoutedResult);
+        projections.forEach((proj, i) => {
+          if ("compileError" in proj) treatErrors(proj);
+          else {
+            if (i === 0) {
+              clearErrors();
+              setDrawerSelectedCode(false);
+              setDrawerSelectedLogs(true);
+              setDrawerWidth("25%");
+              log("Typecheck and compilation succeeded.");
+            }
+            if (proj.graph.events && proj.graph.relations) {
+              const result = processChoregraphyModel(proj);
+              const layoutedResult = getLayoutedElements(
+                result.nodes,
+                result.edges
+              );
+              setProjectionInfo(proj.role.label, layoutedResult);
+              log(`Projection for role ${proj.role.label} created.`);
+            }
           }
         });
       };
@@ -151,6 +175,37 @@ export default function CodeMenu() {
     }
   };
 
+  const editorRef = useRef<monacoEditor.editor.IStandaloneCodeEditor>(null);
+  const monaco = useMonaco();
+  const handleEditorDidMount = (
+    editor: monacoEditor.editor.IStandaloneCodeEditor
+  ) => {
+    editorRef.current = editor;
+  };
+
+  function clearErrors() {
+    const model = editorRef.current?.getModel();
+    if (!model || !monaco) return;
+
+    monaco.editor.setModelMarkers(model, "owner", []);
+  }
+
+  function treatErrors(compileError: CompileError) {
+    const model = editorRef.current?.getModel();
+    if (!model || !monaco) return;
+
+    const markers = compileError.compileError.stackTrace.map((err) => ({
+      severity: monaco.MarkerSeverity.Error,
+      message: err.message,
+      startLineNumber: err.location.from.line,
+      startColumn: err.location.from.column,
+      endLineNumber: err.location.to.line,
+      endColumn: err.location.to.column,
+    }));
+
+    monaco.editor.setModelMarkers(model, "owner", markers);
+  }
+
   return (
     <div
       className="w-[calc(100%-4px)] overflow-y-auto p-2 flex flex-col items-center justify-center gap-2 select-none"
@@ -167,6 +222,7 @@ export default function CodeMenu() {
         onChange={(newCode) => {
           if (newCode) setCode(newCode);
         }}
+        onMount={(editor) => handleEditorDidMount(editor)}
       />
       <div className="flex gap-2 w-full">
         <button

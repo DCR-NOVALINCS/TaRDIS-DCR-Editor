@@ -290,6 +290,20 @@ export interface ChoreographyModel {
   graph: ChoreographyGraph;
 }
 
+export interface StackTraceElement {
+  location: {
+    from: { line: number; column: number };
+    to: { line: number; column: number };
+  };
+  message: string;
+}
+
+export interface CompileError {
+  compileError: {
+    stackTrace: StackTraceElement[];
+  };
+}
+
 export type FieldType = { var: string; type: string };
 
 export type InputType =
