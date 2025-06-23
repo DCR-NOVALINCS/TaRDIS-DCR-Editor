@@ -16,7 +16,7 @@ cd ..
 npm install
 ```
 
-2. Then, simply just **run** the editor using (both backend and frontend will run):
+3. Then, simply just **run** the editor using (both backend and frontend will run):
 
 ```console
 npm run dev
