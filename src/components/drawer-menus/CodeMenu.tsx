@@ -90,7 +90,7 @@ export default function CodeMenu() {
 
         await delay(20);
 
-        clearProjections();
+        clearProjections(true);
 
         await delay(10);
 
@@ -104,6 +104,16 @@ export default function CodeMenu() {
   };
 
   const compileCode = () => {
+    const changes = async () => {
+      changeNodes();
+
+      await delay(20);
+
+      clearProjections(false);
+
+      await delay(10);
+    };
+
     if (code) {
       let projections: ChoreographyModel[] | CompileError[] = [];
       const fetchFun = async () => {
@@ -119,7 +129,7 @@ export default function CodeMenu() {
           .then((res) => res.text())
           .then((data) => console.log(data));
 
-        clearProjections();
+        changes();
         await delay(1000);
 
         const response = await fetch("/api/projections");

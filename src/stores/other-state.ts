@@ -108,7 +108,7 @@ export type OtherState = {
   /* -------------- PROJECTIONS -------------- */
   projectionInfo: Map<string, ProjectionInfo>;
   setProjectionInfo(id: string, projectionInfo: ProjectionInfo): void;
-  clearProjections(): void;
+  clearProjections(all: boolean): void;
   currentProjection: string;
   setCurrentProjection(id: string): void;
   /* ----------------------------------------- */
@@ -234,11 +234,20 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
       projectionInfo: newProjectionInfo,
     });
   },
-  clearProjections() {
+  clearProjections(all: boolean) {
     let newProjectionInfo = get().projectionInfo;
-    get().projectionInfo.forEach((_, k) => {
-      if (newProjectionInfo.has(k)) newProjectionInfo.delete(k);
-    });
+
+    if (all) {
+      get().projectionInfo.forEach((_, k) => {
+        if (newProjectionInfo.has(k)) newProjectionInfo.delete(k);
+      });
+    } else {
+      get().projectionInfo.forEach((_, k) => {
+        if (newProjectionInfo.has(k) && k !== "global")
+          newProjectionInfo.delete(k);
+      });
+    }
+
     set({
       projectionInfo: newProjectionInfo,
     });
