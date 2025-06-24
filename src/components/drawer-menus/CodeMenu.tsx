@@ -31,6 +31,7 @@ const selector = (state: RFState) => ({
   setDrawerSelectedLogs: state.setDrawerSelectedLogs,
   setDrawerWidth: state.setDrawerWidth,
   log: state.log,
+  projectionInfo: state.projectionInfo,
 });
 
 /**
@@ -71,9 +72,10 @@ export default function CodeMenu() {
     setDrawerSelectedLogs,
     setDrawerWidth,
     log,
+    projectionInfo,
   } = useStore(selector, shallow);
 
-  const generateGraph = () => {
+  const generateGraph = async () => {
     if (code) {
       const {
         roles,
@@ -85,35 +87,22 @@ export default function CodeMenu() {
       const { nodes: layoutedNodes, edges: layoutedEdges } =
         getLayoutedElements(newNodes, newEdges);
 
-      const changes = async () => {
-        changeNodes();
-
-        await delay(20);
-
-        clearProjections(true);
-
-        await delay(10);
-
-        setRoles(roles);
-        setSecurity(security);
-        setNodes(layoutedNodes);
-        setEdges(layoutedEdges);
-      };
-      changes();
-    }
-  };
-
-  const compileCode = () => {
-    const changes = async () => {
       changeNodes();
 
       await delay(20);
 
-      clearProjections(false);
+      clearProjections(true);
 
       await delay(10);
-    };
 
+      setRoles(roles);
+      setSecurity(security);
+      setNodes(layoutedNodes);
+      setEdges(layoutedEdges);
+    }
+  };
+
+  const compileCode = async () => {
     if (code) {
       let projections: ChoreographyModel[] | CompileError[] = [];
       const fetchFun = async () => {
@@ -129,8 +118,12 @@ export default function CodeMenu() {
           .then((res) => res.text())
           .then((data) => console.log(data));
 
-        changes();
-        await delay(1000);
+        changeNodes();
+
+        await delay(20);
+
+        clearProjections(false);
+        await delay(10);
 
         const response = await fetch("/api/projections");
         projections = await response.json();
@@ -159,6 +152,27 @@ export default function CodeMenu() {
       };
       fetchFun();
     }
+  };
+
+  const setNewCode = async () => {
+    changeNodes();
+
+    await delay(20);
+
+    const projection = clearProjections(false);
+
+    await delay(10);
+
+    if (projection) {
+      const newCode = writeCode(
+        projection.nodes,
+        projection.edges,
+        rolesParticipants,
+        security
+      );
+      console.log(newCode);
+      setCode(newCode);
+    } else setCode(writeCode(nodes, edges, rolesParticipants, security));
   };
 
   /**
@@ -229,17 +243,13 @@ export default function CodeMenu() {
           fontSize: 16,
           scrollBeyondLastLine: false,
         }}
-        onChange={(newCode) => {
-          if (newCode) setCode(newCode);
-        }}
+        onChange={(newCode) => setCode(newCode ? newCode : "")}
         onMount={(editor) => handleEditorDidMount(editor)}
       />
       <div className="flex gap-2 w-full">
         <button
           className="bg-black h-8 w-full rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
-          onClick={() =>
-            setCode(writeCode(nodes, edges, rolesParticipants, security))
-          }
+          onClick={setNewCode}
         >
           Generate Code
         </button>

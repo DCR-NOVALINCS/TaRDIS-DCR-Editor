@@ -296,8 +296,8 @@ function FlowWithoutProvider() {
   const KeyPressListener = () => {
     useEffect(() => {
       const handleKeyDown = (event: KeyboardEvent) => {
-        event.preventDefault();
-        if (event.ctrlKey) {
+        if (event.ctrlKey && keyPressOn) {
+          event.preventDefault();
           switch (event.key.toLowerCase()) {
             case "s":
               setHistory((prev) => ({
@@ -333,9 +333,8 @@ function FlowWithoutProvider() {
       };
 
       const handleKeyUp = (event: KeyboardEvent) => {
-        event.preventDefault();
-
-        if (event.ctrlKey) {
+        if (event.ctrlKey && keyPressOn) {
+          event.preventDefault();
           switch (event.key.toLowerCase()) {
             case "z":
               setNodes(history.nodes);
@@ -375,7 +374,7 @@ function FlowWithoutProvider() {
       }}
       className="select-none"
     >
-      {keyPressOn && <KeyPressListener />}
+      <KeyPressListener />
       <Controls showInteractive={false} />
       <Background variant={BackgroundVariant.Lines} />
       <Panel position="top-left" style={{ zIndex: 20000 }}>

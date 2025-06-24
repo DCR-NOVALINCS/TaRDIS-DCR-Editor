@@ -539,12 +539,12 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
 
     if (event.shiftKey) {
       const type = get().relationType;
-      if (type !== "exclude") return;
+      if (!type || type === "spawn") return;
 
-      get().log(`Added self-exclusion edge to node ${node.id}`);
+      get().log(`Added self-${type} edge to node ${node.id}`);
 
       const edge: Edge = {
-        id: "se-" + node.id,
+        id: `s${type.charAt(0)}-${node.id}`,
         type,
         source: node.id,
         target: node.id,
