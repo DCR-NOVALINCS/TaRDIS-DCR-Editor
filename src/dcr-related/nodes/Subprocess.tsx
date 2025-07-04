@@ -8,6 +8,13 @@ import {
 
 import "@/dcr-related/CustomHandles.css";
 import { BaseNode } from "@/components/base-node";
+import { useKeyPress } from "@/lib/utils";
+import useStore, { RFState } from "@/stores/store";
+import { shallow } from "zustand/shallow";
+
+const selector = (state: RFState) => ({
+  simulationFlow: state.simulationFlow,
+});
 
 /**
  * Renders a draggable subprocess node component with a dashed border.
@@ -47,8 +54,11 @@ export const SubprocessModel = ({
  * @returns The rendered Subprocess node component.
  */
 export default function Subprocess(props: NodeProps) {
+  const { simulationFlow } = useStore(selector, shallow);
   const connection = useConnection();
   const isTarget = connection.inProgress && connection.fromNode.id != props.id;
+
+  const shiftPressed = useKeyPress("Shift");
 
   return (
     <>
@@ -68,6 +78,13 @@ export default function Subprocess(props: NodeProps) {
           {props.data.label as string}
         </div>
 
+        {simulationFlow &&
+          !(props.data.marking as Record<string, boolean>).spawned && (
+            <div className="flex items-center justify-center mt-[35%] text-4xl">
+              ...
+            </div>
+          )}
+
         {/* HANDLES */}
         {!connection.inProgress && (
           <Handle
@@ -75,6 +92,7 @@ export default function Subprocess(props: NodeProps) {
             className="nestHandle"
             position={Position.Right}
             type="source"
+            isConnectable={!simulationFlow && shiftPressed}
           />
         )}
 
@@ -85,6 +103,7 @@ export default function Subprocess(props: NodeProps) {
             position={Position.Left}
             type="target"
             isConnectableStart={false}
+            isConnectable={!simulationFlow && shiftPressed}
           />
         )}
       </BaseNode>

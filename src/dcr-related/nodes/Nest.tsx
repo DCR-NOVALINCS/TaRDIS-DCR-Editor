@@ -7,6 +7,13 @@ import {
 } from "@xyflow/react";
 
 import "@/dcr-related/CustomHandles.css";
+import useStore, { RFState } from "@/stores/store";
+import { shallow } from "zustand/shallow";
+import { useKeyPress } from "@/lib/utils";
+
+const selector = (state: RFState) => ({
+  simulationFlow: state.simulationFlow,
+});
 
 /**
  * A draggable React component representing a Nest node.
@@ -47,11 +54,13 @@ export const NestModel = ({
  * - Renders connection handles for source and target edges, with conditional visibility based on connection state.
  */
 export default function Nest(props: NodeProps) {
+  const { simulationFlow } = useStore(selector, shallow);
   const { nestType } = props.data;
   const { pending } = props.data.marking as Record<string, boolean>;
 
   const connection = useConnection();
   const isTarget = connection.inProgress && connection.fromNode.id != props.id;
+  const shiftPressed = useKeyPress("Shift");
 
   return (
     <>
@@ -86,6 +95,7 @@ export default function Nest(props: NodeProps) {
             className="nestHandle"
             position={Position.Right}
             type="source"
+            isConnectable={!simulationFlow && shiftPressed}
           />
         )}
 
@@ -96,6 +106,7 @@ export default function Nest(props: NodeProps) {
             position={Position.Left}
             type="target"
             isConnectableStart={false}
+            isConnectable={!simulationFlow && shiftPressed}
           />
         )}
       </div>

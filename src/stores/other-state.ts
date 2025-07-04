@@ -79,11 +79,6 @@ export type OtherState = {
   setSelectedElement(element: Element): void;
   /* ----------------------------------------- */
 
-  /* ------------ SIMULATION FLOW ------------ */
-  simulationFlow: boolean;
-  setSimulationFlow(value: boolean): void;
-  /* ----------------------------------------- */
-
   /* ---------------- SECURITY --------------- */
   security: string;
   setSecurity(security: string): void;
@@ -152,16 +147,6 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
   setSelectedElement(element: Element) {
     set({
       selectedElement: element,
-    });
-  },
-  /* ----------------------------------------- */
-
-  /* ------------ SIMULATION FLOW ------------ */
-  simulationFlow: false,
-  setSimulationFlow(value: boolean) {
-    get().log(value ? "Simulation started" : "Simulation stopped");
-    set({
-      simulationFlow: value,
     });
   },
   /* ----------------------------------------- */

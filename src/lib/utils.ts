@@ -4,6 +4,7 @@ import { twMerge } from "tailwind-merge";
 import { Node, Position, Edge } from "@xyflow/react";
 
 import dagre from "dagre";
+import { useEffect, useState } from "react";
 
 /**
  * Combines multiple class name values into a single string, filtering out falsy values,
@@ -176,4 +177,38 @@ export function getLayoutedElements(
   });
 
   return { nodes: layoutedNodes, edges };
+}
+
+export function useKeyPress(targetKey: string): boolean {
+  const [keyPressed, setKeyPressed] = useState(false);
+
+  useEffect(() => {
+    const downHandler = ({ key }: KeyboardEvent) => {
+      if (key === targetKey) setKeyPressed(true);
+    };
+    const upHandler = ({ key }: KeyboardEvent) => {
+      if (key === targetKey) setKeyPressed(false);
+    };
+
+    window.addEventListener("keydown", downHandler);
+    window.addEventListener("keyup", upHandler);
+
+    return () => {
+      window.removeEventListener("keydown", downHandler);
+      window.removeEventListener("keyup", upHandler);
+    };
+  }, [targetKey]);
+
+  return keyPressed;
+}
+
+export function multiMap<T>(
+  array: T[],
+  ...fns: ((value: T, index: number, array: T[]) => T)[]
+): T[] {
+  let temp = array;
+  fns.forEach((fn) => {
+    temp = temp.map(fn);
+  });
+  return temp;
 }

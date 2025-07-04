@@ -291,7 +291,7 @@ export interface ChoreographyModel {
 }
 
 export interface StackTraceElement {
-  location: {
+  location?: {
     from: { line: number; column: number };
     to: { line: number; column: number };
   };
@@ -315,6 +315,12 @@ export type MarkingType = {
   pending: boolean;
 };
 
+export type SimulationMarkingType = MarkingType & {
+  executable: boolean;
+  executed: boolean;
+  spawned?: boolean;
+};
+
 export type EventType = {
   id: string;
   label: string;
@@ -331,7 +337,6 @@ export type EventType = {
 export type SubprocessType = {
   id: string;
   label: string;
-  children: string[];
   marking: MarkingType;
   parent?: string;
 };

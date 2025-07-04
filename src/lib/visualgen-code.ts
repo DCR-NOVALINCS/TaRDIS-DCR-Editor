@@ -326,5 +326,5 @@ export function visualGen(code: string) {
   subId = 0;
   const { nodes, edges } = genGraph(result.code);
 
-  return { roles, security, nodes, edges };
+  return { roles, security, nodes, edges, nodeId, subId };
 }

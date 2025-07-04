@@ -1,12 +1,22 @@
 import { BaseNode } from "@/components/base-node";
-import { Handle, NodeProps, Position, useConnection } from "@xyflow/react";
+import {
+  Edge,
+  Handle,
+  NodeProps,
+  Position,
+  useConnection,
+} from "@xyflow/react";
 import { Check } from "lucide-react";
 
 import "@/dcr-related/CustomHandles.css";
 import useStore, { RFState } from "@/stores/store";
+import { useKeyPress } from "@/lib/utils";
+import { shallow } from "zustand/shallow";
 
 const selector = (state: RFState) => ({
   simulationFlow: state.simulationFlow,
+  relationType: state.relationType,
+  addEdge: state.addEdge,
 });
 
 /**
@@ -65,7 +75,7 @@ export const EventModel = ({
  * - Marking state controls the display of pending and excluded indicators.
  */
 export default function BaseEvent({ id, data, ...props }: NodeProps) {
-  const { simulationFlow } = useStore(selector);
+  const { simulationFlow, addEdge, relationType } = useStore(selector, shallow);
   const { initiators, receivers, type, label, name, marking, interactionType } =
     data as {
       initiators: string[];
@@ -95,6 +105,8 @@ export default function BaseEvent({ id, data, ...props }: NodeProps) {
   const labelName = label + ": " + name;
   const fixedLabelName =
     labelName.length > 20 ? labelName.slice(0, 19) + "..." : labelName;
+
+  const shiftPressed = useKeyPress("Shift");
 
   return (
     <>
@@ -161,7 +173,7 @@ export default function BaseEvent({ id, data, ...props }: NodeProps) {
             className="customHandle"
             position={Position.Right}
             type="source"
-            isConnectable={!simulationFlow}
+            isConnectable={!simulationFlow && shiftPressed}
           />
         )}
 
@@ -172,7 +184,7 @@ export default function BaseEvent({ id, data, ...props }: NodeProps) {
             position={Position.Left}
             type="target"
             isConnectableStart={false}
-            isConnectable={!simulationFlow}
+            isConnectable={!simulationFlow && shiftPressed}
           />
         )}
       </BaseNode>

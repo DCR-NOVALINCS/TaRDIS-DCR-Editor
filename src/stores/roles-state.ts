@@ -68,6 +68,7 @@ const rolesStateSlice: StateCreator<RFState, [], [], RolesState> = (
         ...get().rolesParticipants,
       ],
     });
+    get().log(`Added a new role ${role.role} with label ${role.label}.`);
   },
   removeRole(role: string) {
     set({
@@ -75,6 +76,7 @@ const rolesStateSlice: StateCreator<RFState, [], [], RolesState> = (
         (rl) => rl.role !== role
       ),
     });
+    get().log(`Removed role ${role}.`);
   },
   setRoles(roles: Role[]) {
     set({

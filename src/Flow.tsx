@@ -70,6 +70,10 @@ const selector = (state: RFState) => ({
   onConnect: state.onConnect,
   onPaneClick: state.onPaneClick,
   onEdgesDelete: state.onEdgesDelete,
+  simNodes: state.simNodes,
+  simEdges: state.simEdges,
+  onClickSimulationToggle: state.onClickSimulationToggle,
+  onNodeClickSimulation: state.onNodeClickSimulation,
 });
 
 const nodeOrigin: NodeOrigin = [0.5, 0.5];
@@ -120,122 +124,20 @@ function FlowWithoutProvider() {
     onConnect,
     onPaneClick,
     onEdgesDelete,
+    onClickSimulationToggle,
+    onNodeClickSimulation,
+    simEdges,
+    simNodes,
   } = useStore(selector, shallow);
 
   const flowRef = useRef<HTMLDivElement>(null);
 
   const { screenToFlowPosition } = useReactFlow();
 
-  const [nodesTemp, setNodesTemp] = useNodesState(nodes);
-  const [edgesTemp, setEdgesTemp] = useEdgesState(edges);
-
-  const onClickSimulationStart = (event: any) => {
-    event.preventDefault();
-    setSimulationFlow(!simulationFlow);
-
-    if (!simulationFlow) {
-      setNodesTemp(() =>
-        nodes.map((node) => {
-          const marking = node.data.marking as Record<string, boolean>;
-
-          if (!marking) {
-            return node;
-          } else {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                marking: {
-                  ...marking,
-                  executable:
-                    marking.included &&
-                    !edges.some(
-                      (edge) =>
-                        edge.target === node.id &&
-                        (edge.type === "condition" || edge.type === "milestone")
-                    ),
-                  executed: false,
-                },
-              },
-              selected: false,
-            };
-          }
-        })
-      );
-
-      setEdgesTemp(() => edges.map((edge) => ({ ...edge, selected: false })));
-    } else setNodes(nodes.map((nd) => ({ ...nd, selected: false })));
-  };
-
-  const onNodeClickSimulation = (event: any, node: Node) => {
-    event.preventDefault();
-
-    if (!(node.data.marking as Record<string, boolean>).executable) {
-      return;
-    }
-
-    edgesTemp.forEach((edge) => {
-      if (edge.source === node.id) {
-        setNodesTemp((nds) => {
-          return nds.map((n) => {
-            const marking = n.data.marking as Record<string, boolean>;
-            if (edge.target === n.id) {
-              return {
-                ...n,
-                data: {
-                  ...n.data,
-                  marking: {
-                    included:
-                      edge.type === "exclude"
-                        ? false
-                        : edge.type === "include"
-                        ? true
-                        : marking.included,
-                    pending: edge.type === "response" ? true : marking.pending,
-                    executable:
-                      edge.type === "condition"
-                        ? true
-                        : edge.type === "exclude"
-                        ? false
-                        : edge.type === "include"
-                        ? true
-                        : marking.executable,
-                    executed: marking.executed,
-                  },
-                },
-              };
-            } else {
-              return n;
-            }
-          });
-        });
-      }
-      setNodesTemp((nds) => {
-        return nds.map((n) => {
-          const marking = n.data.marking as Record<string, boolean>;
-          if (n.id === node.id) {
-            return {
-              ...n,
-              data: {
-                ...n.data,
-                marking: {
-                  ...marking,
-                  executed: true,
-                },
-              },
-            };
-          } else {
-            return n;
-          }
-        });
-      });
-    });
-  };
-
   const simulationProps = {
     ref: flowRef,
-    nodes: nodesTemp,
-    edges: edgesTemp,
+    nodes: simNodes,
+    edges: simEdges,
     edgeTypes,
     nodeTypes,
     nodeOrigin,
@@ -244,7 +146,7 @@ function FlowWithoutProvider() {
     onNodeClick: onNodeClickSimulation,
     fitView: true,
     maxZoom: 5,
-    minZoom: 1,
+    minZoom: 0,
     zoomOnDoubleClick: false,
     elementsSelectable: simulationFlow,
   };
@@ -279,7 +181,7 @@ function FlowWithoutProvider() {
     fitView: true,
     fitViewOptions: { maxZoom: 1 },
     maxZoom: 5,
-    minZoom: 1,
+    minZoom: 0,
     zoomOnDoubleClick: false,
   };
 
@@ -382,7 +284,7 @@ function FlowWithoutProvider() {
         <PngDownload />
         <button
           className="bg-black select-none text-white font-semibold px-2 py-1 w-36 rounded-sm m-2 hover:opacity-75 cursor-pointer"
-          onClick={onClickSimulationStart}
+          onClick={onClickSimulationToggle}
         >
           {simulationFlow ? "Stop" : "Start"} Simulation
         </button>

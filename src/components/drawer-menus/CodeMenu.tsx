@@ -31,7 +31,7 @@ const selector = (state: RFState) => ({
   setDrawerSelectedLogs: state.setDrawerSelectedLogs,
   setDrawerWidth: state.setDrawerWidth,
   log: state.log,
-  projectionInfo: state.projectionInfo,
+  setIds: state.setIds,
 });
 
 /**
@@ -72,7 +72,7 @@ export default function CodeMenu() {
     setDrawerSelectedLogs,
     setDrawerWidth,
     log,
-    projectionInfo,
+    setIds,
   } = useStore(selector, shallow);
 
   const generateGraph = async () => {
@@ -82,6 +82,8 @@ export default function CodeMenu() {
         security,
         nodes: newNodes,
         edges: newEdges,
+        nodeId,
+        subId,
       } = visualGen(code);
 
       const { nodes: layoutedNodes, edges: layoutedEdges } =
@@ -99,6 +101,8 @@ export default function CodeMenu() {
       setSecurity(security);
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
+      setIds([nodeId], [0], [subId]);
+      log(`Graph generated.`);
     }
   };
 
@@ -120,10 +124,10 @@ export default function CodeMenu() {
 
         changeNodes();
 
-        await delay(20);
+        await delay(200);
 
         clearProjections(false);
-        await delay(10);
+        await delay(100);
 
         const response = await fetch("/api/projections");
         projections = await response.json();
@@ -173,6 +177,8 @@ export default function CodeMenu() {
       console.log(newCode);
       setCode(newCode);
     } else setCode(writeCode(nodes, edges, rolesParticipants, security));
+
+    log(`Generated new code.`);
   };
 
   /**
@@ -218,14 +224,25 @@ export default function CodeMenu() {
     const model = editorRef.current?.getModel();
     if (!model || !monaco) return;
 
-    const markers = compileError.compileError.stackTrace.map((err) => ({
-      severity: monaco.MarkerSeverity.Error,
-      message: err.message,
-      startLineNumber: err.location.from.line,
-      startColumn: err.location.from.column,
-      endLineNumber: err.location.to.line,
-      endColumn: err.location.to.column,
-    }));
+    const markers = compileError.compileError.stackTrace.map((err) =>
+      err.location
+        ? {
+            severity: monaco.MarkerSeverity.Error,
+            message: err.message,
+            startLineNumber: err.location.from.line,
+            startColumn: err.location.from.column,
+            endLineNumber: err.location.to.line,
+            endColumn: err.location.to.column,
+          }
+        : {
+            severity: monaco.MarkerSeverity.Error,
+            message: err.message,
+            startLineNumber: 0,
+            startColumn: 0,
+            endLineNumber: 0,
+            endColumn: 0,
+          }
+    );
 
     monaco.editor.setModelMarkers(model, "owner", markers);
   }

@@ -1,4 +1,3 @@
-import { Role } from "@/stores/roles-state";
 import { Node, Edge } from "@xyflow/react";
 import {
   type EventType,
@@ -7,6 +6,7 @@ import {
   Process,
   relationsMap,
   RelationType,
+  RoleParticipants,
 } from "./types";
 
 /**
@@ -71,12 +71,11 @@ function extractData(nodes: Node[], edges: Edge[]) {
         data,
         parentId: parent,
       } = n as { id: string; data: Record<string, unknown>; parentId: string };
-      const { label, children, marking, nestType } = data as NestType;
+      const { label, marking, nestType } = data as NestType;
 
       return {
         id,
         label,
-        children,
         marking,
         nestType,
         ...(parent && { parent }),
@@ -91,12 +90,11 @@ function extractData(nodes: Node[], edges: Edge[]) {
         data,
         parentId: parent,
       } = n as { id: string; data: Record<string, unknown>; parentId: string };
-      const { label, children, marking } = data as SubprocessType;
+      const { label, marking } = data as SubprocessType;
 
       return {
         id,
         label,
-        children,
         marking,
         ...(parent && { parent }),
       };
@@ -200,15 +198,17 @@ function extractData(nodes: Node[], edges: Edge[]) {
 export function writeCode(
   nodes: Node[],
   edges: Edge[],
-  roles: Role[],
+  roles: RoleParticipants[],
   lattice: string
 ): string {
   const parentProcess = extractData(nodes, edges);
+  console.log(parentProcess);
   let content: string[] = [];
 
   function writeProcess(process: Process, numTabs: number): string[] {
     console.log(process);
     let newContent: string[] = [];
+
     process.events.forEach((e) => {
       const { included, pending } = e.marking;
       let eventContent = `${included ? "" : "%"}${pending ? "!" : ""}(${

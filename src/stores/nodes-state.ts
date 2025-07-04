@@ -373,6 +373,12 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
           ...childrenNodes,
         ]);
         childrenNodes.forEach((nd) => get().updateParenting(nd));
+        if (childrenIds.length > 0)
+          get().log(
+            `Updated parenting for parent ${
+              updatedNode.id
+            } with children: ${childrenIds.join(", ")}.`
+          );
       } else if (!get().nodes.some((nd) => nd.id === updatedNode.id))
         get().setNodes([...get().nodes, updatedNode]);
     };
@@ -537,11 +543,9 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
   onNodeDoubleClick(event: any, node: Node) {
     event.preventDefault();
 
-    if (event.shiftKey) {
+    if (event.ctrlKey) {
       const type = get().relationType;
       if (!type || type === "spawn") return;
-
-      get().log(`Added self-${type} edge to node ${node.id}`);
 
       const edge: Edge = {
         id: `s${type.charAt(0)}-${node.id}`,
