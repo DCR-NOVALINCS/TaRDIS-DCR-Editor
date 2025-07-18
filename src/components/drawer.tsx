@@ -51,6 +51,13 @@ export default function Drawer() {
     setDrawerWidth,
   } = useStore(selector, shallow);
 
+  const propertiesColor =
+    !drawerSelectedLogs && !drawerSelectedCode
+      ? "bg-[#CCCCCC]"
+      : "bg-[#D9D9D9]";
+  const logsColor = drawerSelectedLogs ? "bg-[#CCCCCC]" : "bg-[#D9D9D9]";
+  const codeColor = drawerSelectedCode ? "bg-[#CCCCCC]" : "bg-[#D9D9D9]";
+
   return (
     <>
       {/* DRAWER */}
@@ -87,7 +94,7 @@ export default function Drawer() {
             >
               <div className="flex relative border-b-2 font-bold border-[#CCCCCC] ">
                 <div
-                  className="cursor-pointer w-1/3 p-2 border-r-2 border-[#CCCCCC] justify-center flex items-center"
+                  className={`cursor-pointer w-1/3 p-2 border-r-2 border-[#CCCCCC] justify-center flex items-center ${propertiesColor}`}
                   onClick={() => {
                     setDrawerSelectedLogs(false);
                     setDrawerWidth("25%");
@@ -97,7 +104,7 @@ export default function Drawer() {
                   Properties
                 </div>
                 <div
-                  className="cursor-pointer w-1/3 p-2 border-r-2 border-[#CCCCCC] justify-center flex items-center"
+                  className={`cursor-pointer w-1/3 p-2 border-r-2 border-[#CCCCCC] justify-center flex items-center ${logsColor}`}
                   onClick={() => {
                     setDrawerSelectedLogs(true);
                     setDrawerWidth("25%");
@@ -107,7 +114,7 @@ export default function Drawer() {
                   Logs
                 </div>
                 <div
-                  className="cursor-pointer w-1/3 p-2 border-r-2 border-[#CCCCCC] justify-center flex items-center"
+                  className={`cursor-pointer w-1/3 p-2 border-r-2 border-[#CCCCCC] justify-center flex items-center ${codeColor}`}
                   onClick={() => {
                     setDrawerSelectedCode(true);
                     setDrawerWidth("50%");

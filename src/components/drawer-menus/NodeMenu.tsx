@@ -225,7 +225,7 @@ const NodeMenu = ({ node }: { node: Node }) => {
           />
         </div>
 
-        {type === "i" ? (
+        {type === "i" && input ? (
           <div className="grid grid-cols-3 items-center gap-4">
             <label className="col-span-3 flex justify-center font-bold">
               Input Values

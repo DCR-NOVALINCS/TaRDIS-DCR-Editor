@@ -5,8 +5,6 @@ import {
   NodeOrigin,
   ReactFlowProvider,
   useReactFlow,
-  useNodesState,
-  useEdgesState,
   BackgroundVariant,
   type Node,
   Panel,
@@ -109,7 +107,6 @@ function FlowWithoutProvider() {
     setNodes,
     addNode,
     setEdges,
-    setSimulationFlow,
     onNodesChange,
     onNodeClick,
     onNodeDoubleClick,
@@ -278,7 +275,7 @@ function FlowWithoutProvider() {
     >
       <KeyPressListener />
       <Controls showInteractive={false} />
-      <Background variant={BackgroundVariant.Lines} />
+      <Background variant={BackgroundVariant.Dots} />
       <Panel position="top-left" style={{ zIndex: 20000 }}>
         <JsonDownload />
         <PngDownload />

@@ -6,8 +6,6 @@ import Editor, { useMonaco } from "@monaco-editor/react";
 import * as monacoEditor from "monaco-editor";
 import { delay, getLayoutedElements } from "@/lib/utils";
 
-import { type Node, type Edge } from "@xyflow/react";
-
 import { visualGen } from "@/lib/visualgen-code";
 import { processChoregraphyModel } from "@/lib/visualgen-json";
 import { ChoreographyModel, CompileError } from "@/lib/types";
@@ -23,6 +21,7 @@ const selector = (state: RFState) => ({
   code: state.code,
   setCode: state.setCode,
   setProjectionInfo: state.setProjectionInfo,
+  currentProjection: state.currentProjection,
   clearProjections: state.clearProjections,
   setSecurity: state.setSecurity,
   setRoles: state.setRoles,
@@ -63,6 +62,7 @@ export default function CodeMenu() {
     security,
     code,
     setCode,
+    currentProjection,
     setProjectionInfo,
     clearProjections,
     setSecurity,
@@ -163,7 +163,9 @@ export default function CodeMenu() {
 
     await delay(20);
 
-    const projection = clearProjections(false);
+    const projection = clearProjections(
+      currentProjection === "global" ? true : false
+    );
 
     await delay(10);
 
