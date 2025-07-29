@@ -24,6 +24,13 @@ app.post("/code", (req, res) => {
   );
 });
 
+app.post("/example", (req, res) => {
+  const { name, data } = req.body;
+  const fileName = `${name}.json`;
+  fs.writeFileSync(`./examples/${fileName}`, data);
+  res.send(`File ${fileName} was saved.`);
+});
+
 app.get("/projections", (req, res) => {
   const outDir = path.join(__dirname, "_out");
 
@@ -39,6 +46,22 @@ app.get("/projections", (req, res) => {
     });
 
     res.json(jsonArray);
+  });
+});
+
+app.post("/specific-example", (req, res) => {
+  const { name } = req.body;
+  const examplesDir = path.join(__dirname, "examples");
+
+  fs.readdir(examplesDir, (err, files) => {
+    if (err) return res.status(500).send("Error reading dir.");
+
+    const jsonFile = files.find((file) => file.startsWith(name));
+    if (!jsonFile) return res.status(404).send("File not found.");
+
+    const filePath = path.join(examplesDir, jsonFile);
+    const content = fs.readFileSync(filePath, "utf-8");
+    res.json(JSON.parse(content));
   });
 });
 

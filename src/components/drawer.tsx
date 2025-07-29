@@ -1,10 +1,7 @@
-import { type Node, type Edge, isNode } from "@xyflow/react";
-
+import { isNode } from "@xyflow/react";
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
-
-import { ChevronRight } from "lucide-react";
-
+import { ChevronRight, Code, Logs, Pencil } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ChoreographyMenu from "./drawer-menus/ChoreographyMenu";
 import NodeMenu from "./drawer-menus/NodeMenu";
@@ -24,6 +21,42 @@ const selector = (state: RFState) => ({
   drawerWidth: state.drawerWidth,
   setDrawerWidth: state.setDrawerWidth,
 });
+
+const DRAWER_CLOSED_WIDTH = 16;
+const DRAWER_ANIMATION_DURATION = 0.2;
+const CONTENT_ANIMATION_DURATION = 0.3;
+const DEFAULT_WIDTH = "25%";
+const CODE_WIDTH = "50%";
+
+const TABS: {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  width: string;
+  isActive: (logs: boolean, code: boolean) => boolean;
+}[] = [
+  {
+    id: "properties",
+    label: "Properties",
+    icon: <Pencil size={20} />,
+    width: DEFAULT_WIDTH,
+    isActive: (logs: boolean, code: boolean) => !logs && !code,
+  },
+  {
+    id: "logs",
+    label: "Logs",
+    icon: <Logs size={20} />,
+    width: DEFAULT_WIDTH,
+    isActive: (logs: boolean, code: boolean) => logs && !code,
+  },
+  {
+    id: "code",
+    label: "Code",
+    icon: <Code size={20} />,
+    width: CODE_WIDTH,
+    isActive: (logs: boolean, code: boolean) => code && !logs,
+  },
+] as const;
 
 /**
  * Drawer component that provides a collapsible side panel with tabbed content.
@@ -51,109 +84,98 @@ export default function Drawer() {
     setDrawerWidth,
   } = useStore(selector, shallow);
 
-  const propertiesColor =
-    !drawerSelectedLogs && !drawerSelectedCode
-      ? "bg-[#CCCCCC]"
-      : "bg-[#D9D9D9]";
-  const logsColor = drawerSelectedLogs ? "bg-[#CCCCCC]" : "bg-[#D9D9D9]";
-  const codeColor = drawerSelectedCode ? "bg-[#CCCCCC]" : "bg-[#D9D9D9]";
+  const handleTabClick = (tabId: string, width: string) => {
+    const isLogs = tabId === "logs";
+    const isCode = tabId === "code";
+
+    setDrawerSelectedLogs(isLogs);
+    setDrawerSelectedCode(isCode);
+    setDrawerWidth(width);
+  };
+
+  const getTabColor = (isActive: boolean) =>
+    isActive ? "bg-[#CCCCCC]" : "bg-[#D9D9D9]";
+
+  const renderContent = () => {
+    if (drawerSelectedLogs) return <LogsMenu />;
+    if (drawerSelectedCode) return <CodeMenu />;
+
+    if (!selectedElement) return <ChoreographyMenu />;
+
+    if (isNode(selectedElement)) {
+      return selectedElement.type === "event" ? (
+        <NodeMenu key={selectedElement.id} node={selectedElement} />
+      ) : (
+        <SubgraphMenu key={selectedElement.id} nest={selectedElement} />
+      );
+    }
+
+    return <EdgeMenu key={selectedElement.id} edge={selectedElement} />;
+  };
 
   return (
-    <>
-      {/* DRAWER */}
+    <motion.div
+      initial={{ width: DRAWER_CLOSED_WIDTH }}
+      animate={{ width: drawerOpen ? drawerWidth : DRAWER_CLOSED_WIDTH }}
+      exit={{ width: DRAWER_CLOSED_WIDTH }}
+      transition={{ duration: DRAWER_ANIMATION_DURATION, ease: "easeInOut" }}
+      className="absolute h-full right-0 bg-[#D9D9D9] drop-shadow-lg border-l-2 border-[#CCCCCC] overflow-hidden select-none z-10"
+    >
+      {/* DRAWER TOGGLE BUTTON */}
       <motion.div
-        initial={{ width: 16 }}
-        animate={{ width: drawerOpen ? drawerWidth : 16 }}
-        exit={{ width: 16 }}
-        transition={{ duration: 0.2, ease: "easeInOut" }}
-        className="absolute h-full right-0 bg-[#D9D9D9] drop-shadow-lg border-l-2 border-[#CCCCCC] overflow-hidden select-none"
+        onClick={() => setDrawerOpen(!drawerOpen)}
+        className="cursor-pointer flex items-center justify-center w-4 h-full border-r-2 border-[#CCCCCC]"
       >
-        {/* DRAWER TOGGLE BUTTON */}
         <motion.div
-          onClick={() => setDrawerOpen(!drawerOpen)}
-          className="cursor-pointer flex items-center justify-center w-4 h-full border-r-2 border-[#CCCCCC]"
+          animate={{ rotate: drawerOpen ? 0 : 180 }}
+          transition={{ duration: CONTENT_ANIMATION_DURATION }}
         >
-          <motion.div
-            animate={{ rotate: drawerOpen ? 0 : 180 }}
-            transition={{ duration: 0.3 }}
-          >
-            <ChevronRight />
-          </motion.div>
+          <ChevronRight />
         </motion.div>
-
-        {/* DRAWER CONTENT */}
-        <AnimatePresence>
-          {drawerOpen ? (
-            <motion.div
-              key="0"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="absolute top-0 left-4 w-[calc(100%-12px)] flex flex-col text-black"
-            >
-              <div className="flex relative border-b-2 font-bold border-[#CCCCCC] ">
-                <div
-                  className={`cursor-pointer w-1/3 p-2 border-r-2 border-[#CCCCCC] justify-center flex items-center ${propertiesColor}`}
-                  onClick={() => {
-                    setDrawerSelectedLogs(false);
-                    setDrawerWidth("25%");
-                    setDrawerSelectedCode(false);
-                  }}
-                >
-                  Properties
-                </div>
-                <div
-                  className={`cursor-pointer w-1/3 p-2 border-r-2 border-[#CCCCCC] justify-center flex items-center ${logsColor}`}
-                  onClick={() => {
-                    setDrawerSelectedLogs(true);
-                    setDrawerWidth("25%");
-                    setDrawerSelectedCode(false);
-                  }}
-                >
-                  Logs
-                </div>
-                <div
-                  className={`cursor-pointer w-1/3 p-2 border-r-2 border-[#CCCCCC] justify-center flex items-center ${codeColor}`}
-                  onClick={() => {
-                    setDrawerSelectedCode(true);
-                    setDrawerWidth("50%");
-                    setDrawerSelectedLogs(false);
-                  }}
-                >
-                  Code
-                </div>
-              </div>
-              {drawerSelectedLogs ? (
-                <LogsMenu />
-              ) : drawerSelectedCode ? (
-                <CodeMenu />
-              ) : selectedElement ? (
-                isNode(selectedElement) ? (
-                  selectedElement.type === "event" ? (
-                    <NodeMenu
-                      key={(selectedElement as Node).id}
-                      node={selectedElement as Node}
-                    />
-                  ) : (
-                    <SubgraphMenu
-                      key={(selectedElement as Node).id}
-                      nest={selectedElement as Node}
-                    />
-                  )
-                ) : (
-                  <EdgeMenu
-                    key={(selectedElement as Edge).id}
-                    edge={selectedElement as Edge}
-                  />
-                )
-              ) : (
-                <ChoreographyMenu />
-              )}
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
       </motion.div>
-    </>
+
+      {/* DRAWER CONTENT */}
+      <AnimatePresence>
+        {drawerOpen && (
+          <motion.div
+            key="drawer-content"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: CONTENT_ANIMATION_DURATION }}
+            className="absolute top-0 left-4 w-[calc(100%-12px)] flex flex-col text-black"
+          >
+            {/* TABS */}
+            <div className="flex relative border-b-2 font-bold border-[#CCCCCC]">
+              {TABS.map((tab, index) => {
+                const isActive = tab.isActive(
+                  drawerSelectedLogs,
+                  drawerSelectedCode
+                );
+                const isLastTab = index === TABS.length - 1;
+
+                return (
+                  <div
+                    key={tab.id}
+                    className={`
+                      cursor-pointer w-1/3 p-2 justify-center flex items-center gap-2
+                      ${getTabColor(isActive)}
+                      ${!isLastTab ? "border-r-2 border-[#CCCCCC]" : ""}
+                    `}
+                    onClick={() => handleTabClick(tab.id, tab.width)}
+                  >
+                    {tab.label}
+                    {tab.icon}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* CONTENT */}
+            {renderContent()}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

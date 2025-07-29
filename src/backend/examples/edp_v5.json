@@ -1,0 +1,547 @@
+{
+  "nodes": [
+    {
+      "id": "s1",
+      "position": {
+        "x": 710,
+        "y": 515
+      },
+      "width": 640,
+      "height": 340,
+      "type": "subprocess",
+      "parentId": "",
+      "data": {
+        "label": "s1",
+        "marking": {
+          "included": true,
+          "pending": false
+        }
+      },
+      "zIndex": 1000,
+      "measured": {
+        "width": 640,
+        "height": 340
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "s2",
+      "position": {
+        "x": 425,
+        "y": 170
+      },
+      "width": 370,
+      "height": 220,
+      "type": "subprocess",
+      "parentId": "s1",
+      "expandParent": true,
+      "extent": "parent",
+      "data": {
+        "label": "s2",
+        "marking": {
+          "included": true,
+          "pending": false
+        }
+      },
+      "zIndex": 1000,
+      "measured": {
+        "width": 370,
+        "height": 220
+      },
+      "selected": false,
+      "dragging": true
+    },
+    {
+      "id": "s0",
+      "position": {
+        "x": 252.5,
+        "y": 230
+      },
+      "width": 205,
+      "height": 220,
+      "type": "subprocess",
+      "parentId": "",
+      "data": {
+        "label": "s0",
+        "marking": {
+          "included": true,
+          "pending": false
+        }
+      },
+      "zIndex": 1000,
+      "measured": {
+        "width": 205,
+        "height": 220
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "e0",
+      "type": "event",
+      "data": {
+        "initiators": [
+          "CO(#cid as X)"
+        ],
+        "receivers": [
+          "P(id=*; cid=X)"
+        ],
+        "type": "i",
+        "label": "r4c",
+        "name": "request_forecast",
+        "marking": {
+          "included": true,
+          "pending": false
+        },
+        "input": {
+          "type": "Unit"
+        },
+        "security": "Public"
+      },
+      "parentId": "",
+      "position": {
+        "x": 5,
+        "y": 230
+      },
+      "zIndex": 10000,
+      "measured": {
+        "width": 100,
+        "height": 100
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "e1",
+      "type": "event",
+      "data": {
+        "initiators": [
+          "CO(#cid as X)"
+        ],
+        "type": "i",
+        "label": "accounting",
+        "name": "accounting",
+        "marking": {
+          "included": false,
+          "pending": false
+        },
+        "input": {
+          "type": "Integer"
+        },
+        "security": "Public"
+      },
+      "parentId": "",
+      "position": {
+        "x": 470,
+        "y": 230
+      },
+      "zIndex": 10000,
+      "measured": {
+        "width": 100,
+        "height": 100
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "e2",
+      "type": "event",
+      "data": {
+        "initiators": [
+          "P(#id; #cid as X)"
+        ],
+        "receivers": [
+          "P(id=*; cid=X)"
+        ],
+        "type": "i",
+        "label": "csm",
+        "name": "consume",
+        "marking": {
+          "included": true,
+          "pending": false
+        },
+        "input": {
+          "type": "Record",
+          "record": [
+            {
+              "var": "kw",
+              "type": "Integer"
+            }
+          ]
+        },
+        "security": "Public"
+      },
+      "parentId": "",
+      "position": {
+        "x": 260,
+        "y": 515
+      },
+      "zIndex": 10000,
+      "measured": {
+        "width": 100,
+        "height": 100
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "e3",
+      "type": "event",
+      "data": {
+        "initiators": [
+          "@Receiver(r4c)"
+        ],
+        "receivers": [
+          "@Initiator(r4c)"
+        ],
+        "type": "i",
+        "label": "reply",
+        "name": "r4c_reply",
+        "marking": {
+          "included": true,
+          "pending": true
+        },
+        "input": {
+          "type": "Integer"
+        },
+        "security": "Public"
+      },
+      "parentId": "s0",
+      "expandParent": true,
+      "extent": "parent",
+      "position": {
+        "x": 110,
+        "y": 110
+      },
+      "zIndex": 10000,
+      "measured": {
+        "width": 100,
+        "height": 100
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "e4",
+      "type": "event",
+      "data": {
+        "initiators": [
+          "@Receiver(csm)"
+        ],
+        "receivers": [
+          "@Initiator(csm)"
+        ],
+        "type": "i",
+        "label": "reply",
+        "name": "csm_reply",
+        "marking": {
+          "included": true,
+          "pending": false
+        },
+        "input": {
+          "type": "Record",
+          "record": [
+            {
+              "var": "kw",
+              "type": "Integer"
+            },
+            {
+              "var": "cost",
+              "type": "Integer"
+            }
+          ]
+        },
+        "security": "Public"
+      },
+      "parentId": "s1",
+      "expandParent": true,
+      "extent": "parent",
+      "position": {
+        "x": 95,
+        "y": 170
+      },
+      "zIndex": 10000,
+      "measured": {
+        "width": 100,
+        "height": 100
+      },
+      "dragging": true,
+      "selected": false
+    },
+    {
+      "id": "e5",
+      "type": "event",
+      "data": {
+        "initiators": [
+          "@Initiator(csm)"
+        ],
+        "receivers": [
+          "@Receiver(csm)"
+        ],
+        "type": "i",
+        "label": "accept",
+        "name": "accept",
+        "marking": {
+          "included": true,
+          "pending": false
+        },
+        "input": {
+          "type": "Integer"
+        },
+        "security": "Public"
+      },
+      "parentId": "s2",
+      "expandParent": true,
+      "extent": "parent",
+      "position": {
+        "x": 95,
+        "y": 125
+      },
+      "zIndex": 10000,
+      "measured": {
+        "width": 100,
+        "height": 100
+      },
+      "dragging": true,
+      "selected": false
+    },
+    {
+      "id": "e6",
+      "type": "event",
+      "data": {
+        "initiators": [
+          "@Initiator(csm)"
+        ],
+        "receivers": [
+          "@Receiver(csm)"
+        ],
+        "type": "i",
+        "label": "reject",
+        "name": "reject",
+        "marking": {
+          "included": true,
+          "pending": false
+        },
+        "input": {
+          "type": "Unit"
+        },
+        "security": "Public"
+      },
+      "parentId": "s2",
+      "expandParent": true,
+      "extent": "parent",
+      "position": {
+        "x": 275,
+        "y": 125
+      },
+      "zIndex": 10000,
+      "measured": {
+        "width": 100,
+        "height": 100
+      },
+      "dragging": true,
+      "selected": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "s-e0-s0",
+      "type": "spawn",
+      "source": "e0",
+      "target": "s0",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "e-e3-e3",
+      "type": "exclude",
+      "source": "e3",
+      "target": "e3",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "e-e1-e1",
+      "type": "exclude",
+      "source": "e1",
+      "target": "e1",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "r-e3-e1",
+      "type": "response",
+      "source": "e3",
+      "target": "e1",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "i-e3-e1",
+      "type": "include",
+      "source": "e3",
+      "target": "e1",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "s-e4-s2",
+      "type": "spawn",
+      "source": "e4",
+      "target": "s2",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "e-e4-e4",
+      "type": "exclude",
+      "source": "e4",
+      "target": "e4",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "e-e5-e5",
+      "type": "exclude",
+      "source": "e5",
+      "target": "e5",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "e-e5-e6",
+      "type": "exclude",
+      "source": "e5",
+      "target": "e6",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "e-e6-e5",
+      "type": "exclude",
+      "source": "e6",
+      "target": "e5",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "e-e6-e6",
+      "type": "exclude",
+      "source": "e6",
+      "target": "e6",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "e-e0-e2",
+      "type": "exclude",
+      "source": "e0",
+      "target": "e2",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "i-e3-e2",
+      "type": "include",
+      "source": "e3",
+      "target": "e2",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "s-e2-s1",
+      "type": "spawn",
+      "source": "e2",
+      "target": "s1",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    }
+  ],
+  "security": "Public flows P\nPublic flows CO",
+  "roles": [
+    {
+      "role": "CO",
+      "label": "CO",
+      "types": [
+        {
+          "var": "cid",
+          "type": "Integer"
+        }
+      ],
+      "participants": []
+    },
+    {
+      "role": "P",
+      "label": "P",
+      "types": [
+        {
+          "var": "id",
+          "type": "String"
+        },
+        {
+          "var": "cid",
+          "type": "Integer"
+        }
+      ],
+      "participants": []
+    },
+    {
+      "role": "Public",
+      "label": "Public",
+      "types": [],
+      "participants": []
+    }
+  ],
+  "nextNodeId": [
+    7
+  ],
+  "nextGroupId": [
+    0
+  ],
+  "nextSubprocessId": [
+    3
+  ]
+}

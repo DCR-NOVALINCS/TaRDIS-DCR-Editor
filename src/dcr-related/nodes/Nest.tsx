@@ -5,8 +5,6 @@ import {
   Position,
   useConnection,
 } from "@xyflow/react";
-
-import "@/dcr-related/CustomHandles.css";
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
 import { useKeyPress } from "@/lib/utils";
@@ -62,6 +60,19 @@ export default function Nest(props: NodeProps) {
   const isTarget = connection.inProgress && connection.fromNode.id != props.id;
   const shiftPressed = useKeyPress("Shift");
 
+  const handleStyle: React.CSSProperties = {
+    width: "100%",
+    height: "100%",
+    background: "black",
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    borderRadius: "0px",
+    transform: "translate(-50%, -50%)",
+    border: "none",
+    opacity: "0",
+  };
+
   return (
     <>
       {/* NEST */}
@@ -92,7 +103,7 @@ export default function Nest(props: NodeProps) {
         {!connection.inProgress && (
           <Handle
             id={`${props.id}-source-handle`}
-            className="nestHandle"
+            style={handleStyle}
             position={Position.Right}
             type="source"
             isConnectable={!simulationFlow && shiftPressed}
@@ -102,7 +113,7 @@ export default function Nest(props: NodeProps) {
         {(!connection.inProgress || isTarget) && (
           <Handle
             id={`${props.id}-target-handle`}
-            className="nestHandle"
+            style={handleStyle}
             position={Position.Left}
             type="target"
             isConnectableStart={false}

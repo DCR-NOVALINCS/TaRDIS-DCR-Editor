@@ -1,12 +1,27 @@
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
-
 import { X } from "lucide-react";
+import { Log } from "@/lib/types";
 
 const selector = (state: RFState) => ({
   logs: state.logs,
   setLogs: state.setLogs,
 });
+
+const LogItem = ({ log, onRemove }: { log: Log; onRemove: () => void }) => (
+  <div className="flex flex-col p-3 gap-2 border-b-2 border-[#CCCCCC]">
+    <div className="flex items-center">
+      <div className="font-bold text-[16px]">LOG {log.time}</div>
+      <X
+        className="cursor-pointer ml-auto hover:opacity-75 transition-opacity"
+        size={20}
+        onClick={onRemove}
+        aria-label={`Remove log from ${log.time}`}
+      />
+    </div>
+    <div className="text-[14px] break-words">{log.message}</div>
+  </div>
+);
 
 /**
  * Displays a menu for viewing and managing application logs.
@@ -25,32 +40,37 @@ const selector = (state: RFState) => ({
 export default function LogsMenu() {
   const { logs, setLogs } = useStore(selector, shallow);
 
+  const hasLogs = logs.length > 0;
+
   return (
     <>
+      {/* Header with Clear All button */}
       <div className="flex justify-end border-b-2 border-[#CCCCCC] select-none">
         <button
-          className="py-2 mr-6 cursor-pointer hover:underline"
+          className="py-2 mr-6 cursor-pointer hover:underline transition-all duration-200"
           onClick={() => setLogs([])}
+          disabled={!hasLogs}
+          aria-label="Clear all logs"
         >
           Clear All
         </button>
       </div>
-      <div className="h-[calc(100vh-90px)] overflow-y-auto w-[calc(100%-1rem)] select-none">
-        {logs.map((log, index) => (
-          <div
-            key={index}
-            className="flex flex-col p-3 gap-2 border-b-2 border-[#CCCCCC]"
-          >
-            <div className="flex">
-              <div className="font-bold text-[16px]">LOG {log.time}</div>
-              <X
-                className="cursor-pointer ml-auto"
-                onClick={() => setLogs(logs.filter((_, i) => i !== index))}
-              />
-            </div>
-            <div>{log.message}</div>
+
+      {/* Logs container */}
+      <div className="h-[calc(100vh-90px)] overflow-y-auto w-[calc(100%-4px)] select-none">
+        {hasLogs ? (
+          logs.map((log, index) => (
+            <LogItem
+              key={`${log.time}-${index}`}
+              log={log}
+              onRemove={() => setLogs(logs.filter((_, i) => i !== index))}
+            />
+          ))
+        ) : (
+          <div className="flex items-center justify-center h-32 text-gray-500 text-[14px]">
+            No logs available
           </div>
-        ))}
+        )}
       </div>
     </>
   );

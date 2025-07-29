@@ -6,14 +6,10 @@ import { IncludeModel } from "@/dcr-related/edges/Include";
 import { MilestoneModel } from "@/dcr-related/edges/Milestone";
 import { ResponseModel } from "@/dcr-related/edges/Response";
 import { SpawnModel } from "@/dcr-related/edges/Spawn";
-
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
-
 import { ReactNode, useState } from "react";
-
 import { AnimatePresence, motion } from "framer-motion";
-
 import { ChevronLeft } from "lucide-react";
 import { NestModel } from "@/dcr-related/nodes/Nest";
 import { SubprocessModel } from "@/dcr-related/nodes/Subprocess";
@@ -34,6 +30,46 @@ interface RelationProps {
   selected: boolean;
 }
 
+const PALETTE_WIDTH = 300;
+const PALETTE_COLLAPSED_WIDTH = 16;
+const ANIMATION_DURATION = 0.2;
+const CONTENT_ANIMATION_DURATION = 0.3;
+const RESET_DELAY = 10;
+
+const DRAGGABLE_ITEMS = [
+  {
+    component: NestModel,
+    type: "nest",
+    category: "subgraph",
+  },
+  {
+    component: SubprocessModel,
+    type: "subprocess",
+    category: "subgraph",
+  },
+  {
+    component: EventModel,
+    type: "i",
+    category: "event",
+    props: { type: "i" },
+  },
+  {
+    component: EventModel,
+    type: "c",
+    category: "event",
+    props: { type: "c" },
+  },
+] as const;
+
+const INITIAL_RELATIONS = [
+  { component: <ConditionModel />, type: "condition", selected: false },
+  { component: <ResponseModel />, type: "response", selected: false },
+  { component: <IncludeModel />, type: "include", selected: false },
+  { component: <ExcludeModel />, type: "exclude", selected: false },
+  { component: <MilestoneModel />, type: "milestone", selected: false },
+  { component: <SpawnModel />, type: "spawn", selected: false },
+];
+
 /**
  * ToolPallete is a React component that provides a draggable and selectable tool palette
  * for a graphical editor interface. It allows users to:
@@ -53,17 +89,21 @@ export default function ToolPallete() {
     shallow
   );
 
+  const [relations, setRelations] =
+    useState<RelationProps[]>(INITIAL_RELATIONS);
+  const [open, setOpen] = useState(false);
+
   /**
    * Handles the drag start event for draggable items in the tool palette.
    * Sets the appropriate type (event or subgraph) based on the provided type string,
    * and configures the drag-and-drop effect.
    *
    * @param event - The drag event triggered when the user starts dragging an item.
-   * @param type - The type identifier for the dragged item. If the string length is 1,
-   *               it is considered an event type; otherwise, it is treated as a subgraph type.
+   * @param type - The type identifier for the dragged item.
+   * @param category - The category of the item ("event" or "subgraph").
    */
-  const onDragStart = (event: any, type: string) => {
-    if (type.length === 1) setEventType(type);
+  const onDragStart = (event: any, type: string, category: string) => {
+    if (category === "event") setEventType(type);
     else setSubgraphType(type);
     event.dataTransfer.effectAllowed = "move";
   };
@@ -71,150 +111,124 @@ export default function ToolPallete() {
   /**
    * Handles the drag end event by resetting the event and subgraph types after a short delay.
    * This ensures that any UI updates dependent on these states are properly triggered.
-   *
-   * @remarks
-   * The function uses an asynchronous reset with a 10ms delay to avoid potential race conditions
-   * or UI glitches that may occur if the state is reset immediately.
    */
-  const onDragEnd = () => {
-    const reset = async () => {
-      await delay(10);
-      setEventType("");
-      setSubgraphType("");
-    };
-    reset();
+  const onDragEnd = async () => {
+    await delay(RESET_DELAY);
+    setEventType("");
+    setSubgraphType("");
   };
 
-  const [relations, setRelations] = useState<RelationProps[]>([
-    { component: <ConditionModel />, type: "condition", selected: false },
-    { component: <ResponseModel />, type: "response", selected: false },
-    { component: <IncludeModel />, type: "include", selected: false },
-    { component: <ExcludeModel />, type: "exclude", selected: false },
-    { component: <MilestoneModel />, type: "milestone", selected: false },
-    { component: <SpawnModel />, type: "spawn", selected: false },
-  ]);
-
   /**
-   * Sets the relation type for the drag and drop event.
+   * Handles relation selection, toggling the selected state and updating the store.
    * @param index - The index of the relation to select.
    */
-  const onClick = (index: number) => {
-    setRelationType(relations[index].type);
+  const handleRelationClick = (index: number) => {
+    const currentRelation = relations[index];
+    const newSelected = !currentRelation.selected;
 
+    // Set or clear the relation type
+    setRelationType(newSelected ? currentRelation.type : "");
+
+    // Update relations state
     setRelations((prev) =>
-      prev.map((relation, i) => {
-        if (i === index) {
-          if (relation.selected) {
-            setRelationType("");
-            return {
-              ...relation,
-              selected: false,
-            };
-          } else {
-            setRelationType(relation.type);
-            return {
-              ...relation,
-              selected: true,
-            };
-          }
-        } else
-          return {
-            ...relation,
-            selected: false,
-          };
-      })
+      prev.map((relation, i) => ({
+        ...relation,
+        selected: i === index ? newSelected : false,
+      }))
     );
   };
 
-  const [open, setOpen] = useState(true);
+  const getRelationClasses = (selected: boolean) =>
+    `${
+      selected ? "bg-white" : "bg-[#CCCCCC]"
+    } hover:ring-1 h-8 w-12 flex items-center justify-center rounded-sm cursor-pointer select-none`;
+
+  const renderDraggableItems = () => {
+    const subgraphItems = DRAGGABLE_ITEMS.filter(
+      (item) => item.category === "subgraph"
+    );
+    const eventItems = DRAGGABLE_ITEMS.filter(
+      (item) => item.category === "event"
+    );
+
+    return (
+      <>
+        {/* SUBGRAPHS */}
+        <div className="flex gap-5">
+          {subgraphItems.map(({ component: Component, type, category }) => (
+            <Component
+              key={type}
+              onDragStart={(event: any) => onDragStart(event, type, category)}
+              onDragEnd={onDragEnd}
+            />
+          ))}
+        </div>
+
+        {/* EVENTS */}
+        <div className="flex gap-5">
+          {eventItems.map(({ component: Component, type, category, props }) => (
+            <Component
+              key={type}
+              onDragStart={(event: any) => onDragStart(event, type, category)}
+              onDragEnd={onDragEnd}
+              {...(props || {})}
+            />
+          ))}
+        </div>
+      </>
+    );
+  };
+
   return (
-    <>
-      {/* TOOL PALETTE */}
-      <motion.div
-        initial={{ width: 300 }}
-        animate={{ width: open ? 300 : 16 }}
-        exit={{ width: 300 }}
-        transition={{ duration: 0.2, ease: "easeInOut" }}
-        className="absolute h-[50%] top-[25%] bg-[#D9D9D9] rounded-tr-lg rounded-br-lg justify-center shadow-lg flex flex-col py-10 items-center gap-10 overflow-hidden z-50"
-      >
-        {/* TOOL PALETTE CONTENT */}
-        <AnimatePresence>
-          {open ? (
-            <motion.div
-              key="0"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="flex flex-col gap-5 mr-5 items-center"
-            >
-              <div className="flex gap-5">
-                <NestModel
-                  onDragStart={(event: any) => {
-                    onDragStart(event, "nest");
-                  }}
-                  onDragEnd={onDragEnd}
-                />
-                <SubprocessModel
-                  onDragStart={(event: any) => {
-                    onDragStart(event, "subprocess");
-                  }}
-                  onDragEnd={onDragEnd}
-                />
-              </div>
-              {/* EVENTS FOR DND */}
-              <div className="flex gap-5">
-                <EventModel
-                  onDragStart={(event: any) => {
-                    onDragStart(event, "i");
-                  }}
-                  onDragEnd={onDragEnd}
-                  type="i"
-                />
-                <EventModel
-                  onDragStart={(event: any) => {
-                    onDragStart(event, "c");
-                  }}
-                  onDragEnd={onDragEnd}
-                  type="c"
-                />
-              </div>
-
-              {/* RELATIONS FOR SELECTION */}
-              <div className="grid grid-cols-3 gap-x-5 gap-y-3">
-                {relations.map((relation, index) => {
-                  const { component, selected } = relation;
-
-                  return (
-                    <div
-                      key={index}
-                      onClick={() => onClick(index)}
-                      className={`${
-                        selected ? "bg-white" : "bg-[#CCCCCC]"
-                      } hover:ring-1 h-8 w-12 flex items-center justify-center rounded-sm cursor-pointer select-none`}
-                    >
-                      {component}
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
-
-        {/* TOOL PALETTE TOGGLE BUTTON */}
-        <motion.div
-          onClick={() => setOpen(!open)}
-          className="absolute right-0 cursor-pointer flex items-center justify-center w-4 h-full border-l-2 border-r-2 border-b-2 rounded-br-lg border-t-2 rounded-tr-lg border-[#CCCCCC]"
-        >
+    <motion.div
+      initial={{ width: PALETTE_COLLAPSED_WIDTH }}
+      animate={{ width: open ? PALETTE_WIDTH : PALETTE_COLLAPSED_WIDTH }}
+      exit={{ width: PALETTE_WIDTH }}
+      transition={{ duration: ANIMATION_DURATION, ease: "easeInOut" }}
+      className="absolute h-[50%] top-[25%] bg-[#D9D9D9] rounded-tr-lg rounded-br-lg justify-center shadow-lg flex flex-col py-10 items-center gap-10 overflow-hidden z-10"
+    >
+      {/* TOOL PALETTE CONTENT */}
+      <AnimatePresence>
+        {open && (
           <motion.div
-            animate={{ rotate: open ? 0 : 180 }}
-            transition={{ duration: 0.3 }}
+            key="palette-content"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: CONTENT_ANIMATION_DURATION }}
+            className="flex flex-col gap-5 mr-5 items-center"
           >
-            <ChevronLeft />
+            {/* DRAGGABLE ITEMS */}
+            {renderDraggableItems()}
+
+            {/* RELATIONS FOR SELECTION */}
+            <div className="grid grid-cols-3 gap-x-5 gap-y-3">
+              {relations.map((relation, index) => (
+                <div
+                  key={relation.type}
+                  onClick={() => handleRelationClick(index)}
+                  className={getRelationClasses(relation.selected)}
+                >
+                  {relation.component}
+                </div>
+              ))}
+            </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* TOOL PALETTE TOGGLE BUTTON */}
+      <motion.div
+        onClick={() => setOpen(!open)}
+        className="absolute right-0 cursor-pointer flex items-center justify-center w-4 h-full border-l-2 border-r-2 border-b-2 rounded-br-lg border-t-2 rounded-tr-lg border-[#CCCCCC]"
+      >
+        <motion.div
+          animate={{ rotate: open ? 0 : 180 }}
+          transition={{ duration: CONTENT_ANIMATION_DURATION }}
+        >
+          <ChevronLeft />
         </motion.div>
       </motion.div>
-    </>
+    </motion.div>
   );
 }

@@ -1,10 +1,16 @@
 import { MoveRight } from "lucide-react";
-
 import { Edge } from "@xyflow/react";
 import { useState } from "react";
-
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
+import {
+  Button,
+  DrawerMenu,
+  DrawerMenuLabel,
+  FormDocumentation,
+  FormField,
+  FormTextarea,
+} from "@/lib/reusable-comps";
 
 const selector = (state: RFState) => ({
   updateEdge: state.updateEdge,
@@ -32,46 +38,45 @@ const EdgeMenu = ({ edge }: { edge: Edge }) => {
     shallow
   );
   const { id, data } = edge as { id: string; data: Record<string, string> };
-  const [guard, setGuard] = useState(data.guard);
+  const [guard, setGuard] = useState(data.guard || "");
+
+  const handleSave = () => {
+    updateEdge(id, {
+      ...edge,
+      data: { ...data, guard },
+      selected: true,
+    });
+  };
 
   return (
-    <div className="flex flex-col mr-4 w-full select-none">
-      {/* EDGE WITH RESPECTIVE NODE */}
-      <div className="flex items-center gap-5 p-4 border-b-2 border-[#CCCCCC]">
+    <DrawerMenu>
+      <DrawerMenuLabel>
         <MoveRight size={40} />
         Edge {id}
-      </div>
+      </DrawerMenuLabel>
 
-      {/* DOCUMENTATION OF EDGE */}
-      <div className="flex flex-col p-3 gap-2 border-b-2 border-[#CCCCCC]">
-        <div className="font-bold text-[16px]">Documentation</div>
-        <textarea
-          className="bg-white rounded-sm min-h-16 max-h-64 p-1 h-16 text-[14px]"
-          value={documentation.get(id)}
-          onChange={(event) => addDocumentation(id, event.target.value)}
-        />
-      </div>
+      {/* Documentation */}
+      <FormDocumentation
+        documentation={documentation.get(id)}
+        onChange={(e) => addDocumentation(id, e.target.value)}
+        key={id}
+      />
+
+      {/* Form Fields */}
       <div className="flex flex-col p-3 gap-3">
-        {/* GUARD */}
-        <div className="grid grid-cols-3 items-center gap-4">
-          <label>Guard</label>
-          <textarea
-            className="col-span-2 min-h-8 h-8 bg-white rounded-sm p-1 font-mono"
+        {/* Guard */}
+        <FormField label="Guard">
+          <FormTextarea
             value={guard}
-            onChange={(event) => setGuard(event.target.value)}
+            onChange={(e) => setGuard(e.target.value)}
+            placeholder="Guard condition"
           />
-        </div>
-        <button
-          className="bg-black h-8 w-full rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
-          type="button"
-          onClick={() =>
-            updateEdge(id, { ...edge, data: { guard }, selected: true })
-          }
-        >
-          Save Changes
-        </button>
+        </FormField>
+
+        {/* Save Button */}
+        <Button onClick={handleSave}>Save Changes</Button>
       </div>
-    </div>
+    </DrawerMenu>
   );
 };
 

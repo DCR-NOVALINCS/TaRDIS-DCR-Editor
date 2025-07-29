@@ -1,22 +1,12 @@
 import { BaseNode } from "@/components/base-node";
-import {
-  Edge,
-  Handle,
-  NodeProps,
-  Position,
-  useConnection,
-} from "@xyflow/react";
+import { Handle, type NodeProps, Position, useConnection } from "@xyflow/react";
 import { Check } from "lucide-react";
-
-import "@/dcr-related/CustomHandles.css";
 import useStore, { RFState } from "@/stores/store";
 import { useKeyPress } from "@/lib/utils";
 import { shallow } from "zustand/shallow";
 
 const selector = (state: RFState) => ({
   simulationFlow: state.simulationFlow,
-  relationType: state.relationType,
-  addEdge: state.addEdge,
 });
 
 /**
@@ -75,7 +65,7 @@ export const EventModel = ({
  * - Marking state controls the display of pending and excluded indicators.
  */
 export default function BaseEvent({ id, data, ...props }: NodeProps) {
-  const { simulationFlow, addEdge, relationType } = useStore(selector, shallow);
+  const { simulationFlow } = useStore(selector, shallow);
   const { initiators, receivers, type, label, name, marking, interactionType } =
     data as {
       initiators: string[];
@@ -107,6 +97,19 @@ export default function BaseEvent({ id, data, ...props }: NodeProps) {
     labelName.length > 20 ? labelName.slice(0, 19) + "..." : labelName;
 
   const shiftPressed = useKeyPress("Shift");
+
+  const handleStyle: React.CSSProperties = {
+    width: "100%",
+    height: "100%",
+    background: "blue",
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    borderRadius: "2px",
+    transform: "translate(-50%, -50%)",
+    border: "none",
+    opacity: "0",
+  };
 
   return (
     <>
@@ -170,7 +173,7 @@ export default function BaseEvent({ id, data, ...props }: NodeProps) {
         {!connection.inProgress && (
           <Handle
             id={`${id}-source-handle`}
-            className="customHandle"
+            style={handleStyle}
             position={Position.Right}
             type="source"
             isConnectable={!simulationFlow && shiftPressed}
@@ -180,7 +183,7 @@ export default function BaseEvent({ id, data, ...props }: NodeProps) {
         {(!connection.inProgress || isTarget) && (
           <Handle
             id={`${id}-target-handle`}
-            className="customHandle"
+            style={handleStyle}
             position={Position.Left}
             type="target"
             isConnectableStart={false}

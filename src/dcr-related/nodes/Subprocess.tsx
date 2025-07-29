@@ -5,8 +5,6 @@ import {
   Position,
   useConnection,
 } from "@xyflow/react";
-
-import "@/dcr-related/CustomHandles.css";
 import { BaseNode } from "@/components/base-node";
 import { useKeyPress } from "@/lib/utils";
 import useStore, { RFState } from "@/stores/store";
@@ -60,6 +58,19 @@ export default function Subprocess(props: NodeProps) {
 
   const shiftPressed = useKeyPress("Shift");
 
+  const handleStyle: React.CSSProperties = {
+    width: "100%",
+    height: "100%",
+    background: "black",
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    borderRadius: "0px",
+    transform: "translate(-50%, -50%)",
+    border: "none",
+    opacity: "0",
+  };
+
   return (
     <>
       {/* SUBPROCESS */}
@@ -89,7 +100,7 @@ export default function Subprocess(props: NodeProps) {
         {!connection.inProgress && (
           <Handle
             id={`${props.id}-source-handle`}
-            className="nestHandle"
+            style={handleStyle}
             position={Position.Right}
             type="source"
             isConnectable={!simulationFlow && shiftPressed}
@@ -99,7 +110,7 @@ export default function Subprocess(props: NodeProps) {
         {(!connection.inProgress || isTarget) && (
           <Handle
             id={`${props.id}-target-handle`}
-            className="nestHandle"
+            style={handleStyle}
             position={Position.Left}
             type="target"
             isConnectableStart={false}

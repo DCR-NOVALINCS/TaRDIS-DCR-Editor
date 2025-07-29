@@ -29,9 +29,12 @@ import CustomConnectionLine from "./dcr-related/edges/ConnectionLine";
 import BaseEvent from "./dcr-related/nodes/BaseEvent";
 import Nest from "./dcr-related/nodes/Nest";
 import Subprocess from "./dcr-related/nodes/Subprocess";
-
-import JsonDownload from "./components/json-download";
-import PngDownload from "./components/png-download";
+import { Button } from "./lib/reusable-comps";
+import Drawer from "./components/drawer";
+import ToolPallete from "./components/tool-pallete";
+import { Pickaxe } from "lucide-react";
+import ImportButton from "./components/import-button";
+import ExportButton from "./components/export-button";
 
 type History = {
   nodes: Node[];
@@ -72,6 +75,7 @@ const selector = (state: RFState) => ({
   simEdges: state.simEdges,
   onClickSimulationToggle: state.onClickSimulationToggle,
   onNodeClickSimulation: state.onNodeClickSimulation,
+  currentProjection: state.currentProjection,
 });
 
 const nodeOrigin: NodeOrigin = [0.5, 0.5];
@@ -125,6 +129,7 @@ function FlowWithoutProvider() {
     onNodeClickSimulation,
     simEdges,
     simNodes,
+    currentProjection,
   } = useStore(selector, shallow);
 
   const flowRef = useRef<HTMLDivElement>(null);
@@ -276,15 +281,34 @@ function FlowWithoutProvider() {
       <KeyPressListener />
       <Controls showInteractive={false} />
       <Background variant={BackgroundVariant.Dots} />
-      <Panel position="top-left" style={{ zIndex: 20000 }}>
-        <JsonDownload />
-        <PngDownload />
-        <button
-          className="bg-black select-none text-white font-semibold px-2 py-1 w-36 rounded-sm m-2 hover:opacity-75 cursor-pointer"
+      {!simulationFlow && (
+        <>
+          {currentProjection === "global" && <ToolPallete />}
+          <Drawer />
+        </>
+      )}
+      <Panel
+        position="top-left"
+        style={{
+          display: "flex",
+          width: simulationFlow ? "200px" : "600px",
+          gap: 10,
+          zIndex: 10,
+        }}
+      >
+        {!simulationFlow && (
+          <>
+            <ImportButton />
+            <ExportButton />
+          </>
+        )}
+        <Button
+          className="flex items-center justify-center gap-2 w-full"
           onClick={onClickSimulationToggle}
         >
           {simulationFlow ? "Stop" : "Start"} Simulation
-        </button>
+          <Pickaxe size={20} />
+        </Button>
       </Panel>
     </ReactFlow>
   );

@@ -2,17 +2,81 @@ import {
   type Edge,
   type Node,
   type NodeChange,
+  type NodePositionChange,
   type OnNodesChange,
   type OnNodesDelete,
+  type XYPosition,
   applyNodeChanges,
   isNode,
 } from "@xyflow/react";
-
 import { StateCreator } from "zustand/vanilla";
 import { RFState } from "@/stores/store";
-
 import { delay } from "@/lib/utils";
-import { initialNodes, type EventType } from "@/lib/types";
+import { initialState, state, type EventType } from "@/lib/types";
+
+// Type definitions
+type NodeType = "event" | "nest" | "subprocess";
+type EventSubtype = "i" | "c"; // input or computation
+
+interface IdCounters {
+  nextNodeId: number[];
+  nextGroupId: number[];
+  nextSubprocessId: number[];
+}
+
+// Node factory functions
+const createNodeId = (
+  type: NodeType,
+  counters: IdCounters
+): { id: string; updatedCounters: Partial<IdCounters> } => {
+  const prefixMap = { event: "e", nest: "n", subprocess: "s" } as const;
+  const counterMap = {
+    event: "nextNodeId",
+    nest: "nextGroupId",
+    subprocess: "nextSubprocessId",
+  } as const;
+
+  const counterKey = counterMap[type];
+  const currentCounter = counters[counterKey];
+  const id = prefixMap[type] + currentCounter[0];
+  const nextCounters = currentCounter.slice(1);
+
+  return {
+    id,
+    updatedCounters: {
+      [counterKey]:
+        nextCounters.length === 0 ? [currentCounter[0] + 1] : nextCounters,
+    },
+  };
+};
+
+const createEventNode = (node: Node, id: string): Node => {
+  const isInputEvent = node.data.type === "i";
+
+  return {
+    ...node,
+    id,
+    selected: true,
+    data: {
+      ...node.data,
+      label: id,
+      ...(isInputEvent
+        ? { input: node.data.input || { type: "Unit" } }
+        : { expression: node.data.expression || "" }),
+    },
+  };
+};
+
+const createSubgraphNode = (node: Node, id: string): Node => ({
+  ...node,
+  id,
+  selected: true,
+  data: {
+    ...node.data,
+    label: id,
+    ...(node.type === "nest" && { nestType: "group" }),
+  },
+});
 
 /**
  * Represents the state and operations related to nodes within the application.
@@ -94,34 +158,39 @@ import { initialNodes, type EventType } from "@/lib/types";
  */
 export type NodesState = {
   /* ---------- NODES AND PARENTING ---------- */
+  // Core node state
   nodes: Node[];
+
+  // ID management
+  nextNodeId: number[];
+  nextGroupId: number[];
+  nextSubprocessId: number[];
+
+  // Event and subgraph types
+  eventType: string;
+  subgraphType: string;
+
+  // Node operations
   addNode(node: Node): string;
   updateNode(id: string, updatedNode: Node): string;
   updateNodeInfo(id: string, event: EventType): void;
   setNodes(newNodes: Node[]): void;
-  getNode(id: string): Node;
+  getNode(id: string): Node | undefined;
   getFamily(id: string): string[];
   updateParenting(updatedNode: Node): void;
   parentInFront(parentId: string, childId: string): boolean;
-  /* ----------------------------------------- */
 
-  /* ------------------ IDS ------------------ */
-  nextNodeId: number[];
-  nextGroupId: number[];
-  nextSubprocessId: number[];
+  // ID management
   setIds(nodeId: number[], groupId: number[], subprocessId: number[]): void;
-  /* ----------------------------------------- */
 
-  /* -------------- EVENT TYPE --------------- */
-  eventType: string;
+  // Type setters
   setEventType(type: string): void;
-  /* ----------------------------------------- */
-
-  subgraphType: string;
   setSubgraphType(type: string): void;
 
-  /* ------------- FLOW RELATED -------------- */
+  // Flow operations
   changeNodes(previous?: string, role?: string): Promise<void>;
+
+  // Event handlers
   onNodesChange: OnNodesChange;
   onNodesDelete: OnNodesDelete;
   onNodeClick(event: any, node: Node): void;
@@ -129,8 +198,22 @@ export type NodesState = {
   onNodeDragStart(event: any, node: Node): void;
   onNodeDragStop(event: any, node: Node): void;
   onDragOver(event: any): void;
-  onDrop(event: any, screenToFlowPosition: any): void;
-  /* ----------------------------------------- */
+  onDrop(
+    event: any,
+    screenToFlowPosition: (pos: XYPosition) => XYPosition
+  ): void;
+
+  // Helper Functions
+  handleNodeTypeConversion(currentNode: Node, updatedNode: Node): Node;
+  convertNestToSubprocess(currentNode: Node, updatedNode: Node): Node;
+  convertSubprocessToNest(currentNode: Node, updatedNode: Node): Node;
+  handleParentChange(updatedNode: Node): Node;
+  handlePositionChanges(changes: NodePositionChange[]): void;
+  updateConnectedEdges(nodeId: string): Promise<void>;
+  returnDeletedIds(deletedNodes: Node[]): void;
+  handleCtrlDoubleClick(node: Node): void;
+  createEventOnDrop(eventType: string, position: XYPosition): void;
+  createSubgraphOnDrop(subgraphType: string, position: XYPosition): void;
 };
 
 const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
@@ -138,74 +221,45 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
   get
 ) => ({
   /* ---------- NODES AND PARENTING ---------- */
-  nodes: initialNodes,
-  addNode(node: Node) {
-    let id = "";
-    if (node.type === "nest") {
-      id = "n" + get().nextGroupId[0];
-      const nexts = get().nextGroupId.slice(1);
-      set({
-        nextGroupId: nexts.length === 0 ? [get().nextGroupId[0] + 1] : nexts,
-      });
-    } else if (node.type === "subprocess") {
-      id = "s" + get().nextSubprocessId[0];
-      const nexts = get().nextSubprocessId.slice(1);
-      set({
-        nextSubprocessId:
-          nexts.length === 0 ? [get().nextSubprocessId[0] + 1] : nexts,
-      });
-    } else {
-      id = "e" + get().nextNodeId[0];
-      const nexts = get().nextNodeId.slice(1);
-      set({
-        nextNodeId: nexts.length === 0 ? [get().nextNodeId[0] + 1] : nexts,
-      });
-    }
+  // Initial state
+  nodes: state.nodes ?? [],
+  nextNodeId: state.nextNodeId ?? [0],
+  nextGroupId: state.nextGroupId ?? [0],
+  nextSubprocessId: state.nextSubprocessId ?? [0],
+  eventType: "",
+  subgraphType: "",
 
+  // Node operations
+  addNode(node: Node): string {
+    const counters = {
+      nextNodeId: get().nextNodeId,
+      nextGroupId: get().nextGroupId,
+      nextSubprocessId: get().nextSubprocessId,
+    };
+
+    const { id, updatedCounters } = createNodeId(
+      node.type as NodeType,
+      counters
+    );
+
+    // Update counters
+    set(updatedCounters);
+
+    // Create the appropriate node type
     let nodeToAdd: Node;
     if (node.type === "event") {
-      if (node.data.type === "i") {
-        nodeToAdd = {
-          ...node,
-          id,
-          selected: true,
-          data: {
-            ...node.data,
-            label: id,
-            input: node.data.input ? node.data.input : { type: "Unit" },
-          },
-        };
-        get().log(`Input event added: ${id}.`);
-      } else {
-        nodeToAdd = {
-          ...node,
-          id,
-          selected: true,
-          data: {
-            ...node.data,
-            label: id,
-            expression: node.data.expression ? node.data.expression : "",
-          },
-        };
-        get().log(`Computation event added: ${id}.`);
-      }
+      nodeToAdd = createEventNode(node, id);
+      const eventType = node.data.type === "i" ? "Input" : "Computation";
+      get().log(`${eventType} event added: ${id}.`);
     } else {
-      nodeToAdd = {
-        ...node,
-        id,
-        selected: true,
-        data: {
-          ...node.data,
-          label: id,
-        },
-      };
-      const type = nodeToAdd.type as string;
-
-      get().log(
-        `${type.charAt(0).toUpperCase() + type.slice(1)} added: ${id}.`
-      );
+      nodeToAdd = createSubgraphNode(node, id);
+      const capitalizedType =
+        (node.type as string).charAt(0).toUpperCase() +
+        (node.type as string).slice(1);
+      get().log(`${capitalizedType} added: ${id}.`);
     }
 
+    // Update state
     set({
       nodes: [
         ...get().nodes.map((nd) => ({ ...nd, selected: false })),
@@ -214,375 +268,437 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
       selectedElement: nodeToAdd,
     });
 
+    get().saveState();
     return id;
   },
-  updateNode(id: string, updatedNode: Node) {
-    let nodeRet = updatedNode;
 
+  updateNode(id: string, updatedNode: Node): string {
+    const currentNode = get().getNode(id);
+    if (!currentNode) throw new Error(`Node with id ${id} not found`);
+
+    let nodeToUpdate = updatedNode;
+
+    // Handle node type conversions
+    if (currentNode.type !== updatedNode.type)
+      nodeToUpdate = get().handleNodeTypeConversion(currentNode, updatedNode);
+
+    // Handle parent changes
+    if (updatedNode.parentId && updatedNode.parentId !== currentNode.parentId)
+      nodeToUpdate = get().handleParentChange(nodeToUpdate);
+
+    // Update the node in state
     set({
-      nodes: get().nodes.map((node) => {
-        if (node.id === id) {
-          if (node.type === "nest" && updatedNode.type === "subprocess") {
-            get().removeDocumentation(node.id);
-            const subprocessId = "s" + get().nextSubprocessId[0];
-            const nextNestId = parseInt(node.id.substring(1));
-            const nexts = get().nextSubprocessId.slice(1);
-            set({
-              nextGroupId: [nextNestId, ...get().nextGroupId],
-              nextSubprocessId:
-                nexts.length === 0 ? [get().nextSubprocessId[0] + 1] : nexts,
-            });
-            const { nestType, ...restOfData } = updatedNode.data;
-            nodeRet = {
-              ...updatedNode,
-              id: subprocessId,
-              data: {
-                ...restOfData,
-                label: subprocessId,
-              },
-            };
-          } else if (
-            node.type === "subprocess" &&
-            updatedNode.type === "nest"
-          ) {
-            get().removeDocumentation(node.id);
-            const nestId = "n" + get().nextGroupId[0];
-            const nextSubprocessId = parseInt(node.id.substring(1));
-            const nexts = get().nextGroupId.slice(1);
-            set({
-              nextGroupId:
-                nexts.length === 0 ? [get().nextGroupId[0] + 1] : nexts,
-              nextSubprocessId: [nextSubprocessId, ...get().nextSubprocessId],
-            });
-            nodeRet = {
-              ...updatedNode,
-              id: nestId,
-              data: {
-                ...updatedNode.data,
-                nestType: "group",
-                label: nestId,
-              },
-            };
-          } else {
-            if (updatedNode.parentId) {
-              const parentNode = get().getNode(updatedNode.parentId);
-              if (
-                !node.parentId ||
-                (node.parentId && updatedNode.parentId !== node.parentId)
-              ) {
-                const position = {
-                  x: (parentNode.width as number) / 2,
-                  y: (parentNode.height as number) / 2,
-                };
-                nodeRet = {
-                  ...updatedNode,
-                  position,
-                };
-
-                get().onNodesChange([
-                  {
-                    id: updatedNode.id,
-                    type: "position",
-                    dragging: false,
-                    position,
-                  },
-                ]);
-              }
-            }
-          }
-          return nodeRet;
-        } else return node;
-      }),
-      selectedElement: nodeRet,
+      nodes: get().nodes.map((node) => (node.id === id ? nodeToUpdate : node)),
+      selectedElement: nodeToUpdate,
     });
 
-    const type = nodeRet.type as string;
-    get().log(`${type.charAt(0).toUpperCase() + type.slice(1)} ${id} updated.`);
+    const capitalizedType =
+      (nodeToUpdate.type as string).charAt(0).toUpperCase() +
+      (nodeToUpdate.type as string).slice(1);
+    get().log(`${capitalizedType} ${id} updated.`);
 
-    get().updateParenting(nodeRet);
-    return nodeRet.id;
+    get().updateParenting(nodeToUpdate);
+    get().saveState();
+    return nodeToUpdate.id;
   },
-  updateNodeInfo(id: string, event: EventType) {
+
+  // Helper methods for node operations
+  handleNodeTypeConversion(currentNode: Node, updatedNode: Node): Node {
+    get().removeDocumentation(currentNode.id);
+
+    if (currentNode.type === "nest" && updatedNode.type === "subprocess")
+      return get().convertNestToSubprocess(currentNode, updatedNode);
+    else if (currentNode.type === "subprocess" && updatedNode.type === "nest")
+      return get().convertSubprocessToNest(currentNode, updatedNode);
+
+    return updatedNode;
+  },
+
+  convertNestToSubprocess(currentNode: Node, updatedNode: Node): Node {
+    const subprocessId = "s" + get().nextSubprocessId[0];
+    const nextNestId = parseInt(currentNode.id.substring(1));
+    const nexts = get().nextSubprocessId.slice(1);
+
     set({
-      nodes: get().nodes.map((nd) => {
-        if (nd.id === id) {
-          const {
-            label,
-            name,
-            security,
-            initiators,
-            marking,
-            receivers,
-            input,
-            expression,
-            parent,
-          } = event;
-
-          return {
-            ...nd,
-            data: {
-              ...nd.data,
-              ...(label && { label }),
-              ...(name && { name }),
-              ...(security && { security }),
-              ...(initiators.length > 0 && { initiators }),
-              marking,
-              ...(receivers && { receivers }),
-              ...(input && { input }),
-              ...(expression && { expression }),
-            },
-            ...(parent && { parentId: parent }),
-          };
-        } else return nd;
-      }),
+      nextGroupId: [nextNestId, ...get().nextGroupId],
+      nextSubprocessId:
+        nexts.length === 0 ? [get().nextSubprocessId[0] + 1] : nexts,
     });
+
+    const { nestType, ...restOfData } = updatedNode.data;
+    return {
+      ...updatedNode,
+      id: subprocessId,
+      data: {
+        ...restOfData,
+        label: subprocessId,
+      },
+    };
   },
-  setNodes(newNodes: Node[]) {
+
+  convertSubprocessToNest(currentNode: Node, updatedNode: Node): Node {
+    const nestId = "n" + get().nextGroupId[0];
+    const nextSubprocessId = parseInt(currentNode.id.substring(1));
+    const nexts = get().nextGroupId.slice(1);
+
     set({
-      nodes: newNodes,
+      nextGroupId: nexts.length === 0 ? [get().nextGroupId[0] + 1] : nexts,
+      nextSubprocessId: [nextSubprocessId, ...get().nextSubprocessId],
     });
+
+    return {
+      ...updatedNode,
+      id: nestId,
+      data: {
+        ...updatedNode.data,
+        nestType: "group",
+        label: nestId,
+      },
+    };
   },
-  getNode(id: string) {
-    return get().nodes.find((n) => n.id === id) as Node;
-  },
-  getFamily(id: string) {
-    let childrenIds = get()
-      .nodes.filter((nd) => nd.parentId && nd.parentId === id)
-      .map((nd) => nd.id);
 
-    childrenIds.forEach((chId) => childrenIds.push(...get().getFamily(chId)));
+  handleParentChange(updatedNode: Node): Node {
+    if (!updatedNode.parentId) return updatedNode;
 
-    return childrenIds;
-  },
-  updateParenting(updatedNode: Node) {
-    const updateParent = async () => {
-      get().setNodes(get().nodes.filter((nd) => nd.id !== updatedNode.id));
+    const parentNode = get().getNode(updatedNode.parentId);
+    if (!parentNode) return updatedNode;
 
-      await delay(10);
-
-      if (updatedNode.type !== "event") {
-        const childrenNodes = get().nodes.filter(
-          (nd) => nd.parentId && nd.parentId === updatedNode.id
-        );
-
-        const childrenIds = childrenNodes.map((nd) => nd.id);
-
-        get().setNodes([
-          ...get().nodes.filter((nd) => !childrenIds.includes(nd.id)),
-          updatedNode,
-          ...childrenNodes,
-        ]);
-        childrenNodes.forEach((nd) => get().updateParenting(nd));
-        if (childrenIds.length > 0)
-          get().log(
-            `Updated parenting for parent ${
-              updatedNode.id
-            } with children: ${childrenIds.join(", ")}.`
-          );
-      } else if (!get().nodes.some((nd) => nd.id === updatedNode.id))
-        get().setNodes([...get().nodes, updatedNode]);
+    const position = {
+      x: (parentNode.width as number) / 2,
+      y: (parentNode.height as number) / 2,
     };
 
-    updateParent();
-  },
-  parentInFront(parentId: string, childId: string) {
-    let parentIndex = -1;
-    let childIndex = -1;
-    get().nodes.forEach((nd, i) => {
-      parentIndex = nd.id === parentId ? i : parentIndex;
-      childIndex = nd.id === childId ? i : childIndex;
-    });
+    // Update position immediately
+    get().onNodesChange([
+      {
+        id: updatedNode.id,
+        type: "position",
+        dragging: false,
+        position,
+      },
+    ]);
 
+    return { ...updatedNode, position };
+  },
+
+  updateNodeInfo(id: string, event: EventType): void {
+    set({
+      nodes: get().nodes.map((node) => {
+        if (node.id !== id) return node;
+
+        const {
+          label,
+          name,
+          security,
+          initiators,
+          marking,
+          receivers,
+          input,
+          expression,
+          parent,
+        } = event;
+
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            ...(label && { label }),
+            ...(name && { name }),
+            ...(security && { security }),
+            ...(initiators.length > 0 && { initiators }),
+            ...(marking && { marking }),
+            ...(receivers && { receivers }),
+            ...(input && { input }),
+            ...(expression && { expression }),
+          },
+          ...(parent && { parentId: parent }),
+        };
+      }),
+    });
+    get().saveState();
+  },
+
+  setNodes(newNodes: Node[]): void {
+    set({ nodes: newNodes });
+    get().saveState();
+  },
+
+  getNode(id: string): Node | undefined {
+    return get().nodes.find((node) => node.id === id);
+  },
+
+  getFamily(id: string): string[] {
+    const getChildrenRecursive = (nodeId: string): string[] => {
+      const children = get()
+        .nodes.filter((node) => node.parentId === nodeId)
+        .map((node) => node.id);
+
+      let allDescendants = [...children];
+      children.forEach((childId) => {
+        allDescendants.push(...getChildrenRecursive(childId));
+      });
+
+      return allDescendants;
+    };
+
+    return getChildrenRecursive(id);
+  },
+
+  updateParenting(updatedNode: Node): void {
+    const updateParentAsync = async () => {
+      // Remove the node temporarily
+      get().setNodes(get().nodes.filter((node) => node.id !== updatedNode.id));
+      await delay(10);
+
+      if (updatedNode.type === "event") {
+        // For events, just add back if not present
+        if (!get().nodes.some((node) => node.id === updatedNode.id))
+          get().setNodes([...get().nodes, updatedNode]);
+
+        return;
+      }
+
+      // Handle parent nodes (nest, subprocess)
+      const children = get().nodes.filter(
+        (node) => node.parentId === updatedNode.id
+      );
+      const childrenIds = children.map((node) => node.id);
+
+      // Update node order: parent first, then children
+      get().setNodes([
+        ...get().nodes.filter((node) => !childrenIds.includes(node.id)),
+        updatedNode,
+        ...children,
+      ]);
+
+      // Recursively update children
+      children.forEach((child) => get().updateParenting(child));
+
+      if (childrenIds.length > 0) {
+        get().log(
+          `Updated parenting for ${
+            updatedNode.id
+          } with children: ${childrenIds.join(", ")}.`
+        );
+      }
+    };
+
+    updateParentAsync();
+  },
+
+  parentInFront(parentId: string, childId: string): boolean {
+    const parentIndex = get().nodes.findIndex((node) => node.id === parentId);
+    const childIndex = get().nodes.findIndex((node) => node.id === childId);
     return parentIndex < childIndex;
   },
-  /* ----------------------------------------- */
 
-  /* ------------------ IDS ------------------ */
-  nextNodeId: [3],
-  nextGroupId: [0],
-  nextSubprocessId: [0],
-  setIds(nodeId: number[], groupId: number[], subprocessId: number[]) {
+  // ID management
+  setIds(nodeId: number[], groupId: number[], subprocessId: number[]): void {
     set({
       nextNodeId: nodeId,
       nextGroupId: groupId,
       nextSubprocessId: subprocessId,
     });
-  },
-  /* ----------------------------------------- */
 
-  /* -------------- EVENT TYPE --------------- */
-  eventType: "",
-  setEventType(type: string) {
-    set({
-      eventType: type,
-    });
+    get().saveState();
   },
-  /* ----------------------------------------- */
 
-  /* ------------- SUBGRAPH TYPE ------------- */
-  subgraphType: "",
-  setSubgraphType(type: string) {
-    set({
-      subgraphType: type,
-    });
+  // Type setters
+  setEventType(type: string): void {
+    set({ eventType: type });
   },
-  /* ----------------------------------------- */
 
-  /* ------------- FLOW RELATED -------------- */
-  async changeNodes(previous?: string, role?: string) {
-    if (previous) {
-      const nodes = get().nodes;
-      const edges = get().edges;
-      get().setProjectionInfo(previous, { nodes, edges });
-    }
+  setSubgraphType(type: string): void {
+    set({ subgraphType: type });
+  },
+
+  // Flow operations
+  async changeNodes(previous?: string, role?: string): Promise<void> {
+    // Save current state if previous projection specified
+    if (previous)
+      get().setProjectionInfo(previous, {
+        nodes: get().nodes,
+        edges: get().edges,
+      });
 
     await delay(10);
 
-    const projection = role
-      ? get().projectionInfo.get(role)
-      : get().projectionInfo.get("global");
+    // Load projection state
+    const projectionKey = role || "global";
+    const projection = get().projectionInfo.get(projectionKey);
+
     if (projection) {
-      get().setCurrentProjection(role ? role : "");
+      get().setCurrentProjection(projectionKey);
       get().setNodes(projection.nodes);
       get().setEdges(projection.edges);
     }
   },
-  onNodesChange(changes: NodeChange[]) {
+
+  // Event handlers
+  onNodesChange(changes: NodeChange[]): void {
     set({
       nodes: applyNodeChanges(changes, get().nodes),
     });
 
-    const childrenChanges: NodeChange[] = [];
+    // Handle position changes and update children/edges
+    get().handlePositionChanges(changes.filter((ch) => ch.type === "position"));
+
+    // Update selected element if it's a node
+    const selectedElement = get().selectedElement;
+    if (selectedElement && isNode(selectedElement)) {
+      const updatedNode = get().getNode(selectedElement.id);
+      if (updatedNode) get().setSelectedElement(updatedNode);
+    }
+  },
+
+  handlePositionChanges(changes: NodePositionChange[]): void {
+    if (changes.length === 0) return;
+
+    let childrenChanges: NodeChange[] = [];
 
     changes.forEach((change) => {
-      if (change.type === "position") {
-        const node = get().getNode(change.id);
-        if (node.type === "nest" || node.type === "subprocess") {
-          const children = get().nodes.filter(
-            (nd) => nd.parentId && nd.parentId === node.id
-          );
-          if (children.length > 0) {
-            children.forEach((child) => {
-              childrenChanges.push({
-                id: child.id,
-                type: "position",
-                dragging: true,
-                position: child.position,
-              });
-            });
-          }
-        }
-        const edgesUpdate = async () => {
-          get().edges.forEach((e) => {
-            if (e.source === change.id || e.target === change.id) {
-              const toAdd = get().deleteEdge(e.id);
-              if (toAdd) set({ edgeToAdd: [...get().edgeToAdd, toAdd] });
-            }
+      const node = get().getNode(change.id);
+      if (!node) return;
+
+      if (node.type === "nest" || node.type === "subprocess") {
+        // Update children positions
+        const children = get().nodes.filter(
+          (child) => child.parentId === node.id
+        );
+
+        children.forEach((child) => {
+          childrenChanges.push({
+            id: child.id,
+            type: "position",
+            dragging: true,
+            position: child.position,
           });
+        });
+      }
 
-          await delay(10);
+      // Update connected edges
+      get().updateConnectedEdges(change.id);
+    });
 
-          set({
-            edges: [...get().edges, ...get().edgeToAdd],
-            edgeToAdd: [],
-          });
-        };
+    get().saveState();
+    if (childrenChanges.length > 0) get().onNodesChange(childrenChanges);
+  },
 
-        edgesUpdate();
+  async updateConnectedEdges(nodeId: string): Promise<void> {
+    let edgesToUpdate: Edge[] = [];
+
+    get().edges.forEach((edge) => {
+      if (edge.source === nodeId || edge.target === nodeId) {
+        const removedEdge = get().deleteEdge(edge.id);
+        if (removedEdge) edgesToUpdate.push(removedEdge);
       }
     });
 
-    if (childrenChanges.length > 0) get().onNodesChange(childrenChanges);
+    await delay(10);
 
-    const selectedNode = get().selectedElement;
-    if (selectedNode && isNode(selectedNode)) {
-      get().setSelectedElement(get().getNode(selectedNode.id));
-    }
-  },
-  onNodesDelete(deletedNodes: Node[]) {
-    get().log(
-      `Deleted nodes: ${deletedNodes.map((node) => node.id).join(", ")}.`
-    );
-
-    deletedNodes.forEach((nd) => get().removeDocumentation(nd.id));
     set({
-      nodes: get().nodes.filter((node) => {
-        return !deletedNodes.some((deletedNode) => deletedNode.id === node.id);
-      }),
-      edges: get().edges.filter((edge) => {
-        return !deletedNodes.some(
-          (deletedNode) =>
-            deletedNode.id === edge.source || deletedNode.id === edge.target
-        );
-      }),
-      nextNodeId: [
-        ...deletedNodes
-          .filter((node) => node.type !== "nest" && node.type !== "subprocess")
-          .map((node) => parseInt(node.id.slice(1))),
-        ...get().nextNodeId,
-      ].sort((a, b) => a - b),
-      nextGroupId: [
-        ...deletedNodes
-          .filter((node) => node.type === "nest")
-          .map((node) => parseInt(node.id.slice(1))),
-        ...get().nextGroupId,
-      ].sort((a, b) => a - b),
-      nextSubprocessId: [
-        ...deletedNodes
-          .filter((node) => node.type === "subprocess")
-          .map((node) => parseInt(node.id.slice(1))),
-        ...get().nextSubprocessId,
-      ].sort((a, b) => a - b),
-      selectedElement: undefined,
+      edges: [...get().edges, ...edgesToUpdate],
     });
   },
-  onNodeClick(event: any, node: Node) {
+
+  onNodesDelete(deletedNodes: Node[]): void {
+    const deletedIds = deletedNodes.map((node) => node.id);
+
+    get().log(`Deleted nodes: ${deletedIds.join(", ")}.`);
+
+    // Clean up documentation
+    deletedNodes.forEach((node) => get().removeDocumentation(node.id));
+
+    // Remove nodes and connected edges
+    set({
+      nodes: get().nodes.filter((node) => !deletedIds.includes(node.id)),
+      edges: get().edges.filter(
+        (edge) =>
+          !deletedIds.includes(edge.source) && !deletedIds.includes(edge.target)
+      ),
+      selectedElement: undefined,
+    });
+
+    // Return IDs to available pools
+    get().returnDeletedIds(deletedNodes);
+    get().saveState();
+  },
+
+  returnDeletedIds(deletedNodes: Node[]): void {
+    const nodeIds = deletedNodes
+      .filter((node) => node.type === "event")
+      .map((node) => parseInt(node.id.slice(1)))
+      .concat(get().nextNodeId)
+      .sort((a, b) => a - b);
+
+    const groupIds = deletedNodes
+      .filter((node) => node.type === "nest")
+      .map((node) => parseInt(node.id.slice(1)))
+      .concat(get().nextGroupId)
+      .sort((a, b) => a - b);
+
+    const subprocessIds = deletedNodes
+      .filter((node) => node.type === "subprocess")
+      .map((node) => parseInt(node.id.slice(1)))
+      .concat(get().nextSubprocessId)
+      .sort((a, b) => a - b);
+
+    set({
+      nextNodeId: nodeIds,
+      nextGroupId: groupIds,
+      nextSubprocessId: subprocessIds,
+    });
+  },
+
+  onNodeClick(event: any, node: Node): void {
     event.preventDefault();
     get().setSelectedElement(node);
   },
-  onNodeDoubleClick(event: any, node: Node) {
+
+  onNodeDoubleClick(event: any, node: Node): void {
     event.preventDefault();
 
-    if (event.ctrlKey) {
-      const type = get().relationType;
-      if (!type || type === "spawn") return;
-
-      const edge: Edge = {
-        id: `s${type.charAt(0)}-${node.id}`,
-        type,
-        source: node.id,
-        target: node.id,
-        zIndex: 200000,
-        data: {
-          guard: "",
-        },
-      };
-
-      get().addEdge(edge);
-    } else {
-      get().setSelectedElement(node);
-      get().setDrawerSelectedLogs(false);
-      get().setDrawerSelectedCode(false);
-      get().setDrawerWidth("25%");
-      get().setDrawerOpen(true);
-    }
+    if (event.ctrlKey) get().handleCtrlDoubleClick(node);
+    else get().openElementInDrawer(node);
   },
-  onNodeDragStart(event: any, node: Node) {
+
+  handleCtrlDoubleClick(node: Node): void {
+    const relationType = get().relationType;
+    if (!relationType || relationType === "spawn") return;
+
+    const edge: Edge = {
+      id: `s${relationType.charAt(0)}-${node.id}`,
+      type: relationType,
+      source: node.id,
+      target: node.id,
+      zIndex: 200000,
+      data: { guard: "" },
+    };
+
+    get().addEdge(edge);
+  },
+
+  onNodeDragStart(event: any, node: Node): void {
     event.preventDefault();
-    set({ selectedElement: node });
+    get().setSelectedElement(node);
   },
-  onNodeDragStop(event: any, _: Node) {
+
+  onNodeDragStop(event: any, _: Node): void {
     event.preventDefault();
   },
-  onDragOver(event: any) {
+
+  onDragOver(event: any): void {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
   },
-  onDrop(event: any, screenToFlowPosition: any) {
+
+  onDrop(
+    event: any,
+    screenToFlowPosition: (pos: XYPosition) => XYPosition
+  ): void {
     event.preventDefault();
 
-    const eventType = get().eventType;
-    const subgraphType = get().subgraphType;
+    const { eventType, subgraphType } = get();
     if (!eventType && !subgraphType) return;
 
     const position = screenToFlowPosition({
@@ -590,53 +706,57 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
       y: event.clientY,
     });
 
-    if (eventType) {
-      const node: Node = {
-        id: "",
-        type: "event",
-        data: {
-          initiators: [],
-          receivers: [],
-          type: eventType,
-          label: "",
-          name: "",
-          marking: {
-            included: true,
-            pending: false,
-          },
-          security: "",
-        },
-        parentId: "",
-        position,
-        zIndex: 10000,
-      };
-
-      get().addNode(node);
-      get().setEventType("");
-    } else if (subgraphType) {
-      const subgraph: Node = {
-        id: "",
-        type: subgraphType,
-        width: 200,
-        height: 200,
-        data: {
-          ...(subgraphType === "nest" && { nestType: "group" }),
-          label: "",
-          marking: {
-            included: true,
-            pending: false,
-          },
-        },
-        parentId: "",
-        position,
-        zIndex: 1000,
-      };
-
-      get().addNode(subgraph);
-      get().setSubgraphType("");
-    }
+    if (eventType) get().createEventOnDrop(eventType, position);
+    else if (subgraphType) get().createSubgraphOnDrop(subgraphType, position);
   },
-  /* ----------------------------------------- */
+
+  createEventOnDrop(eventType: string, position: XYPosition): void {
+    const node: Node = {
+      id: "",
+      type: "event",
+      data: {
+        initiators: [] as string[],
+        receivers: [] as string[],
+        type: eventType as EventSubtype,
+        label: "",
+        name: "",
+        marking: {
+          included: true,
+          pending: false,
+        },
+        security: "",
+      },
+      parentId: "",
+      position,
+      zIndex: 10000,
+    };
+
+    get().addNode(node);
+    get().setEventType("");
+  },
+
+  createSubgraphOnDrop(subgraphType: string, position: XYPosition): void {
+    const node: Node = {
+      id: "",
+      type: subgraphType as NodeType,
+      width: 200,
+      height: 200,
+      data: {
+        ...(subgraphType === "nest" && { nestType: "group" }),
+        label: "",
+        marking: {
+          included: true,
+          pending: false,
+        },
+      },
+      parentId: "",
+      position,
+      zIndex: 1000,
+    };
+
+    get().addNode(node);
+    get().setSubgraphType("");
+  },
 });
 
 export default nodesStateSlice;

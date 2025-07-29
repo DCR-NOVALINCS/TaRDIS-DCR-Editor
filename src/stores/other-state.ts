@@ -5,273 +5,368 @@ import {
   Log,
   type ProjectionInfo,
   type Element,
+  state,
 } from "@/lib/types";
+import type { Edge, Node } from "@xyflow/react";
+import { delay, generateJsonData } from "@/lib/utils";
+
+/**
+ * Configuration constants for the application state
+ */
+const APP_CONFIG = {
+  Z_INDEX: {
+    NEST_SUBPROCESS: 1000,
+    NODE_DEFAULT: 10000,
+    EDGE_DEFAULT: 20000,
+  },
+  DEFAULTS: {
+    DRAWER_WIDTH: "25%",
+    GLOBAL_ID: "global",
+  },
+} as const;
+
+/**
+ * Creates a log entry with current timestamp
+ */
+const createLogEntry = (message: string): Log => ({
+  time: new Date().toLocaleTimeString(),
+  message,
+});
+
+/**
+ * Updates node selection state and z-index
+ */
+const updateNodesSelection = (nodes: Node[]): Node[] => {
+  return nodes.map((node) => ({
+    ...node,
+    selected: false,
+    zIndex:
+      node.type === "nest" || node.type === "subprocess"
+        ? APP_CONFIG.Z_INDEX.NEST_SUBPROCESS
+        : APP_CONFIG.Z_INDEX.NODE_DEFAULT,
+  }));
+};
+
+/**
+ * Updates edge selection state and z-index
+ */
+const updateEdgesSelection = (edges: Edge[]): Edge[] => {
+  return edges.map((edge) => ({
+    ...edge,
+    selected: false,
+    zIndex: APP_CONFIG.Z_INDEX.EDGE_DEFAULT,
+  }));
+};
+
+/**
+ * Creates a new Map instance to ensure immutability
+ */
+const cloneMap = <K, V>(originalMap: Map<K, V>): Map<K, V> => {
+  return new Map(originalMap);
+};
+
+/**
+ * Filters projection entries based on the clear mode
+ */
+const shouldClearProjection = (key: string, clearAll: boolean): boolean => {
+  return clearAll || key !== APP_CONFIG.DEFAULTS.GLOBAL_ID;
+};
+
+/**
+ * Configures drawer state for opening an element
+ */
+const getElementDrawerConfig = (): Partial<DrawerConfig> => ({
+  selectedLogs: false,
+  selectedCode: false,
+  width: APP_CONFIG.DEFAULTS.DRAWER_WIDTH,
+  open: true,
+});
+
+/**
+ * Utility type for drawer configuration
+ */
+interface DrawerConfig {
+  open: boolean;
+  selectedLogs: boolean;
+  selectedCode: boolean;
+  width: string;
+}
 
 /**
  * Represents miscellaneous application state and operations, including documentation,
  * element selection, simulation flow, security settings, code management, logs, and UI interactions.
  *
- * @property {Map<string, string>} documentation - A map storing documentation content keyed by unique IDs.
- *
- * @method addDocumentation - Adds or updates documentation for a specific ID.
- * @param {string} id - The unique identifier for the documentation.
- * @param {string} doc - The documentation content.
- * @returns {void}
- *
- * @method removeDocumentation - Removes documentation by its ID.
- * @param {string} id - The ID of the documentation to remove.
- * @returns {void}
- *
- * @property {Element} selectedElement - The currently selected element in the UI.
- *
- * @method setSelectedElement - Sets the selected element.
- * @param {Element} element - The element to set as selected.
- * @returns {void}
- *
- * @property {boolean} simulationFlow - Flag indicating whether the simulation flow is active.
- *
- * @method setSimulationFlow - Sets the simulation flow state.
- * @param {boolean} value - True to activate simulation flow, false to deactivate.
- * @returns {void}
- *
- * @property {string} security - The current security configuration or mode.
- *
- * @method setSecurity - Sets the security mode or configuration.
- * @param {string} security - The security value to set.
- * @returns {void}
- *
- * @property {string} code - The current code content.
- *
- * @method setCode - Updates the code content.
- * @param {string} code - The code string to set.
- * @returns {void}
- *
- * @method addToMap - Adds or updates a key-value pair in the event map.
- * @param {string} key - The key (typically an event ID).
- * @param {string} value - The associated value or metadata.
- * @returns {void}
- *
- * @property {Log[]} logs - A list of application logs for debugging or tracing.
- *
- * @method log - Adds a log message to the log history.
- * @param {string} message - The message to log.
- * @returns {void}
- *
- * @method setLogs - Replaces the current logs with a new array of log entries.
- * @param {Log[]} messages - The new array of logs.
- * @returns {void}
- *
- * @method onPaneClick - Handler for pane (canvas/background) click events.
- * @returns {void}
- *
- * @method getChoreographyInfo - Retrieves current choreography-related information.
- * @returns {ChoregraphyInfo} The current choreography metadata.
  */
 export type OtherState = {
   /* ------------ DOCUMENTATION -------------- */
+  /** Map storing documentation content keyed by unique IDs */
   documentation: Map<string, string>;
+  /** Adds or updates documentation for a specific ID */
   addDocumentation(id: string, doc: string): void;
+  /** Removes documentation by its ID */
   removeDocumentation(id: string): void;
-  /* ----------------------------------------- */
 
   /* ----------- SELECTED ELEMENT ------------ */
+  /** The currently selected element in the UI */
   selectedElement: Element;
+  /** Sets the selected element */
   setSelectedElement(element: Element): void;
-  /* ----------------------------------------- */
 
   /* ---------------- SECURITY --------------- */
+  /** The current security configuration or mode */
   security: string;
+  /** Sets the security mode or configuration */
   setSecurity(security: string): void;
-  /* ----------------------------------------- */
 
   /* ------------------ CODE ----------------- */
+  /** The current code content */
   code: string;
+  /** Updates the code content */
   setCode(code: string): void;
-  /* ----------------------------------------- */
 
   /* ------------------ LOGS ----------------- */
+  /** A list of application logs for debugging or tracing */
   logs: Log[];
+  /** Adds a log message to the log history */
   log(message: string): void;
+  /** Replaces the current logs with a new array of log entries */
   setLogs(messages: Log[]): void;
-  /* ----------------------------------------- */
-
-  /* ----------------- OTHER ----------------- */
-  onPaneClick(): void;
-  getChoreographyInfo(): ChoregraphyInfo;
-  /* ----------------------------------------- */
 
   /* -------------- PROJECTIONS -------------- */
+  /** Map storing projection information */
   projectionInfo: Map<string, ProjectionInfo>;
+  /** Sets projection information for a specific ID */
   setProjectionInfo(id: string, projectionInfo: ProjectionInfo): void;
-  clearProjections(all: boolean): ProjectionInfo | undefined;
+  /** Clears projections (all or excluding global) */
+  clearProjections(all: boolean): Promise<ProjectionInfo>;
+  /** Current projection ID */
   currentProjection: string;
+  /** Sets the current projection ID */
   setCurrentProjection(id: string): void;
-  /* ----------------------------------------- */
 
   /* -------------- DRAWER PROPS ------------- */
+  /** Drawer open state */
   drawerOpen: boolean;
+  /** Sets drawer open state */
   setDrawerOpen(open: boolean): void;
+  /** Drawer logs selection state */
   drawerSelectedLogs: boolean;
+  /** Sets drawer logs selection state */
   setDrawerSelectedLogs(selected: boolean): void;
+  /** Drawer code selection state */
   drawerSelectedCode: boolean;
+  /** Sets drawer code selection state */
   setDrawerSelectedCode(selected: boolean): void;
+  /** Drawer width */
   drawerWidth: string;
+  /** Sets drawer width */
   setDrawerWidth(width: string): void;
-  /* ----------------------------------------- */
+
+  /* ----------------- HANDLERS -------------- */
+  /** Handler for pane (canvas/background) click events */
+  onPaneClick(): void;
+  /** Retrieves current choreography-related information */
+  getChoreographyInfo(): ChoregraphyInfo;
+  /** Opens an element in the drawer */
+  openElementInDrawer(element: Node | Edge): void;
+
+  saveState(): void;
 };
 
 const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
   set,
   get
 ) => ({
+  /* ------------ INITIAL STATE -------------- */
+  documentation: new Map<string, string>([[APP_CONFIG.DEFAULTS.GLOBAL_ID, ""]]),
+  selectedElement: undefined,
+  security: state.security ?? "",
+  code: state.code,
+  logs: [],
+  projectionInfo: new Map<string, ProjectionInfo>([
+    [APP_CONFIG.DEFAULTS.GLOBAL_ID, { nodes: state.nodes, edges: state.edges }],
+  ]),
+  currentProjection: APP_CONFIG.DEFAULTS.GLOBAL_ID,
+  drawerOpen: false,
+  drawerSelectedLogs: false,
+  drawerSelectedCode: false,
+  drawerWidth: APP_CONFIG.DEFAULTS.DRAWER_WIDTH,
+
   /* ------------ DOCUMENTATION -------------- */
-  documentation: new Map<string, string>([["global", ""]]),
-  addDocumentation(id: string, doc: string) {
-    let newDocumentation = get().documentation;
+  addDocumentation(id: string, doc: string): void {
+    if (!id.trim()) return;
+
+    let newDocumentation = cloneMap(get().documentation);
     newDocumentation.set(id, doc);
-    set({
-      documentation: newDocumentation,
-    });
+
+    set({ documentation: newDocumentation });
   },
-  removeDocumentation(id: string) {
-    let newDocumentation = get().documentation;
-    newDocumentation.delete(id);
-    set({
-      documentation: newDocumentation,
-    });
+
+  removeDocumentation(id: string): void {
+    if (!id.trim()) return;
+
+    let newDocumentation = cloneMap(get().documentation);
+    const wasDeleted = newDocumentation.delete(id);
+
+    if (!wasDeleted) return;
+
+    set({ documentation: newDocumentation });
   },
-  /* ----------------------------------------- */
 
   /* ----------- SELECTED ELEMENT ------------ */
-  selectedElement: undefined,
-  setSelectedElement(element: Element) {
-    set({
-      selectedElement: element,
-    });
+  setSelectedElement(element: Element): void {
+    set({ selectedElement: element });
   },
-  /* ----------------------------------------- */
 
   /* ---------------- SECURITY --------------- */
-  security: "Public flows P",
-  setSecurity(security: string) {
+  setSecurity(security: string): void {
     set({ security });
+    get().saveState();
   },
-  /* ----------------------------------------- */
 
   /* ------------------ CODE ----------------- */
-  code: "",
-  setCode(code: string) {
-    set({
-      code,
-    });
+  setCode(code: string): void {
+    set({ code });
+    get().saveState();
   },
-  /* ----------------------------------------- */
 
   /* ------------------ LOGS ----------------- */
-  logs: [],
-  log(message: string) {
-    set({
-      logs: [...get().logs, { time: new Date().toLocaleTimeString(), message }],
-    });
-  },
-  setLogs(messages: Log[]) {
-    set({
-      logs: messages,
-    });
-  },
-  /* ----------------------------------------- */
+  log(message: string): void {
+    if (!message.trim()) return;
 
-  /* ----------------- OTHER ----------------- */
-  onPaneClick() {
+    const logEntry = createLogEntry(message);
+
+    set({
+      logs: [...get().logs, logEntry],
+    });
+  },
+
+  setLogs(messages: Log[]): void {
+    set({ logs: messages });
+  },
+
+  /* -------------- PROJECTIONS -------------- */
+  setProjectionInfo(id: string, projectionInfo: ProjectionInfo): void {
+    if (!id.trim()) return;
+
+    let newProjectionInfo = cloneMap(get().projectionInfo);
+    newProjectionInfo.set(id, projectionInfo);
+
+    set({ projectionInfo: newProjectionInfo });
+  },
+
+  clearProjections(all: boolean): Promise<ProjectionInfo> {
+    const clearProjectionsAsync = async () => {
+      const currentProjections = get().projectionInfo;
+      let newProjectionInfo = cloneMap(currentProjections);
+
+      // Clear projections based on the 'all' flag
+      for (const [key] of currentProjections) {
+        if (shouldClearProjection(key, all)) newProjectionInfo.delete(key);
+      }
+
+      await delay(10);
+
+      const globalProjection = newProjectionInfo.get(
+        APP_CONFIG.DEFAULTS.GLOBAL_ID
+      );
+      const nodes: Node[] = globalProjection ? globalProjection.nodes : [];
+      const edges: Edge[] = globalProjection ? globalProjection.edges : [];
+      set({
+        nodes,
+        edges,
+        projectionInfo: newProjectionInfo,
+        currentProjection: APP_CONFIG.DEFAULTS.GLOBAL_ID,
+      });
+
+      return { nodes, edges };
+    };
+
+    return clearProjectionsAsync();
+  },
+
+  setCurrentProjection(id: string): void {
+    set({ currentProjection: id });
+  },
+
+  /* -------------- DRAWER PROPS ------------- */
+  setDrawerOpen(open: boolean): void {
+    set({ drawerOpen: open });
+  },
+
+  setDrawerSelectedLogs(selected: boolean): void {
+    set({ drawerSelectedLogs: selected });
+  },
+
+  setDrawerSelectedCode(selected: boolean): void {
+    set({ drawerSelectedCode: selected });
+  },
+
+  setDrawerWidth(width: string): void {
+    set({ drawerWidth: width });
+  },
+
+  /* ----------------- HANDLERS -------------- */
+  onPaneClick(): void {
     set({
       selectedElement: undefined,
-      nodes: get().nodes.map((node) => ({
-        ...node,
-        selected: false,
-        zIndex:
-          node.type === "nest" || node.type === "subprocess" ? 1000 : 10000,
-      })),
-      edges: get().edges.map((edge) => ({
-        ...edge,
-        selected: false,
-        zIndex: 20000,
-      })),
+      nodes: updateNodesSelection(get().nodes),
+      edges: updateEdgesSelection(get().edges),
     });
   },
-  getChoreographyInfo() {
+
+  getChoreographyInfo(): ChoregraphyInfo {
     return {
       nodesCount: get().nodes.filter((node) => node.type === "event").length,
-      roles: get().rolesParticipants.map((role) => ({
+      roles: get().roles.map((role) => ({
         role: role.role,
         label: role.label,
       })),
     };
   },
-  /* ----------------------------------------- */
 
-  /* -------------- PROJECTIONS -------------- */
-  projectionInfo: new Map<string, ProjectionInfo>(),
-  setProjectionInfo(id: string, projectionInfo: ProjectionInfo) {
-    let newProjectionInfo = get().projectionInfo;
-    if (newProjectionInfo.has(id)) newProjectionInfo.delete(id);
-    newProjectionInfo.set(id, projectionInfo);
-    set({
-      projectionInfo: newProjectionInfo,
-    });
-  },
-  clearProjections(all: boolean) {
-    let newProjectionInfo = get().projectionInfo;
+  openElementInDrawer(element: Node | Edge): void {
+    if (!element) return;
 
-    if (all) {
-      get().projectionInfo.forEach((_, k) => {
-        if (newProjectionInfo.has(k)) newProjectionInfo.delete(k);
-      });
-    } else {
-      get().projectionInfo.forEach((_, k) => {
-        if (newProjectionInfo.has(k) && k !== "global")
-          newProjectionInfo.delete(k);
-      });
-    }
+    const drawerConfig = getElementDrawerConfig();
 
-    set({
-      projectionInfo: newProjectionInfo,
-    });
-    return newProjectionInfo.get("global");
+    // Apply all drawer configurations at once
+    get().setSelectedElement(element);
+    get().setDrawerSelectedLogs(drawerConfig.selectedLogs!);
+    get().setDrawerSelectedCode(drawerConfig.selectedCode!);
+    get().setDrawerWidth(drawerConfig.width!);
+    get().setDrawerOpen(drawerConfig.open!);
   },
-  currentProjection: "",
-  setCurrentProjection(id: string) {
-    set({
-      currentProjection: id,
-    });
-  },
-  /* ----------------------------------------- */
 
-  /* -------------- DRAWER PROPS ------------- */
-  drawerOpen: false,
-  setDrawerOpen(open: boolean) {
-    set({
-      drawerOpen: open,
-    });
+  saveState(): void {
+    const save = async () => {
+      await delay(100);
+
+      const data = JSON.stringify(
+        generateJsonData(
+          true,
+          get().nodes,
+          get().edges,
+          get().security,
+          get().roles,
+          get().code,
+          get().nextNodeId,
+          get().nextGroupId,
+          get().nextSubprocessId
+        )
+      );
+
+      await fetch("/api/example", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "current", data }),
+      })
+        .then((res) => res.text())
+        .then(console.log);
+    };
+
+    if (get().currentProjection === "global") save();
   },
-  drawerSelectedLogs: false,
-  setDrawerSelectedLogs(selected: boolean) {
-    set({
-      drawerSelectedLogs: selected,
-    });
-  },
-  drawerSelectedCode: false,
-  setDrawerSelectedCode(selected: boolean) {
-    set({
-      drawerSelectedCode: selected,
-    });
-  },
-  drawerWidth: "25%",
-  setDrawerWidth(width: string) {
-    set({
-      drawerWidth: width,
-    });
-  },
-  /* ----------------------------------------- */
 });
 
 export default otherStateSlice;

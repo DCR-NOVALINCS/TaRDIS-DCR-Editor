@@ -1,0 +1,168 @@
+{
+  "nodes": [
+    {
+      "id": "e0",
+      "type": "event",
+      "data": {
+        "initiators": [
+          "P(id=1)"
+        ],
+        "receivers": [],
+        "type": "i",
+        "label": "e0",
+        "name": "readDocument",
+        "marking": {
+          "included": true,
+          "pending": false
+        },
+        "input": {
+          "type": "Record",
+          "record": [
+            {
+              "var": "size",
+              "type": "Integer"
+            },
+            {
+              "var": "name",
+              "type": "String"
+            }
+          ]
+        },
+        "security": "Public"
+      },
+      "parentId": "",
+      "position": {
+        "x": 95,
+        "y": 95
+      },
+      "zIndex": 10000,
+      "measured": {
+        "width": 100,
+        "height": 100
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "e1",
+      "type": "event",
+      "data": {
+        "initiators": [
+          "P(id=1)"
+        ],
+        "receivers": [
+          "P(id=2)"
+        ],
+        "type": "i",
+        "label": "e1",
+        "name": "submit",
+        "marking": {
+          "included": true,
+          "pending": false
+        },
+        "input": {
+          "type": "Unit"
+        },
+        "security": "Public"
+      },
+      "parentId": "",
+      "position": {
+        "x": 260,
+        "y": 95
+      },
+      "zIndex": 10000,
+      "measured": {
+        "width": 100,
+        "height": 100
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "e2",
+      "type": "event",
+      "data": {
+        "initiators": [
+          "P(id=2)"
+        ],
+        "receivers": [
+          "P(id=1)"
+        ],
+        "type": "i",
+        "label": "e2",
+        "name": "accept",
+        "marking": {
+          "included": true,
+          "pending": false
+        },
+        "input": {
+          "type": "Unit"
+        },
+        "security": "Public"
+      },
+      "parentId": "",
+      "position": {
+        "x": 425,
+        "y": 95
+      },
+      "zIndex": 10000,
+      "measured": {
+        "width": 100,
+        "height": 100
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "c-e0-e1",
+      "type": "condition",
+      "source": "e0",
+      "target": "e1",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000
+    },
+    {
+      "id": "r-e1-e2",
+      "type": "response",
+      "source": "e1",
+      "target": "e2",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000
+    }
+  ],
+  "security": "Public flows P",
+  "roles": [
+    {
+      "role": "Prosumer",
+      "label": "P",
+      "types": [
+        {
+          "var": "id",
+          "type": "Integer"
+        }
+      ]
+    },
+    {
+      "role": "Public",
+      "label": "Public",
+      "types": []
+    }
+  ],
+  "nextNodeId": [
+    3,
+    4,
+    5
+  ],
+  "nextGroupId": [
+    0
+  ],
+  "nextSubprocessId": [
+    0
+  ]
+}

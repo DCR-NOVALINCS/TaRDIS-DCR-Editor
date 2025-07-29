@@ -1,6 +1,10 @@
 import { StateCreator } from "zustand/vanilla";
 import { RFState } from "./store";
-import { Participant, RoleParticipants as Role, SimpleRole } from "@/lib/types";
+import { initialState, SimpleRole, state } from "@/lib/types";
+
+const fixRole = (role: string) => {
+  return role.charAt(0).toUpperCase() + role.slice(1);
+};
 
 /**
  * Represents the state and operations related to roles and participants within the application.
@@ -26,15 +30,10 @@ import { Participant, RoleParticipants as Role, SimpleRole } from "@/lib/types";
  */
 export type RolesState = {
   /* ------------ ROLE OPERATIONS ------------ */
-  rolesParticipants: Role[];
+  roles: SimpleRole[];
   addRole(role: SimpleRole): void;
   removeRole(role: string): void;
-  setRoles(roles: Role[]): void;
-
-  /* --------- PARTICIPANT OPERATIONS -------- */
-  addParticipant(participant: Participant): void;
-  removeParticipant(role: string, participant: string): void;
-  /* ----------------------------------------- */
+  setRoles(roles: SimpleRole[]): void;
 };
 
 const rolesStateSlice: StateCreator<RFState, [], [], RolesState> = (
@@ -42,84 +41,32 @@ const rolesStateSlice: StateCreator<RFState, [], [], RolesState> = (
   get
 ) => ({
   /* ------------ ROLE OPERATIONS ------------ */
-  rolesParticipants: [
-    {
-      role: "Prosumer",
-      label: "P",
-      types: [{ var: "id", type: "Integer" }],
-      participants: ["P(id=1)", "P(id=2)"],
-    },
-    {
-      role: "Public",
-      label: "Public",
-      types: [],
-      participants: [],
-    },
-  ],
+  roles: state.roles ?? [],
   addRole(role: SimpleRole) {
-    const fixedRole = role.role.charAt(0).toUpperCase() + role.role.slice(1);
     set({
-      rolesParticipants: [
+      roles: [
         {
           ...role,
-          role: fixedRole,
-          participants: [],
+          role: fixRole(role.role),
         },
-        ...get().rolesParticipants,
+        ...get().roles,
       ],
     });
     get().log(`Added a new role ${role.role} with label ${role.label}.`);
+    get().saveState();
   },
   removeRole(role: string) {
     set({
-      rolesParticipants: get().rolesParticipants.filter(
-        (rl) => rl.role !== role
-      ),
+      roles: get().roles.filter((rl) => rl.role !== role),
     });
     get().log(`Removed role ${role}.`);
+    get().saveState();
   },
-  setRoles(roles: Role[]) {
+  setRoles(roles: SimpleRole[]) {
     set({
-      rolesParticipants: roles,
+      roles,
     });
-  },
-  /* ----------------------------------------- */
-
-  /* --------- PARTICIPANT OPERATIONS -------- */
-  addParticipant(participant: Participant) {
-    const { role, inputs } = participant;
-    const size = inputs.length;
-
-    set({
-      rolesParticipants: get().rolesParticipants.map((rl) => {
-        if (rl.role === role) {
-          let part = rl.label;
-          if (size > 0) {
-            part += "(";
-            inputs.forEach((t, i) => {
-              if (i < size - 1) part += t.var + "=" + t.input + ", ";
-              else part += t.var + "=" + t.input + ")";
-            });
-          }
-          return {
-            ...rl,
-            participants: [...rl.participants, part],
-          };
-        } else return rl;
-      }),
-    });
-  },
-  removeParticipant(role: string, participant: string) {
-    set({
-      rolesParticipants: get().rolesParticipants.map((rl) => {
-        if (rl.role === role) {
-          return {
-            ...rl,
-            participants: rl.participants.filter((p) => p !== participant),
-          };
-        } else return rl;
-      }),
-    });
+    get().saveState();
   },
   /* ----------------------------------------- */
 });

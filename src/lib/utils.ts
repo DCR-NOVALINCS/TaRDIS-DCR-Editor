@@ -5,6 +5,7 @@ import { Node, Position, Edge } from "@xyflow/react";
 
 import dagre from "dagre";
 import { useEffect, useState } from "react";
+import { SimpleRole, State } from "./types";
 
 /**
  * Combines multiple class name values into a single string, filtering out falsy values,
@@ -211,4 +212,61 @@ export function multiMap<T>(
     temp = temp.map(fn);
   });
   return temp;
+}
+
+export function generateJsonData(
+  full: boolean,
+  nodes: Node[],
+  edges: Edge[],
+  security: string,
+  roles: SimpleRole[],
+  code: string,
+  nextNodeId: number[] = [0],
+  nextGroupId: number[] = [0],
+  nextSubprocessId: number[] = [0]
+) {
+  if (!full)
+    return {
+      nodes: nodes.map((node) => {
+        const { id, type, parentId, data } = node;
+
+        return {
+          id,
+          type,
+          parentId,
+          data,
+        };
+      }),
+      edges: edges.map((edge) => {
+        const { id, source, target, type } = edge;
+        return {
+          id,
+          source,
+          target,
+          type,
+        };
+      }),
+      security,
+      roles,
+    };
+  else
+    return {
+      nodes,
+      edges,
+      security,
+      roles,
+      code,
+      nextNodeId,
+      nextGroupId,
+      nextSubprocessId,
+    };
+}
+
+export async function setState(name: string = "current") {
+  const response = await fetch("/api/specific-example", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  return (await response.json()) as State;
 }

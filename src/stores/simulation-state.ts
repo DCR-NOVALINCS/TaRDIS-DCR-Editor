@@ -2,7 +2,7 @@ import { StateCreator } from "zustand/vanilla";
 import { RFState } from "./store";
 import { Edge, Node } from "@xyflow/react";
 import { MarkingType, SimulationMarkingType } from "@/lib/types";
-import { delay, multiMap } from "@/lib/utils";
+import { delay } from "@/lib/utils";
 
 export type SimulationState = {
   /* ------------ SIMULATION FLOW ------------ */
@@ -12,7 +12,7 @@ export type SimulationState = {
   //setSimEdges(edges: Edge[]): void;
   simulationFlow: boolean;
   setSimulationFlow(value: boolean): void;
-  onClickSimulationToggle(event: any): void;
+  onClickSimulationToggle(): void;
   onNodeClickSimulation(event: any, node: Node): void;
   updateChildEvents(): void;
   /* ----------------------------------------- */
@@ -31,8 +31,7 @@ const simulationStateSlice: StateCreator<RFState, [], [], SimulationState> = (
       simulationFlow: value,
     });
   },
-  onClickSimulationToggle(event: any) {
-    event.preventDefault();
+  onClickSimulationToggle() {
     const value = !get().simulationFlow;
     get().setSimulationFlow(value);
 

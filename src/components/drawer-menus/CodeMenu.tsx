@@ -10,28 +10,61 @@ import { visualGen } from "@/lib/visualgen-code";
 import { processChoregraphyModel } from "@/lib/visualgen-json";
 import { ChoreographyModel, CompileError } from "@/lib/types";
 import { useRef } from "react";
+import { Button } from "@/lib/reusable-comps";
 
 const selector = (state: RFState) => ({
   nodes: state.nodes,
   setNodes: state.setNodes,
   edges: state.edges,
   setEdges: state.setEdges,
-  rolesParticipants: state.rolesParticipants,
+  roles: state.roles,
   security: state.security,
   code: state.code,
   setCode: state.setCode,
   setProjectionInfo: state.setProjectionInfo,
-  currentProjection: state.currentProjection,
   clearProjections: state.clearProjections,
   setSecurity: state.setSecurity,
   setRoles: state.setRoles,
-  changeNodes: state.changeNodes,
   setDrawerSelectedCode: state.setDrawerSelectedCode,
   setDrawerSelectedLogs: state.setDrawerSelectedLogs,
   setDrawerWidth: state.setDrawerWidth,
   log: state.log,
   setIds: state.setIds,
 });
+
+const DELAYS = {
+  CHANGE_NODES: 20,
+  CLEAR_PROJECTIONS: 100,
+  COMPILE: 200,
+  FETCH_PROJECTIONS: 100,
+} as const;
+
+const DRAWER_CONFIG = {
+  WIDTH: "25%",
+  LOGS_TAB: true,
+  CODE_TAB: false,
+} as const;
+
+const EDITOR_CONFIG_OPTIONS = {
+  minimap: { enabled: false },
+  fontSize: 16,
+  scrollBeyondLastLine: false,
+} as const;
+
+const BUTTON_ACTIONS = [
+  {
+    label: "Generate Code",
+    action: "generateCode",
+  },
+  {
+    label: "Compile",
+    action: "compile",
+  },
+  {
+    label: "Generate Graph",
+    action: "generateGraph",
+  },
+] as const;
 
 /**
  * `CodeMenu` is a React functional component that provides a code editor interface
@@ -58,16 +91,14 @@ export default function CodeMenu() {
     edges,
     setNodes,
     setEdges,
-    rolesParticipants,
+    roles,
     security,
     code,
     setCode,
-    currentProjection,
     setProjectionInfo,
     clearProjections,
     setSecurity,
     setRoles,
-    changeNodes,
     setDrawerSelectedCode,
     setDrawerSelectedLogs,
     setDrawerWidth,
@@ -75,154 +106,17 @@ export default function CodeMenu() {
     setIds,
   } = useStore(selector, shallow);
 
-  const generateGraph = async () => {
-    if (code) {
-      const {
-        roles,
-        security,
-        nodes: newNodes,
-        edges: newEdges,
-        nodeId,
-        subId,
-      } = visualGen(code);
-
-      const { nodes: layoutedNodes, edges: layoutedEdges } =
-        getLayoutedElements(newNodes, newEdges);
-
-      changeNodes();
-
-      await delay(20);
-
-      clearProjections(true);
-
-      await delay(10);
-
-      setRoles(roles);
-      setSecurity(security);
-      setNodes(layoutedNodes);
-      setEdges(layoutedEdges);
-      setIds([nodeId], [0], [subId]);
-      log(`Graph generated.`);
-    }
-  };
-
-  const compileCode = async () => {
-    if (code) {
-      let projections: ChoreographyModel[] | CompileError[] = [];
-      const fetchFun = async () => {
-        fetch("/api/code", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            code,
-          }),
-        })
-          .then((res) => res.text())
-          .then((data) => console.log(data));
-
-        changeNodes();
-
-        await delay(200);
-
-        clearProjections(false);
-        await delay(100);
-
-        const response = await fetch("/api/projections");
-        projections = await response.json();
-
-        projections.forEach((proj, i) => {
-          if ("compileError" in proj) treatErrors(proj);
-          else {
-            if (i === 0) {
-              clearErrors();
-              setDrawerSelectedCode(false);
-              setDrawerSelectedLogs(true);
-              setDrawerWidth("25%");
-              log("Typecheck and compilation succeeded.");
-            }
-            if (proj.graph.events && proj.graph.relations) {
-              const result = processChoregraphyModel(proj);
-              const layoutedResult = getLayoutedElements(
-                result.nodes,
-                result.edges
-              );
-              setProjectionInfo(proj.role.label, layoutedResult);
-              log(`Projection for role ${proj.role.label} created.`);
-            }
-          }
-        });
-      };
-      fetchFun();
-    }
-  };
-
-  const setNewCode = async () => {
-    changeNodes();
-
-    await delay(20);
-
-    const projection = clearProjections(
-      currentProjection === "global" ? true : false
-    );
-
-    await delay(10);
-
-    if (projection) {
-      const newCode = writeCode(
-        projection.nodes,
-        projection.edges,
-        rolesParticipants,
-        security
-      );
-      console.log(newCode);
-      setCode(newCode);
-    } else setCode(writeCode(nodes, edges, rolesParticipants, security));
-
-    log(`Generated new code.`);
-  };
-
-  /**
-   * Initiates a download of the current code as a plain text file named "regrada.txt".
-   *
-   * This function creates a Blob from the `code` variable, generates a temporary object URL,
-   * and programmatically triggers a download by creating and clicking an anchor element.
-   * After the download is triggered, the anchor is removed from the DOM and the object URL is revoked.
-   */
-  const downloadCode = () => {
-    if (code) {
-      const blob = new Blob([code], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "regrada.txt";
-
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-
-      URL.revokeObjectURL(url);
-    }
-  };
-
   const editorRef = useRef<monacoEditor.editor.IStandaloneCodeEditor>(null);
   const monaco = useMonaco();
-  const handleEditorDidMount = (
-    editor: monacoEditor.editor.IStandaloneCodeEditor
-  ) => {
-    editorRef.current = editor;
-  };
 
-  function clearErrors() {
+  const clearErrors = () => {
     const model = editorRef.current?.getModel();
     if (!model || !monaco) return;
 
     monaco.editor.setModelMarkers(model, "owner", []);
-  }
+  };
 
-  function treatErrors(compileError: CompileError) {
+  const treatErrors = (compileError: CompileError) => {
     const model = editorRef.current?.getModel();
     if (!model || !monaco) return;
 
@@ -247,7 +141,108 @@ export default function CodeMenu() {
     );
 
     monaco.editor.setModelMarkers(model, "owner", markers);
-  }
+  };
+
+  const switchToLogsTab = () => {
+    setDrawerSelectedCode(DRAWER_CONFIG.CODE_TAB);
+    setDrawerSelectedLogs(DRAWER_CONFIG.LOGS_TAB);
+    setDrawerWidth(DRAWER_CONFIG.WIDTH);
+  };
+
+  const processProjection = (proj: ChoreographyModel, index: number) => {
+    if (index === 0) {
+      clearErrors();
+      switchToLogsTab();
+      log("Typecheck and compilation succeeded.");
+    }
+
+    if (proj.graph.events && proj.graph.relations) {
+      const result = processChoregraphyModel(proj);
+      const layoutedResult = getLayoutedElements(result.nodes, result.edges);
+      setProjectionInfo(proj.role.label, layoutedResult);
+      log(`Projection for role ${proj.role.label} created.`);
+    }
+  };
+
+  const generateGraph = async () => {
+    if (!code) return;
+
+    const {
+      roles,
+      security,
+      nodes: newNodes,
+      edges: newEdges,
+      nodeId,
+      subId,
+    } = visualGen(code);
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+      newNodes,
+      newEdges
+    );
+
+    clearProjections(true);
+    await delay(DELAYS.CLEAR_PROJECTIONS);
+
+    setRoles(roles);
+    setSecurity(security);
+    setNodes(layoutedNodes);
+    setEdges(layoutedEdges);
+    setIds([nodeId], [0], [subId]);
+    log("Graph generated.");
+  };
+
+  const compileCode = async () => {
+    if (!code) return;
+
+    try {
+      // Send code for compilation
+      await fetch("/api/code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      })
+        .then((res) => res.text())
+        .then(console.log);
+
+      clearProjections(false);
+      await delay(DELAYS.FETCH_PROJECTIONS);
+
+      // Fetch projections
+      const response = await fetch("/api/projections");
+      const projections: ChoreographyModel[] | CompileError[] =
+        await response.json();
+
+      // Process each projection
+      projections.forEach((proj, index) => {
+        if ("compileError" in proj) treatErrors(proj);
+        else processProjection(proj, index);
+      });
+    } catch (error) {
+      console.error("Compilation failed:", error);
+      log("Compilation failed. Please check your code.");
+    }
+  };
+
+  const generateCode = async () => {
+    const { nodes: newNodes, edges: newEdges } = await clearProjections(false);
+    await delay(DELAYS.CLEAR_PROJECTIONS);
+
+    const newCode = writeCode(newNodes, newEdges, roles, security);
+
+    setCode(newCode);
+    log("Generated new code.");
+  };
+
+  const handleButtonClick = (action: string) => {
+    const actions = {
+      generateCode,
+      compile: compileCode,
+      generateGraph,
+    };
+
+    const actionHandler = actions[action as keyof typeof actions];
+    if (actionHandler) actionHandler();
+  };
 
   return (
     <div
@@ -255,42 +250,25 @@ export default function CodeMenu() {
       style={{ height: "calc(100vh - 50px)" }}
     >
       <Editor
-        className="w-full h-[520px]"
+        className={`w-full h-full`}
         value={code}
-        options={{
-          minimap: { enabled: false },
-          fontSize: 16,
-          scrollBeyondLastLine: false,
-        }}
-        onChange={(newCode) => setCode(newCode ? newCode : "")}
-        onMount={(editor) => handleEditorDidMount(editor)}
+        options={EDITOR_CONFIG_OPTIONS}
+        onChange={(newCode) => setCode(newCode || "")}
+        onMount={(editor: monacoEditor.editor.IStandaloneCodeEditor) =>
+          (editorRef.current = editor)
+        }
       />
-      <div className="flex gap-2 w-full">
-        <button
-          className="bg-black h-8 w-full rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
-          onClick={setNewCode}
-        >
-          Generate Code
-        </button>
-        <button
-          className="bg-black h-8 w-full rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
-          onClick={compileCode}
-        >
-          Compile
-        </button>
 
-        <button
-          className="bg-black h-8 w-full rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
-          onClick={downloadCode}
-        >
-          Download Code
-        </button>
-        <button
-          className="bg-black h-8 w-full rounded-sm cursor-pointer font-semibold text-white hover:opacity-75"
-          onClick={generateGraph}
-        >
-          Generate Graph
-        </button>
+      <div className="flex gap-2 w-full">
+        {BUTTON_ACTIONS.map(({ label, action }) => (
+          <Button
+            className="w-full"
+            key={action}
+            onClick={() => handleButtonClick(action)}
+          >
+            {label}
+          </Button>
+        ))}
       </div>
     </div>
   );
