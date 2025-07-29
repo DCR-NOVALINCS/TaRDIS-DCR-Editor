@@ -13,9 +13,7 @@ import { useRef } from "react";
 import { Button } from "@/lib/reusable-comps";
 
 const selector = (state: RFState) => ({
-  nodes: state.nodes,
   setNodes: state.setNodes,
-  edges: state.edges,
   setEdges: state.setEdges,
   roles: state.roles,
   security: state.security,
@@ -87,8 +85,6 @@ const BUTTON_ACTIONS = [
  */
 export default function CodeMenu() {
   const {
-    nodes,
-    edges,
     setNodes,
     setEdges,
     roles,

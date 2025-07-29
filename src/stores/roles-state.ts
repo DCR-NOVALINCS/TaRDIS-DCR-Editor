@@ -1,6 +1,6 @@
 import { StateCreator } from "zustand/vanilla";
 import { RFState } from "./store";
-import { initialState, SimpleRole, state } from "@/lib/types";
+import { SimpleRole, state } from "@/lib/types";
 
 const fixRole = (role: string) => {
   return role.charAt(0).toUpperCase() + role.slice(1);

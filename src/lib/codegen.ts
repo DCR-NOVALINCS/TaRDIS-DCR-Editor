@@ -6,7 +6,7 @@ import {
   Process,
   relationsMap,
   RelationType,
-  RoleParticipants,
+  SimpleRole,
 } from "./types";
 
 /**
@@ -320,7 +320,7 @@ function extractData(nodes: Node[], edges: Edge[]) {
 export function writeCode(
   nodes: Node[],
   edges: Edge[],
-  roles: RoleParticipants[],
+  roles: SimpleRole[],
   lattice: string
 ): string {
   const parentProcess = extractData(nodes, edges);

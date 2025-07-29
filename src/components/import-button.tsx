@@ -15,6 +15,7 @@ const selector = (state: RFState) => ({
   setIds: state.setIds,
   setCode: state.setCode,
   clearProjections: state.clearProjections,
+  setProjectionInfo: state.setProjectionInfo,
   log: state.log,
 });
 
@@ -27,6 +28,7 @@ export default function ImportButton() {
     setIds,
     setCode,
     clearProjections,
+    setProjectionInfo,
     log,
   } = useStore(selector, shallow);
 
@@ -40,8 +42,10 @@ export default function ImportButton() {
     setRoles(state.roles);
     setSecurity(state.security);
     setNodes(state.nodes);
+    setCode(state.code);
     setEdges(state.edges);
     setIds(state.nextNodeId, state.nextGroupId, state.nextSubprocessId);
+    setProjectionInfo("global", { nodes: state.nodes, edges: state.edges });
   };
 
   const treatCode = async (code: string) => {
@@ -64,6 +68,7 @@ export default function ImportButton() {
       edges: layoutedEdges,
       security,
       roles,
+      code,
       nextNodeId: [nextNodeId],
       nextGroupId: [0],
       nextSubprocessId: [nextSubprocessId],
@@ -82,6 +87,7 @@ export default function ImportButton() {
             edges: json.edges,
             security: json.security,
             roles: json.roles,
+            code: json.code,
             nextNodeId: json.nextNodeId,
             nextGroupId: json.nextGroupId,
             nextSubprocessId: json.nextSubprocessId,

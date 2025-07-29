@@ -44,11 +44,12 @@ export default function ExportButton() {
             edges,
             security,
             roles,
+            code,
             nextNodeId,
             nextGroupId,
             nextSubprocessId
           )
-        : generateJsonData(false, nodes, edges, security, roles),
+        : generateJsonData(false, nodes, edges, security, roles, code),
       null,
       2
     );

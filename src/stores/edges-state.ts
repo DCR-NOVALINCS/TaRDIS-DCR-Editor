@@ -10,7 +10,7 @@ import {
 } from "@xyflow/react";
 import { StateCreator } from "zustand/vanilla";
 import { RFState } from "./store";
-import { initialState, state, TempEdge } from "@/lib/types";
+import { state, TempEdge } from "@/lib/types";
 
 const EDGE_Z_INDEX = {
   DEFAULT: 20000,

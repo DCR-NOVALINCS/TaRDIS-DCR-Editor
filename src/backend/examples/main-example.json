@@ -4,9 +4,7 @@
       "id": "e0",
       "type": "event",
       "data": {
-        "initiators": [
-          "P(id=1)"
-        ],
+        "initiators": ["P(id=1)"],
         "receivers": [],
         "type": "i",
         "label": "e0",
@@ -47,12 +45,8 @@
       "id": "e1",
       "type": "event",
       "data": {
-        "initiators": [
-          "P(id=1)"
-        ],
-        "receivers": [
-          "P(id=2)"
-        ],
+        "initiators": ["P(id=1)"],
+        "receivers": ["P(id=2)"],
         "type": "i",
         "label": "e1",
         "name": "submit",
@@ -82,12 +76,8 @@
       "id": "e2",
       "type": "event",
       "data": {
-        "initiators": [
-          "P(id=2)"
-        ],
-        "receivers": [
-          "P(id=1)"
-        ],
+        "initiators": ["P(id=2)"],
+        "receivers": ["P(id=1)"],
         "type": "i",
         "label": "e2",
         "name": "accept",
@@ -154,15 +144,8 @@
       "types": []
     }
   ],
-  "nextNodeId": [
-    3,
-    4,
-    5
-  ],
-  "nextGroupId": [
-    0
-  ],
-  "nextSubprocessId": [
-    0
-  ]
+  "code": "P(id:Integer)\nPublic\n;\nPublic flows P\n;\n(e0:readDocument) (Public) [?:{size:Integer; name:String}] [P(id=1)]\n(e1:submit) (Public) [?] [P(id=1) -> P(id=2)]\n(e2:accept) (Public) [?] [P(id=2) -> P(id=1)]\n;\ne0 -->* e1\ne1 *--> e2",
+  "nextNodeId": [3, 4, 5],
+  "nextGroupId": [0],
+  "nextSubprocessId": [0]
 }

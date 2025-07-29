@@ -1,6 +1,12 @@
-import { Parameter, Role } from "@/stores/roles-state";
 import { Edge, Node } from "@xyflow/react";
-import { eventRegex, FieldType, InputType, MarkingType } from "./types";
+import {
+  eventRegex,
+  FieldType,
+  InputType,
+  MarkingType,
+  Parameter,
+  SimpleRole,
+} from "./types";
 
 let nodeId = 0;
 let subId = 0;
@@ -49,7 +55,7 @@ function detectSubprocess(code: string): { part: string[]; code: string } {
   return { part: arr, code: str.reverse().join("\n") };
 }
 
-function genRole(role: string): Role {
+function genRole(role: string): SimpleRole {
   const [roleLabel, roleParams] = role
     .replace(" ", "")
     .replace("(", " ")
@@ -68,7 +74,6 @@ function genRole(role: string): Role {
     role: roleLabel,
     label: roleLabel,
     types: params,
-    participants: [],
   };
 }
 
@@ -317,7 +322,7 @@ function cleanCode(code: string): string {
 
 export function visualGen(code: string) {
   let result = untilRegex(cleanCode(code), ";");
-  const roles: Role[] = result.part.map((role) => genRole(role));
+  const roles: SimpleRole[] = result.part.map((role) => genRole(role));
 
   result = untilRegex(result.code, ";");
   const security = result.part.join("\n");

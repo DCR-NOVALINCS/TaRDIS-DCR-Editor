@@ -12,7 +12,7 @@ import {
 import { StateCreator } from "zustand/vanilla";
 import { RFState } from "@/stores/store";
 import { delay } from "@/lib/utils";
-import { initialState, state, type EventType } from "@/lib/types";
+import { state, type EventType } from "@/lib/types";
 
 // Type definitions
 type NodeType = "event" | "nest" | "subprocess";

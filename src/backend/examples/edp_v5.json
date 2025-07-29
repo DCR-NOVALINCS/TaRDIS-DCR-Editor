@@ -81,12 +81,8 @@
       "id": "e0",
       "type": "event",
       "data": {
-        "initiators": [
-          "CO(#cid as X)"
-        ],
-        "receivers": [
-          "P(id=*; cid=X)"
-        ],
+        "initiators": ["CO(#cid as X)"],
+        "receivers": ["P(id=*; cid=X)"],
         "type": "i",
         "label": "r4c",
         "name": "request_forecast",
@@ -116,9 +112,7 @@
       "id": "e1",
       "type": "event",
       "data": {
-        "initiators": [
-          "CO(#cid as X)"
-        ],
+        "initiators": ["CO(#cid as X)"],
         "type": "i",
         "label": "accounting",
         "name": "accounting",
@@ -148,12 +142,8 @@
       "id": "e2",
       "type": "event",
       "data": {
-        "initiators": [
-          "P(#id; #cid as X)"
-        ],
-        "receivers": [
-          "P(id=*; cid=X)"
-        ],
+        "initiators": ["P(#id; #cid as X)"],
+        "receivers": ["P(id=*; cid=X)"],
         "type": "i",
         "label": "csm",
         "name": "consume",
@@ -189,12 +179,8 @@
       "id": "e3",
       "type": "event",
       "data": {
-        "initiators": [
-          "@Receiver(r4c)"
-        ],
-        "receivers": [
-          "@Initiator(r4c)"
-        ],
+        "initiators": ["@Receiver(r4c)"],
+        "receivers": ["@Initiator(r4c)"],
         "type": "i",
         "label": "reply",
         "name": "r4c_reply",
@@ -226,12 +212,8 @@
       "id": "e4",
       "type": "event",
       "data": {
-        "initiators": [
-          "@Receiver(csm)"
-        ],
-        "receivers": [
-          "@Initiator(csm)"
-        ],
+        "initiators": ["@Receiver(csm)"],
+        "receivers": ["@Initiator(csm)"],
         "type": "i",
         "label": "reply",
         "name": "csm_reply",
@@ -273,12 +255,8 @@
       "id": "e5",
       "type": "event",
       "data": {
-        "initiators": [
-          "@Initiator(csm)"
-        ],
-        "receivers": [
-          "@Receiver(csm)"
-        ],
+        "initiators": ["@Initiator(csm)"],
+        "receivers": ["@Receiver(csm)"],
         "type": "i",
         "label": "accept",
         "name": "accept",
@@ -310,12 +288,8 @@
       "id": "e6",
       "type": "event",
       "data": {
-        "initiators": [
-          "@Initiator(csm)"
-        ],
-        "receivers": [
-          "@Receiver(csm)"
-        ],
+        "initiators": ["@Initiator(csm)"],
+        "receivers": ["@Receiver(csm)"],
         "type": "i",
         "label": "reject",
         "name": "reject",
@@ -535,13 +509,8 @@
       "participants": []
     }
   ],
-  "nextNodeId": [
-    7
-  ],
-  "nextGroupId": [
-    0
-  ],
-  "nextSubprocessId": [
-    3
-  ]
+  "code": "CO(cid:Integer)\nP(id:String; cid:Integer)\nPublic\n;\nPublic flows P\nPublic flows CO\n;\n(r4c:request_forecast) (Public) [?] [CO(#cid as X) -> P(id=*; cid=X)]\n%(accounting:accounting) (Public) [?:Integer] [CO(#cid as X)]\n(csm:consume) (Public) [?:{kw:Integer}] [P(#id; #cid as X) -> P(id=*; cid=X)]\n;\nr4c -->> {\n\t!(reply:r4c_reply) (Public) [?:Integer] [@Receiver(r4c) -> @Initiator(r4c)]\n\t;\n\treply -->% reply\n\treply *--> accounting\n\treply -->+ accounting\n\treply -->+ csm\n}\ncsm -->> {\n\t(reply:csm_reply) (Public) [?:{kw:Integer; cost:Integer}] [@Receiver(csm) -> @Initiator(csm)]\n\t;\n\treply -->> {\n\t\t(accept:accept) (Public) [?:Integer] [@Initiator(csm) -> @Receiver(csm)]\n\t\t(reject:reject) (Public) [?] [@Initiator(csm) -> @Receiver(csm)]\n\t\t;\n\t\taccept -->% accept\n\t\taccept -->% reject\n\t\treject -->% accept\n\t\treject -->% reject\n\t}\n\treply -->% reply\n}\naccounting -->% accounting\nr4c -->% csm",
+  "nextNodeId": [0],
+  "nextGroupId": [3],
+  "nextSubprocessId": [0]
 }
