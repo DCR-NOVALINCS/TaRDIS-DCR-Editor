@@ -24,6 +24,7 @@ const selector = (state: RFState) => ({
   documentation: state.documentation,
   addDocumentation: state.addDocumentation,
   updateNodeInfo: state.updateNodeInfo,
+  currentProjection: state.currentProjection,
 });
 
 /**
@@ -49,6 +50,7 @@ const SubgraphMenu = ({ nest }: { nest: Node }) => {
     documentation,
     addDocumentation,
     updateNodeInfo,
+    currentProjection,
   } = useStore(selector);
   const { id, data, parentId } = nest;
 
@@ -60,6 +62,8 @@ const SubgraphMenu = ({ nest }: { nest: Node }) => {
   const [parent, setParent] = useState(parentId as string);
 
   const family = getFamily(id);
+
+  const isGlobalProjection = currentProjection === "global";
 
   const handleEdgeManagement = (children: Node[]) => {
     if (type !== "nest") return;
@@ -149,11 +153,13 @@ const SubgraphMenu = ({ nest }: { nest: Node }) => {
       </DrawerMenuLabel>
 
       {/* Documentation */}
-      <FormDocumentation
-        documentation={documentation.get(id)}
-        onChange={(e) => addDocumentation(id, e.target.value)}
-        key={id}
-      />
+      {isGlobalProjection && (
+        <FormDocumentation
+          documentation={documentation.get(id)}
+          onChange={(e) => addDocumentation(id, e.target.value)}
+          key={id}
+        />
+      )}
 
       {/* Form Fields */}
       <div className="flex flex-col p-3 gap-3">
@@ -163,6 +169,7 @@ const SubgraphMenu = ({ nest }: { nest: Node }) => {
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             placeholder={type === "nest" ? `Nest label` : "Subprocess Label"}
+            disabled={!isGlobalProjection}
           />
         </FormField>
 
@@ -172,6 +179,7 @@ const SubgraphMenu = ({ nest }: { nest: Node }) => {
             value={type}
             onChange={(e) => setType(e.target.value)}
             options={typeOptions}
+            disabled={!isGlobalProjection}
           />
         </FormField>
 
@@ -182,6 +190,7 @@ const SubgraphMenu = ({ nest }: { nest: Node }) => {
               value={nestType}
               onChange={(e) => setNestType(e.target.value)}
               options={nestTypeOptions}
+              disabled={!isGlobalProjection}
             />
           </FormField>
         )}
@@ -192,6 +201,7 @@ const SubgraphMenu = ({ nest }: { nest: Node }) => {
             value={parent}
             onChange={(e) => setParent(e.target.value)}
             options={parentOptions}
+            disabled={!isGlobalProjection}
           />
         </FormField>
 
@@ -203,17 +213,21 @@ const SubgraphMenu = ({ nest }: { nest: Node }) => {
               label="Pending"
               checked={marking.pending}
               onChange={() => toggleMarking("pending")}
+              disabled={!isGlobalProjection}
             />
             <FormCheckbox
               label="Included"
               checked={marking.included}
               onChange={() => toggleMarking("included")}
+              disabled={!isGlobalProjection}
             />
           </div>
         )}
 
         {/* Save Button */}
-        <Button onClick={handleSave}>Save Changes</Button>
+        {isGlobalProjection && (
+          <Button onClick={handleSave}>Save Changes</Button>
+        )}
       </div>
     </DrawerMenu>
   );

@@ -70,6 +70,7 @@ export const FormInput = ({
   onChange,
   placeholder = "",
   required = false,
+  disabled = false,
   className = "",
 }: {
   label: string;
@@ -77,6 +78,7 @@ export const FormInput = ({
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
   required?: boolean;
+  disabled?: boolean;
   className?: string;
 }) => (
   <>
@@ -88,6 +90,7 @@ export const FormInput = ({
       placeholder={placeholder}
       value={value}
       onChange={onChange}
+      disabled={disabled}
     />
   </>
 );
@@ -98,6 +101,7 @@ export const FormTextarea = ({
   onChange,
   placeholder,
   required = false,
+  disabled = false,
   className = "",
   rows = 1,
   ...props
@@ -106,6 +110,7 @@ export const FormTextarea = ({
   onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
   placeholder?: string;
   required?: boolean;
+  disabled?: boolean;
   className?: string;
   rows?: number;
   [key: string]: any;
@@ -121,6 +126,7 @@ export const FormTextarea = ({
       value={value}
       onChange={onChange}
       placeholder={placeholder}
+      disabled={disabled}
       {...props}
     />
   );
@@ -131,18 +137,21 @@ export const FormSelect = ({
   value,
   onChange,
   options,
+  disabled = false,
   className = "",
   ...props
 }: {
   value: string;
   onChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
   options: { value: string; label: string }[];
+  disabled?: boolean;
   className?: string;
 }) => (
   <select
     className={`col-span-2 h-9 bg-white rounded-sm font-mono ${className}`}
     value={value}
     onChange={onChange}
+    disabled={disabled}
     {...props}
   >
     {options.map((option, index) => (
@@ -158,14 +167,21 @@ export const FormCheckbox = ({
   label,
   checked,
   onChange,
+  disabled = false,
 }: {
   label: string;
   checked: boolean;
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
 }) => (
   <div className="flex gap-1 items-center">
     <label>{label}</label>
-    <input type="checkbox" checked={checked} onChange={onChange} />
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      disabled={disabled}
+    />
   </div>
 );
 
@@ -174,12 +190,14 @@ export const Button = ({
   onClick,
   children,
   variant = "primary",
+  disabled = false,
   className = "",
   ...props
 }: {
   onClick: () => void;
   children: React.ReactNode;
   variant?: "primary" | "secondary" | "danger";
+  disabled?: boolean;
   className?: string;
 }) => {
   const variants = {
@@ -192,6 +210,7 @@ export const Button = ({
     <button
       onClick={onClick}
       className={`h-9 rounded-sm cursor-pointer font-semibold hover:opacity-75 ${variants[variant]} ${className}`}
+      disabled={disabled}
       {...props}
     >
       {children}
@@ -205,11 +224,13 @@ export const RecordFieldManager = ({
   setInput,
   recordField,
   setRecordField,
+  disabled = false,
 }: {
   input: InputType;
   setInput: React.Dispatch<React.SetStateAction<InputType>>;
   recordField: FieldType;
   setRecordField: React.Dispatch<React.SetStateAction<FieldType>>;
+  disabled?: boolean;
 }) => {
   const handleAddField = () => {
     if (recordField.var && input.type === "Record") {
@@ -245,31 +266,39 @@ export const RecordFieldManager = ({
         Record Fields
       </label>
 
-      <FormField className="grid grid-cols-3" newClassName label="Label">
-        <input
-          className="col-span-2 h-8 bg-white rounded-sm font-mono px-1"
-          value={recordField.var}
-          placeholder="Field Name"
-          onChange={(e) =>
-            setRecordField((prev) => ({ ...prev, var: e.target.value }))
-          }
-        />
-      </FormField>
+      {!disabled && (
+        <>
+          <FormField className="grid grid-cols-3" newClassName label="Label">
+            <input
+              className="col-span-2 h-8 bg-white rounded-sm font-mono px-1"
+              value={recordField.var}
+              placeholder="Field Name"
+              onChange={(e) =>
+                setRecordField((prev) => ({ ...prev, var: e.target.value }))
+              }
+            />
+          </FormField>
 
-      <FormField label="Type" newClassName={true} className="grid grid-cols-3">
-        <FormSelect
-          value={recordField.type}
-          onChange={(e) =>
-            setRecordField((prev) => ({ ...prev, type: e.target.value }))
-          }
-          options={typeOptions}
-          className="col-span-1"
-        />
-      </FormField>
+          <FormField
+            label="Type"
+            newClassName={true}
+            className="grid grid-cols-3"
+          >
+            <FormSelect
+              value={recordField.type}
+              onChange={(e) =>
+                setRecordField((prev) => ({ ...prev, type: e.target.value }))
+              }
+              options={typeOptions}
+              className="col-span-1"
+            />
+          </FormField>
 
-      <Button onClick={handleAddField} className="col-span-3">
-        Add Field
-      </Button>
+          <Button onClick={handleAddField} className="col-span-3">
+            Add Field
+          </Button>
+        </>
+      )}
 
       {"record" in input &&
         input.record?.map((field, index) => (
@@ -280,9 +309,11 @@ export const RecordFieldManager = ({
             <label className="font-mono">
               {field.var}: {field.type}
             </label>
-            <Button variant="danger" onClick={() => handleRemoveField(index)}>
-              X
-            </Button>
+            {!disabled && (
+              <Button variant="danger" onClick={() => handleRemoveField(index)}>
+                X
+              </Button>
+            )}
           </div>
         ))}
     </>

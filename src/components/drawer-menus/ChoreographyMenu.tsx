@@ -346,11 +346,13 @@ export default function ChoreographyMenu() {
       </DrawerMenuLabel>
 
       {/* Documentation */}
-      <FormDocumentation
-        documentation={documentation.get(key)}
-        onChange={(e) => addDocumentation(key, e.target.value)}
-        key={key}
-      />
+      {currentProjection === "global" && (
+        <FormDocumentation
+          documentation={documentation.get(key)}
+          onChange={(e) => addDocumentation(key, e.target.value)}
+          key={key}
+        />
+      )}
 
       {/* Main Content */}
       <div className="flex flex-col gap-3 overflow-y-auto h-full">

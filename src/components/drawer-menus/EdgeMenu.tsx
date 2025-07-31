@@ -16,6 +16,7 @@ const selector = (state: RFState) => ({
   updateEdge: state.updateEdge,
   documentation: state.documentation,
   addDocumentation: state.addDocumentation,
+  currentProjection: state.currentProjection,
 });
 
 /**
@@ -33,12 +34,12 @@ const selector = (state: RFState) => ({
  * This component assumes the presence of a global store (via `useStore`) for managing edges and their documentation.
  */
 const EdgeMenu = ({ edge }: { edge: Edge }) => {
-  const { updateEdge, documentation, addDocumentation } = useStore(
-    selector,
-    shallow
-  );
+  const { updateEdge, documentation, addDocumentation, currentProjection } =
+    useStore(selector, shallow);
   const { id, data } = edge as { id: string; data: Record<string, string> };
   const [guard, setGuard] = useState(data.guard || "");
+
+  const isGlobalProjection = currentProjection === "global";
 
   const handleSave = () => {
     updateEdge(id, {
@@ -56,11 +57,13 @@ const EdgeMenu = ({ edge }: { edge: Edge }) => {
       </DrawerMenuLabel>
 
       {/* Documentation */}
-      <FormDocumentation
-        documentation={documentation.get(id)}
-        onChange={(e) => addDocumentation(id, e.target.value)}
-        key={id}
-      />
+      {isGlobalProjection && (
+        <FormDocumentation
+          documentation={documentation.get(id)}
+          onChange={(e) => addDocumentation(id, e.target.value)}
+          key={id}
+        />
+      )}
 
       {/* Form Fields */}
       <div className="flex flex-col p-3 gap-3">
@@ -70,11 +73,14 @@ const EdgeMenu = ({ edge }: { edge: Edge }) => {
             value={guard}
             onChange={(e) => setGuard(e.target.value)}
             placeholder="Guard condition"
+            disabled={!isGlobalProjection}
           />
         </FormField>
 
         {/* Save Button */}
-        <Button onClick={handleSave}>Save Changes</Button>
+        {isGlobalProjection && (
+          <Button onClick={handleSave}>Save Changes</Button>
+        )}
       </div>
     </DrawerMenu>
   );

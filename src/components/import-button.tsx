@@ -17,6 +17,7 @@ const selector = (state: RFState) => ({
   clearProjections: state.clearProjections,
   setProjectionInfo: state.setProjectionInfo,
   log: state.log,
+  setSelectedElement: state.setSelectedElement,
 });
 
 export default function ImportButton() {
@@ -30,6 +31,7 @@ export default function ImportButton() {
     clearProjections,
     setProjectionInfo,
     log,
+    setSelectedElement,
   } = useStore(selector, shallow);
 
   const [open, setOpen] = useState(false);
@@ -46,6 +48,7 @@ export default function ImportButton() {
     setEdges(state.edges);
     setIds(state.nextNodeId, state.nextGroupId, state.nextSubprocessId);
     setProjectionInfo("global", { nodes: state.nodes, edges: state.edges });
+    setSelectedElement(undefined);
   };
 
   const treatCode = async (code: string) => {

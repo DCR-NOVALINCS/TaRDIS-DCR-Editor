@@ -21,6 +21,7 @@ const selector = (state: RFState) => ({
   updateNode: state.updateNode,
   documentation: state.documentation,
   addDocumentation: state.addDocumentation,
+  currentProjection: state.currentProjection,
 });
 
 // Input Configuration Component
@@ -29,11 +30,13 @@ const InputConfiguration = ({
   setInput,
   recordField,
   setRecordField,
+  disabled,
 }: {
   input: InputType;
   setInput: React.Dispatch<React.SetStateAction<InputType>>;
   recordField: FieldType;
   setRecordField: React.Dispatch<React.SetStateAction<FieldType>>;
+  disabled: boolean;
 }) => {
   const inputTypeOptions = inputTypes.map((type) => ({
     value: type,
@@ -54,6 +57,7 @@ const InputConfiguration = ({
           }
           options={inputTypeOptions}
           className="col-span-1"
+          disabled={disabled}
         />
       </FormField>
 
@@ -63,6 +67,7 @@ const InputConfiguration = ({
           setInput={setInput}
           recordField={recordField}
           setRecordField={setRecordField}
+          disabled={disabled}
         />
       )}
     </div>
@@ -73,9 +78,11 @@ const InputConfiguration = ({
 const ComputationExpression = ({
   expression,
   setExpression,
+  disabled,
 }: {
   expression: string;
   setExpression: React.Dispatch<React.SetStateAction<string>>;
+  disabled: boolean;
 }) => (
   <>
     <label className="col-span-3 flex justify-center font-bold">
@@ -85,6 +92,7 @@ const ComputationExpression = ({
       className="col-span-3 min-h-24 max-h-72 h-24 bg-white rounded-sm p-1 font-mono"
       value={expression}
       onChange={(e) => setExpression(e.target.value)}
+      disabled={disabled}
     />
   </>
 );
@@ -113,6 +121,7 @@ const NodeProperties = ({
   recordField,
   setRecordField,
   nodes,
+  disabled,
 }: {
   initiators: string[];
   setInitiators: React.Dispatch<React.SetStateAction<string[]>>;
@@ -137,6 +146,7 @@ const NodeProperties = ({
   recordField: FieldType;
   setRecordField: React.Dispatch<React.SetStateAction<FieldType>>;
   nodes: Node[];
+  disabled: boolean;
 }) => {
   // Helper functions for array transformations
   const handleArrayChange = (
@@ -169,6 +179,7 @@ const NodeProperties = ({
           onChange={(e) => handleArrayChange(e.target.value, setInitiators)}
           placeholder="Initiators"
           required
+          disabled={disabled}
         />
       </FormField>
 
@@ -177,6 +188,7 @@ const NodeProperties = ({
           value={receivers.join(", ")}
           onChange={(e) => handleArrayChange(e.target.value, setReceivers)}
           placeholder="Receivers"
+          disabled={disabled}
         />
       </FormField>
 
@@ -185,6 +197,7 @@ const NodeProperties = ({
           value={type}
           onChange={(e) => setType(e.target.value)}
           options={typeOptions}
+          disabled={disabled}
         />
       </FormField>
 
@@ -194,6 +207,7 @@ const NodeProperties = ({
           onChange={(e) => setLabel(e.target.value)}
           placeholder="Event label"
           required
+          disabled={disabled}
         />
       </FormField>
 
@@ -203,6 +217,7 @@ const NodeProperties = ({
           onChange={(e) => setName(e.target.value)}
           placeholder="Event name"
           required
+          disabled={disabled}
         />
       </FormField>
 
@@ -215,6 +230,7 @@ const NodeProperties = ({
           onChange={() =>
             setMarking((prev) => ({ ...prev, pending: !prev.pending }))
           }
+          disabled={disabled}
         />
         <FormCheckbox
           label="Included"
@@ -222,6 +238,7 @@ const NodeProperties = ({
           onChange={() =>
             setMarking((prev) => ({ ...prev, included: !prev.included }))
           }
+          disabled={disabled}
         />
       </div>
 
@@ -230,6 +247,7 @@ const NodeProperties = ({
           value={parent}
           onChange={(e) => setParent(e.target.value)}
           options={parentOptions}
+          disabled={disabled}
         />
       </FormField>
 
@@ -239,6 +257,7 @@ const NodeProperties = ({
           onChange={(e) => setSecurity(e.target.value)}
           placeholder="Security label"
           required
+          disabled={disabled}
         />
       </FormField>
 
@@ -249,11 +268,13 @@ const NodeProperties = ({
           setInput={setInput}
           recordField={recordField}
           setRecordField={setRecordField}
+          disabled={disabled}
         />
       ) : (
         <ComputationExpression
           expression={expression}
           setExpression={setExpression}
+          disabled={disabled}
         />
       )}
     </div>
@@ -281,10 +302,13 @@ const NodeProperties = ({
  * @returns {JSX.Element} The rendered node menu component.
  */
 const NodeMenu = ({ node }: { node: Node }) => {
-  const { nodes, updateNode, documentation, addDocumentation } = useStore(
-    selector,
-    shallow
-  );
+  const {
+    nodes,
+    updateNode,
+    documentation,
+    addDocumentation,
+    currentProjection,
+  } = useStore(selector, shallow);
   const { id, data, parentId } = node;
 
   // State management
@@ -306,6 +330,8 @@ const NodeMenu = ({ node }: { node: Node }) => {
     var: "",
     type: inputTypes[0],
   });
+
+  const isGlobalProjection = currentProjection === "global";
 
   const handleSaveChanges = () => {
     const newData = {
@@ -341,11 +367,13 @@ const NodeMenu = ({ node }: { node: Node }) => {
       </DrawerMenuLabel>
 
       {/* Documentation */}
-      <FormDocumentation
-        documentation={documentation.get(id)}
-        onChange={(e) => addDocumentation(id, e.target.value)}
-        key={id}
-      />
+      {isGlobalProjection && (
+        <FormDocumentation
+          documentation={documentation.get(id)}
+          onChange={(e) => addDocumentation(id, e.target.value)}
+          key={id}
+        />
+      )}
 
       {/* Node Properties */}
       <NodeProperties
@@ -372,14 +400,17 @@ const NodeMenu = ({ node }: { node: Node }) => {
         recordField={recordField}
         setRecordField={setRecordField}
         nodes={nodes}
+        disabled={!isGlobalProjection}
       />
 
       {/* Save Button */}
-      <div className="flex justify-center m-2">
-        <Button onClick={handleSaveChanges} className="min-h-8 w-full">
-          Save Changes
-        </Button>
-      </div>
+      {isGlobalProjection && (
+        <div className="flex justify-center m-2">
+          <Button onClick={handleSaveChanges} className="min-h-8 w-full">
+            Save Changes
+          </Button>
+        </div>
+      )}
     </DrawerMenu>
   );
 };
