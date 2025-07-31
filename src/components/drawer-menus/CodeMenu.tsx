@@ -152,7 +152,7 @@ export default function CodeMenu() {
       log("Typecheck and compilation succeeded.");
     }
 
-    if (proj.graph.events && proj.graph.relations) {
+    if (proj.graph.events || proj.graph.relations) {
       const result = processChoregraphyModel(proj);
       const layoutedResult = getLayoutedElements(result.nodes, result.edges);
       setProjectionInfo(proj.role.label, layoutedResult);
@@ -210,6 +210,7 @@ export default function CodeMenu() {
 
       // Process each projection
       projections.forEach((proj, index) => {
+        console.log(proj);
         if ("compileError" in proj) treatErrors(proj);
         else processProjection(proj, index);
       });
@@ -223,6 +224,7 @@ export default function CodeMenu() {
     const { nodes: newNodes, edges: newEdges } = await clearProjections(false);
     await delay(DELAYS.CLEAR_PROJECTIONS);
 
+    console.log(newNodes, newEdges);
     const newCode = writeCode(newNodes, newEdges, roles, security);
 
     setCode(newCode);

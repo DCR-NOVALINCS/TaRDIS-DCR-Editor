@@ -342,11 +342,13 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
     const save = async () => {
       await delay(100);
 
+      const { nodes, edges } = get();
+
       const data = JSON.stringify(
         generateJsonData(
           true,
-          get().nodes,
-          get().edges,
+          nodes,
+          edges,
           get().security,
           get().roles,
           get().code,
@@ -355,6 +357,8 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
           get().nextSubprocessId
         )
       );
+
+      get().setProjectionInfo("global", { nodes, edges });
 
       await fetch("/api/example", {
         method: "POST",

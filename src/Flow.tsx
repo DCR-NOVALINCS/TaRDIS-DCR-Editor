@@ -291,17 +291,11 @@ function FlowWithoutProvider() {
         position="top-left"
         style={{
           display: "flex",
-          width: simulationFlow ? "200px" : "600px",
+          width: simulationFlow ? "193px" : "600px",
           gap: 10,
           zIndex: 10,
         }}
       >
-        {!simulationFlow && (
-          <>
-            <ImportButton />
-            <ExportButton />
-          </>
-        )}
         <Button
           className="flex items-center justify-center gap-2 w-full"
           onClick={onClickSimulationToggle}
@@ -309,6 +303,12 @@ function FlowWithoutProvider() {
           {simulationFlow ? "Stop" : "Start"} Simulation
           <Pickaxe size={20} />
         </Button>
+        {!simulationFlow && (
+          <>
+            <ImportButton />
+            <ExportButton />
+          </>
+        )}
       </Panel>
     </ReactFlow>
   );
