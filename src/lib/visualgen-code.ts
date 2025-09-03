@@ -315,8 +315,6 @@ function cleanCode(code: string): string {
         codeClean.push(line.trim());
     });
 
-  console.log(codeClean);
-
   return codeClean.join("\n");
 }
 

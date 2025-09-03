@@ -9,9 +9,11 @@ import { BaseNode } from "@/components/base-node";
 import { useKeyPress } from "@/lib/utils";
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
+import { SimulationMarkingType } from "@/lib/types";
 
 const selector = (state: RFState) => ({
   simulationFlow: state.simulationFlow,
+  nodeProperties: state.nodeProperties,
 });
 
 /**
@@ -52,7 +54,7 @@ export const SubprocessModel = ({
  * @returns The rendered Subprocess node component.
  */
 export default function Subprocess(props: NodeProps) {
-  const { simulationFlow } = useStore(selector, shallow);
+  const { simulationFlow, nodeProperties } = useStore(selector, shallow);
   const connection = useConnection();
   const isTarget = connection.inProgress && connection.fromNode.id != props.id;
 
@@ -71,6 +73,7 @@ export default function Subprocess(props: NodeProps) {
     opacity: "0",
   };
 
+  const subProps = nodeProperties.get(props.id);
   return (
     <>
       {/* SUBPROCESS */}
@@ -89,12 +92,11 @@ export default function Subprocess(props: NodeProps) {
           {props.data.label as string}
         </div>
 
-        {simulationFlow &&
-          !(props.data.marking as Record<string, boolean>).spawned && (
-            <div className="flex items-center justify-center mt-[35%] text-4xl">
-              ...
-            </div>
-          )}
+        {simulationFlow && subProps && !subProps.spawned && (
+          <div className="flex items-center justify-center mt-[35%] text-4xl">
+            ...
+          </div>
+        )}
 
         {/* HANDLES */}
         {!connection.inProgress && (

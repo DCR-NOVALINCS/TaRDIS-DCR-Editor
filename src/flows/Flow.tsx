@@ -14,27 +14,27 @@ import "@xyflow/react/dist/style.css";
 
 import { shallow } from "zustand/shallow";
 
-import useStore, { RFState } from "./stores/store";
+import useStore, { RFState } from "../stores/store";
 
 import { useEffect, useRef, useState } from "react";
 
-import Condition from "./dcr-related/edges/Condition";
-import Response from "./dcr-related/edges/Response";
-import Include from "./dcr-related/edges/Include";
-import Exclude from "./dcr-related/edges/Exclude";
-import Milestone from "./dcr-related/edges/Milestone";
-import Spawn from "./dcr-related/edges/Spawn";
-import CustomConnectionLine from "./dcr-related/edges/ConnectionLine";
+import Condition, { NewCondition } from "../dcr-related/edges/Condition";
+import Response, { NewResponse } from "../dcr-related/edges/Response";
+import Include, { NewInclude } from "../dcr-related/edges/Include";
+import Exclude, { NewExclude } from "../dcr-related/edges/Exclude";
+import Milestone, { NewMilestone } from "../dcr-related/edges/Milestone";
+import Spawn, { NewSpawn } from "../dcr-related/edges/Spawn";
+import CustomConnectionLine from "../dcr-related/edges/ConnectionLine";
 
-import BaseEvent from "./dcr-related/nodes/BaseEvent";
-import Nest from "./dcr-related/nodes/Nest";
-import Subprocess from "./dcr-related/nodes/Subprocess";
-import { Button } from "./lib/reusable-comps";
-import Drawer from "./components/drawer";
-import ToolPallete from "./components/tool-pallete";
+import BaseEvent from "../dcr-related/nodes/BaseEvent";
+import Nest from "../dcr-related/nodes/Nest";
+import Subprocess from "../dcr-related/nodes/Subprocess";
+import { Button } from "../lib/reusable-comps";
+import Drawer from "../components/drawer";
+import ToolPallete from "../components/tool-pallete";
 import { Pickaxe } from "lucide-react";
-import ImportButton from "./components/import-button";
-import ExportButton from "./components/export-button";
+import ImportButton from "../components/import-button";
+import ExportButton from "../components/export-button";
 
 type History = {
   nodes: Node[];
@@ -52,11 +52,9 @@ const selector = (state: RFState) => ({
   nextGroupId: state.nextGroupId,
   nextSubprocessId: state.nextSubprocessId,
   setIds: state.setIds,
-  simulationFlow: state.simulationFlow,
   setNodes: state.setNodes,
   addNode: state.addNode,
   setEdges: state.setEdges,
-  setSimulationFlow: state.setSimulationFlow,
   onNodesChange: state.onNodesChange,
   onNodeClick: state.onNodeClick,
   onNodeDoubleClick: state.onNodeDoubleClick,
@@ -71,10 +69,7 @@ const selector = (state: RFState) => ({
   onConnect: state.onConnect,
   onPaneClick: state.onPaneClick,
   onEdgesDelete: state.onEdgesDelete,
-  simNodes: state.simNodes,
-  simEdges: state.simEdges,
   onClickSimulationToggle: state.onClickSimulationToggle,
-  onNodeClickSimulation: state.onNodeClickSimulation,
   currentProjection: state.currentProjection,
 });
 
@@ -87,6 +82,15 @@ const edgeTypes = {
   exclude: Exclude,
   milestone: Milestone,
   spawn: Spawn,
+};
+
+const newEdgeTypes = {
+  condition: NewCondition,
+  response: NewResponse,
+  include: NewInclude,
+  exclude: NewExclude,
+  milestone: NewMilestone,
+  spawn: NewSpawn,
 };
 
 const nodeTypes = {
@@ -107,7 +111,6 @@ function FlowWithoutProvider() {
     nextGroupId,
     nextSubprocessId,
     setIds,
-    simulationFlow,
     setNodes,
     addNode,
     setEdges,
@@ -126,66 +129,12 @@ function FlowWithoutProvider() {
     onPaneClick,
     onEdgesDelete,
     onClickSimulationToggle,
-    onNodeClickSimulation,
-    simEdges,
-    simNodes,
     currentProjection,
   } = useStore(selector, shallow);
 
   const flowRef = useRef<HTMLDivElement>(null);
 
   const { screenToFlowPosition } = useReactFlow();
-
-  const simulationProps = {
-    ref: flowRef,
-    nodes: simNodes,
-    edges: simEdges,
-    edgeTypes,
-    nodeTypes,
-    nodeOrigin,
-    nodesDraggable: false,
-    nodesConnectable: false,
-    onNodeClick: onNodeClickSimulation,
-    fitView: true,
-    maxZoom: 5,
-    minZoom: 0,
-    zoomOnDoubleClick: false,
-    elementsSelectable: simulationFlow,
-  };
-
-  const normalProps = {
-    ref: flowRef,
-    nodes,
-    edges,
-    onNodesChange,
-    onNodeClick,
-    onNodeDoubleClick,
-    onNodeDragStart,
-    onNodeDragStop,
-    onNodesDelete,
-    onEdgesChange,
-    onEdgeClick,
-    onEdgeDoubleClick,
-    onEdgesDelete,
-    onDragOver,
-    onDrop: (event: any) => onDrop(event, screenToFlowPosition),
-    onConnect,
-    onPaneClick,
-    nodesDraggable: true,
-    nodesConnectable: true,
-    edgeTypes,
-    nodeTypes,
-    nodeOrigin,
-    connectionLineComponent: CustomConnectionLine,
-    connectionLineContainerStyle: { zIndex: 20000 },
-    selectNodesOnDrag: true,
-    snapToGrid: true,
-    fitView: true,
-    fitViewOptions: { maxZoom: 1 },
-    maxZoom: 5,
-    minZoom: 0,
-    zoomOnDoubleClick: false,
-  };
 
   const [history, setHistory] = useState<History>({
     nodes,
@@ -200,7 +149,7 @@ function FlowWithoutProvider() {
   const KeyPressListener = () => {
     useEffect(() => {
       const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.ctrlKey && keyPressOn) {
+        if (event.ctrlKey) {
           event.preventDefault();
           switch (event.key.toLowerCase()) {
             case "s":
@@ -237,7 +186,7 @@ function FlowWithoutProvider() {
       };
 
       const handleKeyUp = (event: KeyboardEvent) => {
-        if (event.ctrlKey && keyPressOn) {
+        if (event.ctrlKey) {
           event.preventDefault();
           switch (event.key.toLowerCase()) {
             case "z":
@@ -268,30 +217,52 @@ function FlowWithoutProvider() {
 
   return (
     <ReactFlow
+      ref={flowRef}
+      nodes={nodes}
+      edges={edges}
+      nodeTypes={nodeTypes}
+      edgeTypes={edgeTypes}
+      nodeOrigin={nodeOrigin}
+      onNodesChange={onNodesChange}
+      onNodeClick={onNodeClick}
+      onNodeDoubleClick={onNodeDoubleClick}
+      onNodeDragStart={onNodeDragStart}
+      onNodeDragStop={onNodeDragStop}
+      onNodesDelete={onNodesDelete}
+      onEdgesChange={onEdgesChange}
+      onEdgeClick={onEdgeClick}
+      onEdgeDoubleClick={onEdgeDoubleClick}
+      onEdgesDelete={onEdgesDelete}
+      onDragOver={onDragOver}
+      onDrop={(event: any) => onDrop(event, screenToFlowPosition)}
+      onConnect={onConnect}
+      onPaneClick={onPaneClick}
+      connectionLineComponent={CustomConnectionLine}
+      connectionLineContainerStyle={{ zIndex: 20000 }}
+      selectNodesOnDrag={true}
+      snapToGrid={true}
+      fitView={true}
+      fitViewOptions={{ maxZoom: 1 }}
+      maxZoom={5}
+      minZoom={0}
+      zoomOnDoubleClick={false}
+      nodesDraggable={true}
+      nodesConnectable={true}
       elevateNodesOnSelect={false}
-      {...(simulationFlow ? simulationProps : normalProps)}
-      onPaneMouseEnter={() => {
-        setKeyPressOn(true);
-      }}
-      onPaneMouseLeave={() => {
-        setKeyPressOn(false);
-      }}
+      onPaneMouseEnter={() => setKeyPressOn(true)}
+      onPaneMouseLeave={() => setKeyPressOn(false)}
       className="select-none"
     >
-      <KeyPressListener />
+      {keyPressOn && <KeyPressListener />}
       <Controls showInteractive={false} />
       <Background variant={BackgroundVariant.Dots} />
-      {!simulationFlow && (
-        <>
-          {currentProjection === "global" && <ToolPallete />}
-          <Drawer />
-        </>
-      )}
+      {currentProjection === "global" && <ToolPallete />}
+      <Drawer />
       <Panel
         position="top-left"
         style={{
           display: "flex",
-          width: simulationFlow ? "193px" : "600px",
+          width: "600px",
           gap: 10,
           zIndex: 10,
         }}
@@ -300,15 +271,11 @@ function FlowWithoutProvider() {
           className="flex items-center justify-center gap-2 w-full"
           onClick={onClickSimulationToggle}
         >
-          {simulationFlow ? "Stop" : "Start"} Simulation
+          Start Simulation
           <Pickaxe size={20} />
         </Button>
-        {!simulationFlow && (
-          <>
-            <ImportButton />
-            <ExportButton />
-          </>
-        )}
+        <ImportButton />
+        <ExportButton />
       </Panel>
     </ReactFlow>
   );

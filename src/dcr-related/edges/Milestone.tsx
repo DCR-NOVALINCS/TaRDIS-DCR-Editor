@@ -25,6 +25,39 @@ export const MilestoneModel = () => {
  * @param relationProps - The properties of the relation.
  * @returns A React component that renders a milestone relation.
  */
+export function NewMilestone(relationProps: RelationProperties) {
+  return (
+    <>
+      <defs>
+        <marker
+          id="milestone-markerEnd"
+          viewBox="0 0 10 10"
+          refX="0"
+          refY="5"
+          markerWidth="20"
+          markerHeight="5"
+          orient="auto-start-reverse"
+        >
+          <path d="M -1 4 L 8 4 L 8 6 L -1 6 Z" fill={MILESTONE_COLOR} />
+          <circle cx="12" cy="5" r="4" fill={MILESTONE_COLOR}>
+            <text></text>
+          </circle>
+        </marker>
+      </defs>
+      <BaseRelation
+        {...relationProps}
+        markerEnd="url(#milestone-markerEnd)"
+        style={{ stroke: MILESTONE_COLOR }}
+      />
+    </>
+  );
+}
+
+/**
+ * Milestone relation component.
+ * @param relationProps - The properties of the relation.
+ * @returns A React component that renders a milestone relation.
+ */
 export default function Milestone(relationProps: RelationProperties) {
   return (
     <>

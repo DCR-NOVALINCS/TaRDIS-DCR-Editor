@@ -4,9 +4,11 @@ import { Check } from "lucide-react";
 import useStore, { RFState } from "@/stores/store";
 import { useKeyPress } from "@/lib/utils";
 import { shallow } from "zustand/shallow";
+import { MarkingType } from "@/lib/types";
 
 const selector = (state: RFState) => ({
   simulationFlow: state.simulationFlow,
+  nodeProperties: state.nodeProperties,
 });
 
 /**
@@ -65,7 +67,7 @@ export const EventModel = ({
  * - Marking state controls the display of pending and excluded indicators.
  */
 export default function BaseEvent({ id, data, ...props }: NodeProps) {
-  const { simulationFlow } = useStore(selector, shallow);
+  const { simulationFlow, nodeProperties } = useStore(selector, shallow);
   const { initiators, receivers, type, label, name, marking, interactionType } =
     data as {
       initiators: string[];
@@ -73,21 +75,27 @@ export default function BaseEvent({ id, data, ...props }: NodeProps) {
       type: string;
       label: string;
       name: string;
-      marking: Record<string, boolean>;
+      marking: MarkingType;
       interactionType?: string;
     };
 
-  const { included, pending, executable, executed } = marking as Record<
-    string,
-    boolean
-  >;
+  const { included, pending } = marking;
+  const simulationMarking = nodeProperties.get(id);
 
   const connection = useConnection();
   const isTarget = connection.inProgress && connection.fromNode.id != id;
 
-  const borderDashed = included ? "" : "border-dashed";
+  const borderDashed = simulationFlow
+    ? simulationMarking && simulationMarking.included
+      ? ""
+      : "border-dashed"
+    : included
+    ? ""
+    : "border-dashed";
   const borderColor =
-    simulationFlow && executable ? "border-[#00FF00]" : "border-[#CCCCCC]";
+    simulationFlow && simulationMarking && simulationMarking.executable
+      ? "border-[#00FF00]"
+      : "border-[#CCCCCC]";
 
   const initiatorsJoined = initiators.join(", ");
   const receiversJoined = receivers ? receivers.join(", ") : "";
@@ -141,10 +149,17 @@ export default function BaseEvent({ id, data, ...props }: NodeProps) {
 
           {/* EVENT PENDING STATE */}
           <div className="absolute px-[4px] right-0 items-center flex gap-1">
-            {pending && <div className="font-bold text-blue-700">!</div>}
-            {simulationFlow && executed && (
-              <Check className="text-[#00FF00]" size={12} />
+            {((simulationFlow &&
+              simulationMarking &&
+              simulationMarking.pending) ||
+              (!simulationFlow && pending)) && (
+              <div className="font-bold text-blue-700">!</div>
             )}
+            {simulationFlow &&
+              simulationMarking &&
+              simulationMarking.executed && (
+                <Check className="text-[#00FF00]" size={12} />
+              )}
           </div>
 
           {/* EVENT LABEL PLUS NAME */}

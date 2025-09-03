@@ -13,7 +13,6 @@ import {
 import { nextChar } from "./utils";
 
 function processRoleExpr(roleExpr: RoleExpr): string {
-  console.log(roleExpr);
   let roleLabel, params;
   if ("initiatorExpr" in roleExpr)
     return `@Initiator(${roleExpr.initiatorExpr.eventId})`;
@@ -28,7 +27,6 @@ function processRoleExpr(roleExpr: RoleExpr): string {
   }
   const paramsString = params.map((param) => {
     const { name, value } = param;
-    console.log(param);
     if (value) {
       if ("propDeref" in value)
         return `${name}=${processPropDeref(value.propDeref)}`;
@@ -434,8 +432,5 @@ function processChoreographyGraph(
 }
 
 export function processChoregraphyModel(choregraphy: ChoreographyModel) {
-  const { role, graph } = choregraphy;
-  const { nodes, edges } = processChoreographyGraph(role, graph, 0);
-  console.log(nodes, edges);
-  return { nodes, edges };
+  return processChoreographyGraph(choregraphy.role, choregraphy.graph, 0);
 }

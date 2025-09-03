@@ -270,3 +270,10 @@ export async function setState(name: string = "current") {
   });
   return (await response.json()) as State;
 }
+
+/**
+ * Creates a new Map instance to ensure immutability
+ */
+export const cloneMap = <K, V>(originalMap: Map<K, V>): Map<K, V> => {
+  return new Map(originalMap);
+};

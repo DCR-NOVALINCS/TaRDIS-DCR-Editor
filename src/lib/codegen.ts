@@ -9,313 +9,406 @@ import {
   SimpleRole,
 } from "./types";
 
+type ProcessNode = EventType | NestType | SubprocessType;
+
 /**
  * Extracts and organizes process-related data from provided nodes and edges.
  *
  * This function processes arrays of nodes and edges, categorizing them into events, nests,
  * subprocesses, and relations. It then groups these elements by their parent relationships,
- * constructing a hierarchical map of processes. Each process contains its associated events,
- * relations, nests, and subprocesses, as well as a reference to its parent process.
- *
- * @param nodes - An array of node objects representing events, nests, and subprocesses.
- * @param edges - An array of edge objects representing relations between nodes.
- * @returns A Map where each key is a process ID and each value is a Process object containing
- *          the grouped events, relations, nests, subprocesses, and parent process reference.
+ * constructing a hierarchical map of processes.
  */
-function extractData(nodes: Node[], edges: Edge[]) {
-  let parentProcess = new Map<string, Process>();
+function extractData(nodes: Node[], edges: Edge[]): Map<string, Process> {
+  const { events, nests, subprocesses } = categorizeNodes(nodes);
+  const relations = processEdges(edges, events, nests, subprocesses);
 
-  let events: EventType[] = nodes
+  return buildProcessHierarchy(events, nests, subprocesses, relations);
+}
+
+/**
+ * Categorizes nodes into events, nests, and subprocesses
+ */
+function categorizeNodes(nodes: Node[]) {
+  const events: EventType[] = nodes
     .filter((n) => n.type === "event")
-    .map((n) => {
-      const {
-        id,
-        data,
-        parentId: parent,
-      } = n as {
-        id: string;
-        data: Record<string, unknown>;
-        parentId: string;
-      };
+    .map((n) => createEventFromNode(n));
 
-      const {
-        label,
-        name,
-        security,
-        input,
-        expression,
-        initiators,
-        receivers,
-        marking,
-      } = data as EventType;
-
-      return {
-        id,
-        label,
-        name,
-        security,
-        ...(input && { input }),
-        ...(expression && { expression }),
-        initiators,
-        ...(receivers && receivers.length > 0 && { receivers }),
-        marking,
-        ...(parent ? { parent } : { parent: "global" }),
-      };
-    });
-
-  let nests: NestType[] = nodes
+  const nests: NestType[] = nodes
     .filter((n) => n.type === "nest")
-    .map((n) => {
-      const {
-        id,
-        data,
-        parentId: parent,
-      } = n as { id: string; data: Record<string, unknown>; parentId: string };
-      const { label, marking, nestType } = data as NestType;
+    .map((n) => createNestFromNode(n));
 
-      return {
-        id,
-        label,
-        marking,
-        nestType,
-        ...(parent ? { parent } : { parent: "global" }),
-      };
-    });
-
-  let subprocesses: SubprocessType[] = nodes
+  const subprocesses: SubprocessType[] = nodes
     .filter((n) => n.type === "subprocess")
-    .map((n) => {
-      const {
-        id,
-        data,
-        parentId: parent,
-      } = n as { id: string; data: Record<string, unknown>; parentId: string };
-      const { label, marking } = data as SubprocessType;
+    .map((n) => createSubprocessFromNode(n));
 
-      return {
-        id,
-        label,
-        marking,
-        ...(parent ? { parent } : { parent: "global" }),
-      };
+  return { events, nests, subprocesses };
+}
+
+/**
+ * Creates an EventType from a node
+ */
+function createEventFromNode(node: Node): EventType {
+  const { id, data, parentId } = node as {
+    id: string;
+    data: Record<string, unknown>;
+    parentId: string;
+  };
+
+  const {
+    label,
+    name,
+    security,
+    input,
+    expression,
+    initiators,
+    receivers,
+    marking,
+  } = data as EventType;
+
+  return {
+    id,
+    label,
+    name,
+    security,
+    initiators,
+    marking,
+    parent: parentId || "global",
+    ...(input && { input }),
+    ...(expression && { expression }),
+    ...(receivers?.length && { receivers }),
+  };
+}
+
+/**
+ * Creates a NestType from a node
+ */
+function createNestFromNode(node: Node): NestType {
+  const { id, data, parentId } = node as {
+    id: string;
+    data: Record<string, unknown>;
+    parentId: string;
+  };
+
+  const { label, marking, nestType } = data as NestType;
+
+  return {
+    id,
+    label,
+    marking,
+    nestType,
+    parent: parentId || "global",
+  };
+}
+
+/**
+ * Creates a SubprocessType from a node
+ */
+function createSubprocessFromNode(node: Node): SubprocessType {
+  const { id, data, parentId } = node as {
+    id: string;
+    data: Record<string, unknown>;
+    parentId: string;
+  };
+
+  const { label, marking } = data as SubprocessType;
+
+  return {
+    id,
+    label,
+    marking,
+    parent: parentId || "global",
+  };
+}
+
+/**
+ * Gets all child events recursively from a nest or subprocess
+ */
+function getChildrenEvents(
+  node: NestType | SubprocessType,
+  events: EventType[],
+  nests: NestType[],
+  subprocesses: SubprocessType[]
+): { events: EventType[]; parent: string }[] {
+  const directChildEvents = events.filter((e) => e.parent === node.id);
+  const childNests = nests.filter((n) => n.parent === node.id);
+  const childSubprocesses = subprocesses.filter((s) => s.parent === node.id);
+
+  let allChildren = [{ events: directChildEvents, parent: node.id }];
+
+  // Recursively get children from nests and subprocesses
+  [...childNests, ...childSubprocesses].forEach((child) => {
+    allChildren.push(...getChildrenEvents(child, events, nests, subprocesses));
+  });
+
+  return allChildren;
+}
+
+/**
+ * Processes edges to create relations
+ */
+function processEdges(
+  edges: Edge[],
+  events: EventType[],
+  nests: NestType[],
+  subprocesses: SubprocessType[]
+): RelationType[] {
+  const relations: RelationType[] = [];
+
+  edges.forEach((edge) => {
+    const { id, source, target, type, data } = edge;
+    const guard = (data as { guard?: string })?.guard;
+
+    const sourceNode = findNode(source, events, nests, subprocesses);
+    const targetNode = findNode(target, events, nests, subprocesses);
+
+    if (!sourceNode || !targetNode) return;
+
+    const edgeRelations = createRelationsForEdge({
+      id,
+      source,
+      target,
+      type: type ?? "",
+      guard,
+      sourceNode,
+      targetNode,
+      events,
+      nests,
+      subprocesses,
     });
 
-  function getChildren(
-    node: NestType | SubprocessType
-  ): { events: EventType[]; parent: string }[] {
-    const childrenEvents = events.filter((e) => e.parent === node.id);
-    const childrenNests = nests.filter((n) => n.parent === node.id);
-    const childrenSubprocesses = subprocesses.filter(
-      (s) => s.parent === node.id
+    relations.push(...edgeRelations);
+  });
+
+  return relations.filter((r) => r.id !== "toDelete");
+}
+
+/**
+ * Finds a node by ID in any of the node arrays
+ */
+function findNode(
+  id: string,
+  events: EventType[],
+  nests: NestType[],
+  subprocesses: SubprocessType[]
+): ProcessNode | undefined {
+  return (
+    events.find((n) => n.id === id) ||
+    nests.find((n) => n.id === id) ||
+    subprocesses.find((n) => n.id === id)
+  );
+}
+
+/**
+ * Creates relations for a single edge
+ */
+function createRelationsForEdge({
+  id,
+  source,
+  target,
+  type,
+  guard,
+  sourceNode,
+  targetNode,
+  events,
+  nests,
+  subprocesses,
+}: {
+  id: string;
+  source: string;
+  target: string;
+  type: string;
+  guard?: string;
+  sourceNode: ProcessNode;
+  targetNode: ProcessNode;
+  events: EventType[];
+  nests: NestType[];
+  subprocesses: SubprocessType[];
+}): RelationType[] {
+  const relations: RelationType[] = [];
+
+  // Handle spawn relations specially
+  if (type === "spawn")
+    return [
+      {
+        id,
+        source: sourceNode.label,
+        target: targetNode.label,
+        type,
+        parent: sourceNode.parent,
+        ...(guard && { guard }),
+      },
+    ];
+
+  const isSourceEvent = events.some((e) => e.id === source);
+  const isTargetEvent = events.some((e) => e.id === target);
+
+  if (isSourceEvent && isTargetEvent) {
+    // Event to Event
+    relations.push({
+      id,
+      source: sourceNode.label,
+      target: targetNode.label,
+      type,
+      parent: sourceNode.parent,
+      ...(guard && { guard }),
+    });
+  } else if (isSourceEvent && !isTargetEvent) {
+    // Event to Container (Nest/Subprocess)
+    const targetChildren = getChildrenEvents(
+      targetNode as NestType | SubprocessType,
+      events,
+      nests,
+      subprocesses
     );
 
-    let children = [{ events: childrenEvents, parent: node.id }];
-    if (childrenNests.length > 0)
-      childrenNests.forEach((n) => children.push(...getChildren(n)));
-    if (childrenSubprocesses.length > 0)
-      childrenSubprocesses.forEach((s) => children.push(...getChildren(s)));
-
-    return children;
-  }
-
-  let relationsToAdd: RelationType[] = [];
-  let relations: RelationType[] = edges.map((e) => {
-    const { id, source, target, type, data } = e as {
-      id: string;
-      source: string;
-      target: string;
-      type: string;
-      data: Record<string, unknown>;
-    };
-    const { guard } = data as { guard: string | undefined };
-
-    const sourceEventNode = events.find((n) => n.id === source);
-    const sourceNestNode = nests.find((n) => n.id === source);
-    const sourceSubprocessNode = subprocesses.find((n) => n.id === source);
-
-    const targetEventNode = events.find((n) => n.id === target);
-    const targetNestNode = nests.find((n) => n.id === target);
-    const targetSubprocessNode = subprocesses.find((n) => n.id === target);
-
-    let sourceNode: EventType | NestType | SubprocessType;
-    let targetNode: EventType | NestType | SubprocessType;
-    if (sourceEventNode) {
-      sourceNode = sourceEventNode as EventType;
-      const parent = sourceNode.parent;
-      if (targetEventNode) {
-        targetNode = targetEventNode as EventType;
-        relationsToAdd.push({
+    targetChildren.forEach((child) => {
+      child.events.forEach((event) => {
+        relations.push({
           id,
           source: sourceNode.label,
-          target: targetNode.label,
+          target: event.label,
           type,
-          ...(parent ? { parent } : { parent: "global" }),
+          parent: child.parent,
           ...(guard && { guard }),
         });
-      } else {
-        targetNode = targetNestNode
-          ? (targetNestNode as NestType)
-          : (targetSubprocessNode as SubprocessType);
+      });
+    });
+  } else if (!isSourceEvent && isTargetEvent) {
+    // Container to Event
+    const sourceChildren = getChildrenEvents(
+      sourceNode as NestType | SubprocessType,
+      events,
+      nests,
+      subprocesses
+    );
 
-        const children = getChildren(targetNode);
-        if (type !== "spawn") {
-          children.forEach((child) => {
-            child.events.forEach((e) => {
-              relationsToAdd.push({
-                id,
-                source: sourceNode.label,
-                target: e.label,
-                type,
-                parent: child.parent,
-                ...(guard && { guard }),
-              });
-            });
-          });
-        }
-      }
-    } else {
-      sourceNode = sourceNestNode
-        ? (sourceNestNode as NestType)
-        : (sourceSubprocessNode as SubprocessType);
+    sourceChildren.forEach((child) => {
+      child.events.forEach((event) => {
+        relations.push({
+          id,
+          source: event.label,
+          target: targetNode.label,
+          type,
+          parent: child.parent,
+          ...(guard && { guard }),
+        });
+      });
+    });
+  } else {
+    // Container to Container
+    const sourceChildren = getChildrenEvents(
+      sourceNode as NestType | SubprocessType,
+      events,
+      nests,
+      subprocesses
+    );
+    const targetChildren = getChildrenEvents(
+      targetNode as NestType | SubprocessType,
+      events,
+      nests,
+      subprocesses
+    );
 
-      const sourceChildren = getChildren(sourceNode);
-      if (targetEventNode) {
-        targetNode = targetEventNode as EventType;
-        sourceChildren.forEach((child) => {
-          child.events.forEach((e) => {
-            relationsToAdd.push({
+    sourceChildren.forEach((sourceChild) => {
+      sourceChild.events.forEach((sourceEvent) => {
+        targetChildren.forEach((targetChild) => {
+          targetChild.events.forEach((targetEvent) => {
+            relations.push({
               id,
-              source: e.label,
-              target: targetNode.label,
+              source: sourceEvent.label,
+              target: targetEvent.label,
               type,
-              parent: child.parent,
+              parent: sourceChild.parent,
               ...(guard && { guard }),
             });
           });
         });
-      } else {
-        targetNode = targetNestNode
-          ? (targetNestNode as NestType)
-          : (targetSubprocessNode as SubprocessType);
+      });
+    });
+  }
 
-        const targetChildren = getChildren(targetNode);
-        sourceChildren.forEach((child) => {
-          child.events.forEach((e) => {
-            targetChildren.forEach((targetChild) => {
-              targetChild.events.forEach((te) => {
-                relationsToAdd.push({
-                  id,
-                  source: e.label,
-                  target: te.label,
-                  type,
-                  parent: child.parent,
-                  ...(guard && { guard }),
-                });
-              });
-            });
-          });
-        });
-      }
-    }
-
-    return type === "spawn"
-      ? {
-          id,
-          source: sourceNode.label,
-          target: targetNode.label,
-          type,
-          ...(guard && { guard }),
-          ...(sourceNode.parent
-            ? { parent: sourceNode.parent }
-            : { parent: "global" }),
-        }
-      : {
+  // Return placeholder for non-spawn relations (they're expanded above)
+  return relations.length > 0
+    ? relations
+    : [
+        {
           id: "toDelete",
           source: "",
           target: "",
           type: "",
-        };
-  });
+        },
+      ];
+}
 
-  relations = [
-    ...relations.filter((r) => r.id !== "toDelete"),
-    ...relationsToAdd,
-  ];
+/**
+ * Finds the ultimate parent process for a node
+ */
+function findUltimateParent(
+  item: ProcessNode | RelationType,
+  nests: NestType[],
+  subprocesses: SubprocessType[]
+): string {
+  if (!item.parent || item.parent === "global") return "global";
 
-  function findParent(
-    item: EventType | NestType | SubprocessType | RelationType
-  ) {
-    const parent = item.parent;
-    if (parent) {
-      const nestParent = nests.find((n) => n.id === parent);
-      if (nestParent) return findParent(nestParent);
-      else return subprocesses.some((s) => s.id === parent) ? parent : "global";
-    } else return "global";
-  }
+  const nestParent = nests.find((n) => n.id === item.parent);
+  if (nestParent) return findUltimateParent(nestParent, nests, subprocesses);
 
-  events = events.map((e) => ({
+  const subprocessParent = subprocesses.find((s) => s.id === item.parent);
+  return subprocessParent ? item.parent : "global";
+}
+
+/**
+ * Builds the process hierarchy map
+ */
+function buildProcessHierarchy(
+  events: EventType[],
+  nests: NestType[],
+  subprocesses: SubprocessType[],
+  relations: RelationType[]
+): Map<string, Process> {
+  // Update all items to have their ultimate parent
+  const updatedEvents = events.map((e) => ({
     ...e,
-    parent: findParent(e),
+    parent: findUltimateParent(e, nests, subprocesses),
   }));
-  nests = nests.map((n) => ({
+
+  const updatedNests = nests.map((n) => ({
     ...n,
-    parent: findParent(n),
+    parent: findUltimateParent(n, nests, subprocesses),
   }));
-  subprocesses = subprocesses.map((s) => ({
+
+  const updatedSubprocesses = subprocesses.map((s) => ({
     ...s,
-    parent: findParent(s),
+    parent: findUltimateParent(s, nests, subprocesses),
   }));
-  relations = relations.map((r) => ({
+
+  const updatedRelations = relations.map((r) => ({
     ...r,
-    parent: findParent(r),
+    parent: findUltimateParent(r, nests, subprocesses),
   }));
 
-  const parents: { id: string; parent: string }[] = [
-    { id: "global", parent: "" },
-    ...subprocesses.map((s) => ({
-      id: s.id,
-      parent: s.parent ? s.parent : "global",
-    })),
-  ];
+  // Create parent process map
+  const parentProcesses = new Map<string, Process>();
+  const allParentIds = ["global", ...updatedSubprocesses.map((s) => s.id)];
 
-  parents.forEach((parent) => {
-    const { id, parent: upParent } = parent;
-    let processEvents: EventType[] = [];
-    let processRelations: RelationType[] = [];
-    let processNests: NestType[] = [];
-    let processSubprocesses: SubprocessType[] = [];
+  allParentIds.forEach((parentId) => {
+    const parentProcess = updatedSubprocesses.find((s) => s.id === parentId);
+    const upParent = parentProcess?.parent || "";
 
-    processEvents = events.filter((e) => e.parent && e.parent === id);
-    processRelations = relations.filter((r) => r.parent && r.parent === id);
-    processNests = nests.filter((n) => n.parent && n.parent === id);
-    processSubprocesses = subprocesses.filter(
-      (s) => s.parent && s.parent === id
-    );
-
-    parentProcess.set(id, {
-      events: processEvents,
-      relations: processRelations,
-      nests: processNests,
-      subprocesses: processSubprocesses,
+    parentProcesses.set(parentId, {
+      events: updatedEvents.filter((e) => e.parent === parentId),
+      relations: updatedRelations.filter((r) => r.parent === parentId),
+      nests: updatedNests.filter((n) => n.parent === parentId),
+      subprocesses: updatedSubprocesses.filter((s) => s.parent === parentId),
       parentProcess: upParent,
     });
   });
 
-  return parentProcess;
+  return parentProcesses;
 }
 
 /**
- * Generates code and an event mapping from a set of process nodes, edges, roles, and a security lattice.
- *
- * This function traverses the provided process structure, serializes events and relations into a custom
- * code format, and constructs a mapping from event IDs to their string representations. It also serializes
- * role definitions and the security lattice.
- *
- * @param nodes - The list of process nodes to be included in the code generation.
- * @param edges - The list of edges representing relations between nodes.
- * @param roles - The list of roles, each with associated types, to be serialized.
- * @param lattice - The security lattice definition as a string.
- * @returns The generated code as a string.
+ * Generates code from process structure
  */
 export function writeCode(
   nodes: Node[],
@@ -324,130 +417,102 @@ export function writeCode(
   lattice: string
 ): string {
   const parentProcess = extractData(nodes, edges);
-  console.log(parentProcess);
-  let content: string[] = [];
+  const content: string[] = [];
 
-  function writeProcess(process: Process, numTabs: number): string[] {
-    let newContent: string[] = [];
-
-    let events = process.events;
-    let relations = process.relations;
-
-    events.forEach((e) => {
-      const { included, pending } = e.marking;
-      let eventContent = `${included ? "" : "%"}${pending ? "!" : ""}(${
-        e.label
-      }:${e.name}) (${e.security}) [`;
-
-      if (e.input) {
-        eventContent += "?";
-        const input = e.input;
-        if (input.type !== "Unit") {
-          eventContent += ":";
-          if ("record" in input) {
-            eventContent += "{";
-            input.record.forEach((field, index) => {
-              if (index === input.record.length - 1)
-                eventContent += `${field.var}:${field.type}}`;
-              else eventContent += `${field.var}:${field.type}; `;
-            });
-          } else {
-            eventContent += `${input.type}`;
-          }
-        }
-      } else if (e.expression) eventContent += `${e.expression}`;
-      eventContent += `] [${e.initiators.join(", ")}${
-        e.receivers && e.receivers.length > 0
-          ? ` -> ${e.receivers.join(", ")}]`
-          : "]"
-      }`;
-
-      newContent.push(eventContent);
-    });
-
-    if (relations.length > 0) newContent.push(";");
-
-    relations.forEach((r) => {
-      if (r.type === "spawn") {
-        newContent.push(`${r.source} ${relationsMap[r.type]} {`);
-        const childProcess = parentProcess.get(r.target);
-        if (childProcess) {
-          newContent.push(
-            `\t${writeProcess(childProcess, numTabs + 1).join(
-              `\n${"\t".repeat(numTabs)}`
-            )}`
-          );
-
-          newContent.push("}");
-        }
-      } else {
-        const sourceProcess = parentProcess.get(r.source);
-        const targetProcess = parentProcess.get(r.target);
-        if (sourceProcess) {
-          const sourceChildren = sourceProcess.events.map((e) => e.label);
-          if (targetProcess) {
-            const targetChildren = targetProcess.events.map((e) => e.label);
-            sourceChildren.forEach((sc) => {
-              targetChildren.forEach((tc) => {
-                newContent.push(
-                  `${sc} ${relationsMap[r.type]} ${tc}${
-                    r.guard ? ` [${r.guard}]` : ""
-                  }`
-                );
-              });
-            });
-          } else {
-            sourceChildren.forEach((sc) => {
-              newContent.push(
-                `${sc} ${relationsMap[r.type]} ${r.target}${
-                  r.guard ? ` [${r.guard}]` : ""
-                }`
-              );
-            });
-          }
-        } else {
-          if (targetProcess) {
-            const targetChildren = targetProcess.events.map((e) => e.label);
-            targetChildren.forEach((tc) => {
-              newContent.push(
-                `${r.source} ${relationsMap[r.type]} ${tc}${
-                  r.guard ? ` [${r.guard}]` : ""
-                }`
-              );
-            });
-          } else {
-            newContent.push(
-              `${r.source} ${relationsMap[r.type]} ${r.target}${
-                r.guard ? ` [${r.guard}]` : ""
-              }`
-            );
-          }
-        }
-      }
-    });
-
-    return newContent;
-  }
-
+  // Write roles
   roles.forEach((role) => {
-    let roleContent = `${role.label}`;
-
+    let roleContent = role.label;
     if (role.types.length > 0) {
-      roleContent += "(";
-      role.types.forEach((value, index) => {
-        if (index === role.types.length - 1)
-          roleContent += `${value.var}:${value.type})`;
-        else roleContent += `${value.var}:${value.type}; `;
-      });
+      const typeParams = role.types
+        .map((type) => `${type.var}:${type.type}`)
+        .join("; ");
+      roleContent += `(${typeParams})`;
     }
     content.push(roleContent);
   });
-  content.push(";");
-  content.push(lattice);
-  content.push(";");
 
+  content.push(";", lattice, ";");
+
+  // Write global process
   const globalProcess = parentProcess.get("global");
-  if (globalProcess) content.push(writeProcess(globalProcess, 1).join("\n"));
+  if (globalProcess)
+    content.push(writeProcess(globalProcess, parentProcess, 1).join("\n"));
 
-  return content.join(`\n`);
+  return content.join("\n");
+}
+
+/**
+ * Writes a single process to string format
+ */
+function writeProcess(
+  process: Process,
+  allProcesses: Map<string, Process>,
+  numTabs: number
+): string[] {
+  const content: string[] = [];
+
+  // Write events
+  process.events.forEach((event) => {
+    content.push(formatEvent(event));
+  });
+
+  if (process.relations.length > 0) content.push(";");
+
+  // Write relations
+  process.relations.forEach((relation) => {
+    if (relation.type === "spawn") {
+      content.push(`${relation.source} ${relationsMap[relation.type]} {`);
+
+      const childProcess = allProcesses.get(relation.target);
+      if (childProcess) {
+        const childContent = writeProcess(
+          childProcess,
+          allProcesses,
+          numTabs + 1
+        );
+        const indentedChild = childContent.join(`\n${"\t".repeat(numTabs)}`);
+        content.push(`\t${indentedChild}`, "}");
+      }
+    } else {
+      const guardSuffix = relation.guard ? ` [${relation.guard}]` : "";
+      content.push(
+        `${relation.source} ${relationsMap[relation.type]} ${
+          relation.target
+        }${guardSuffix}`
+      );
+    }
+  });
+
+  return content;
+}
+
+/**
+ * Formats an event to its string representation
+ */
+function formatEvent(event: EventType): string {
+  const { included, pending } = event.marking;
+  const prefix = `${included ? "" : "%"}${pending ? "!" : ""}`;
+
+  let eventContent = `${prefix}(${event.label}:${event.name}) (${event.security}) [`;
+
+  if (event.input) {
+    eventContent += "?";
+    if (event.input.type !== "Unit") {
+      eventContent += ":";
+      if ("record" in event.input) {
+        const fields = event.input.record
+          .map((field) => `${field.var}:${field.type}`)
+          .join("; ");
+        eventContent += `{${fields}}`;
+      } else eventContent += event.input.type;
+    }
+  } else if (event.expression) eventContent += event.expression;
+
+  const receivers = event.receivers?.length
+    ? ` -> ${event.receivers.join(", ")}`
+    : "";
+
+  eventContent += `] [${event.initiators.join(", ")}${receivers}]`;
+
+  return eventContent;
 }

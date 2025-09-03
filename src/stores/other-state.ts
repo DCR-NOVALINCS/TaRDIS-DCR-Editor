@@ -8,7 +8,7 @@ import {
   state,
 } from "@/lib/types";
 import type { Edge, Node } from "@xyflow/react";
-import { delay, generateJsonData } from "@/lib/utils";
+import { cloneMap, delay, generateJsonData } from "@/lib/utils";
 
 /**
  * Configuration constants for the application state
@@ -56,13 +56,6 @@ const updateEdgesSelection = (edges: Edge[]): Edge[] => {
     selected: false,
     zIndex: APP_CONFIG.Z_INDEX.EDGE_DEFAULT,
   }));
-};
-
-/**
- * Creates a new Map instance to ensure immutability
- */
-const cloneMap = <K, V>(originalMap: Map<K, V>): Map<K, V> => {
-  return new Map(originalMap);
 };
 
 /**
@@ -170,7 +163,7 @@ export type OtherState = {
   /** Opens an element in the drawer */
   openElementInDrawer(element: Node | Edge): void;
 
-  saveState(): void;
+  saveState(): Promise<void>;
 };
 
 const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
@@ -255,34 +248,30 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
     set({ projectionInfo: newProjectionInfo });
   },
 
-  clearProjections(all: boolean): Promise<ProjectionInfo> {
-    const clearProjectionsAsync = async () => {
-      const currentProjections = get().projectionInfo;
-      let newProjectionInfo = cloneMap(currentProjections);
+  async clearProjections(all: boolean): Promise<ProjectionInfo> {
+    const currentProjections = get().projectionInfo;
+    let newProjectionInfo = cloneMap(currentProjections);
 
-      // Clear projections based on the 'all' flag
-      for (const [key] of currentProjections) {
-        if (shouldClearProjection(key, all)) newProjectionInfo.delete(key);
-      }
+    // Clear projections based on the 'all' flag
+    for (const [key] of currentProjections) {
+      if (shouldClearProjection(key, all)) newProjectionInfo.delete(key);
+    }
 
-      await delay(10);
+    await delay(10);
 
-      const globalProjection = newProjectionInfo.get(
-        APP_CONFIG.DEFAULTS.GLOBAL_ID
-      );
-      const nodes: Node[] = globalProjection ? globalProjection.nodes : [];
-      const edges: Edge[] = globalProjection ? globalProjection.edges : [];
-      set({
-        nodes,
-        edges,
-        projectionInfo: newProjectionInfo,
-        currentProjection: APP_CONFIG.DEFAULTS.GLOBAL_ID,
-      });
+    const globalProjection = newProjectionInfo.get(
+      APP_CONFIG.DEFAULTS.GLOBAL_ID
+    );
+    const nodes: Node[] = globalProjection ? globalProjection.nodes : [];
+    const edges: Edge[] = globalProjection ? globalProjection.edges : [];
+    set({
+      nodes,
+      edges,
+      projectionInfo: newProjectionInfo,
+      currentProjection: APP_CONFIG.DEFAULTS.GLOBAL_ID,
+    });
 
-      return { nodes, edges };
-    };
-
-    return clearProjectionsAsync();
+    return { nodes, edges };
   },
 
   setCurrentProjection(id: string): void {
@@ -338,38 +327,36 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
     get().setDrawerOpen(drawerConfig.open!);
   },
 
-  saveState(): void {
-    const save = async () => {
-      await delay(100);
+  async saveState(): Promise<void> {
+    if (get().currentProjection !== "global") return;
 
-      const { nodes, edges } = get();
+    await delay(100);
 
-      const data = JSON.stringify(
-        generateJsonData(
-          true,
-          nodes,
-          edges,
-          get().security,
-          get().roles,
-          get().code,
-          get().nextNodeId,
-          get().nextGroupId,
-          get().nextSubprocessId
-        )
-      );
+    const { nodes, edges } = get();
 
-      get().setProjectionInfo("global", { nodes, edges });
+    const data = JSON.stringify(
+      generateJsonData(
+        true,
+        nodes,
+        edges,
+        get().security,
+        get().roles,
+        get().code,
+        get().nextNodeId,
+        get().nextGroupId,
+        get().nextSubprocessId
+      )
+    );
 
-      await fetch("/api/example", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: "current", data }),
-      })
-        .then((res) => res.text())
-        .then(console.log);
-    };
+    get().setProjectionInfo("global", { nodes, edges });
 
-    if (get().currentProjection === "global") save();
+    await fetch("/api/example", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "current", data }),
+    })
+      .then((res) => res.text())
+      .then(console.log);
   },
 });
 

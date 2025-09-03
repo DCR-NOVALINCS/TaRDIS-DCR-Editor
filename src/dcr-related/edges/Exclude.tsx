@@ -30,6 +30,67 @@ export const ExcludeModel = () => {
  * @param relationProps - The properties of the relation.
  * @returns A React component that renders a exclude relation.
  */
+export function NewExclude(relationProps: RelationProperties) {
+  return (
+    <>
+      <defs>
+        <marker
+          id="exclude-markerEnd"
+          viewBox="0 0 10 10"
+          refX="0"
+          refY="5"
+          markerWidth="15"
+          markerHeight="5"
+          orient="auto-start-reverse"
+        >
+          <path d="M -1 4 L 16 4 L 16 6 L -1 6 Z" fill={EXCLUDE_COLOR} />
+        </marker>
+        <marker
+          id="exclude-markerStart"
+          viewBox="0 0 10 10"
+          refX="13"
+          refY="5"
+          markerWidth="15"
+          markerHeight="5"
+          orient="auto-start-reverse"
+        >
+          <rect
+            x="3"
+            y="0"
+            width="10"
+            height="10"
+            rx="1"
+            ry="1"
+            fill={EXCLUDE_COLOR}
+          />
+          <text
+            x="10"
+            y="2.3"
+            fontSize="10"
+            fill="white"
+            stroke="white"
+            strokeWidth={0.1}
+            rotate={180}
+          >
+            -
+          </text>
+        </marker>
+      </defs>
+      <BaseRelation
+        {...relationProps}
+        markerStart="url(#exclude-markerStart)"
+        markerEnd="url(#exclude-markerEnd)"
+        style={{ stroke: EXCLUDE_COLOR }}
+      />
+    </>
+  );
+}
+
+/**
+ * Exclude relation component.
+ * @param relationProps - The properties of the relation.
+ * @returns A React component that renders a exclude relation.
+ */
 export default function Exclude(relationProps: RelationProperties) {
   return (
     <>

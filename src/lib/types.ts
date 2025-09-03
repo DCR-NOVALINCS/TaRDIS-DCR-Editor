@@ -130,9 +130,16 @@ export const relationsMap: { [rel: string]: string } = {
   spawn: "-->>",
 };
 
-export const eventRegex = /\(([^)]+)\) \(([^)]+)\) \[([^\]]+)\] \[([^\]]+)\]/;
+export const reversedRelationsMap: { [rel: string]: string } = {
+  "-->*": "condition",
+  "*-->": "response",
+  "-->+": "include",
+  "-->%": "exclude",
+  "--<>": "milestone",
+  "-->>": "spawn",
+};
 
-type BasicType = "array" | "int" | "string" | "bool" | "void" | "float";
+export const eventRegex = /\(([^)]+)\) \(([^)]+)\) \[([^\]]+)\] \[([^\]]+)\]/;
 
 type EventRelation =
   | "condition"
@@ -149,6 +156,8 @@ type BoolOperation =
   | "intGreaterThan"
   | "intLessThan"
   | "intAdd";
+
+type BasicType = "array" | "int" | "string" | "bool" | "void" | "float";
 
 type ValueType = BasicType | { recordType: { fields: Field[] } };
 
@@ -178,10 +187,7 @@ interface PropBasedExprSimple {
 }
 
 interface PropBasedExprComplex {
-  propDeref: {
-    propBasedExpr: PropBasedExpr;
-    prop: string;
-  };
+  propDeref: PropBasedExprSimple;
 }
 
 export type PropBasedExpr =
@@ -252,10 +258,7 @@ interface RoleExprSimple {
 }
 
 interface RoleExprComplex {
-  roleExpr: {
-    roleLabel: string;
-    params: Param[];
-  };
+  roleExpr: RoleExprSimple;
 }
 
 interface InitiatorExpr {
@@ -338,8 +341,11 @@ export type MarkingType = {
 };
 
 export type SimulationMarkingType = MarkingType & {
+  conditions: string[];
+  milestones: string[];
   executable: boolean;
   executed: boolean;
+  isParentSub: boolean;
   spawned?: boolean;
 };
 

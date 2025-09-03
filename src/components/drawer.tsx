@@ -20,6 +20,7 @@ const selector = (state: RFState) => ({
   setDrawerSelectedCode: state.setDrawerSelectedCode,
   drawerWidth: state.drawerWidth,
   setDrawerWidth: state.setDrawerWidth,
+  currentProjection: state.currentProjection,
 });
 
 const DRAWER_CLOSED_WIDTH = 16;
@@ -28,13 +29,15 @@ const CONTENT_ANIMATION_DURATION = 0.3;
 const DEFAULT_WIDTH = "25%";
 const CODE_WIDTH = "50%";
 
-const TABS: {
+type Tab = {
   id: string;
   label: string;
   icon: React.ReactNode;
   width: string;
   isActive: (logs: boolean, code: boolean) => boolean;
-}[] = [
+};
+
+const TABS: Tab[] = [
   {
     id: "properties",
     label: "Properties",
@@ -49,6 +52,10 @@ const TABS: {
     width: DEFAULT_WIDTH,
     isActive: (logs: boolean, code: boolean) => logs && !code,
   },
+] as const;
+
+const MAIN_TABS: Tab[] = [
+  ...TABS,
   {
     id: "code",
     label: "Code",
@@ -56,7 +63,7 @@ const TABS: {
     width: CODE_WIDTH,
     isActive: (logs: boolean, code: boolean) => code && !logs,
   },
-] as const;
+];
 
 /**
  * Drawer component that provides a collapsible side panel with tabbed content.
@@ -82,7 +89,10 @@ export default function Drawer() {
     setDrawerSelectedCode,
     drawerWidth,
     setDrawerWidth,
+    currentProjection,
   } = useStore(selector, shallow);
+
+  const currentTabs = currentProjection === "global" ? MAIN_TABS : TABS;
 
   const handleTabClick = (tabId: string, width: string) => {
     const isLogs = tabId === "logs";
@@ -147,18 +157,20 @@ export default function Drawer() {
           >
             {/* TABS */}
             <div className="flex relative border-b-2 font-bold border-[#CCCCCC]">
-              {TABS.map((tab, index) => {
+              {currentTabs.map((tab, index) => {
                 const isActive = tab.isActive(
                   drawerSelectedLogs,
                   drawerSelectedCode
                 );
-                const isLastTab = index === TABS.length - 1;
+                const isLastTab = index === currentTabs.length - 1;
 
                 return (
                   <div
                     key={tab.id}
                     className={`
-                      cursor-pointer w-1/3 p-2 justify-center flex items-center gap-2
+                      cursor-pointer w-1/${
+                        currentTabs.length
+                      } p-2 justify-center flex items-center gap-2
                       ${getTabColor(isActive)}
                       ${!isLastTab ? "border-r-2 border-[#CCCCCC]" : ""}
                     `}

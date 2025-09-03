@@ -2,269 +2,264 @@ import { StateCreator } from "zustand/vanilla";
 import { RFState } from "./store";
 import { Edge, Node } from "@xyflow/react";
 import { MarkingType, SimulationMarkingType } from "@/lib/types";
-import { delay } from "@/lib/utils";
+import { cloneMap, delay } from "@/lib/utils";
 
 export type SimulationState = {
   /* ------------ SIMULATION FLOW ------------ */
+  nodeProperties: Map<string, SimulationMarkingType>;
   simNodes: Node[];
   simEdges: Edge[];
-  //setSimNodes(nodes: Node[]): void;
-  //setSimEdges(edges: Edge[]): void;
   simulationFlow: boolean;
   setSimulationFlow(value: boolean): void;
   onClickSimulationToggle(): void;
+  startSimulation(): void;
   onNodeClickSimulation(event: any, node: Node): void;
-  updateChildEvents(): void;
   /* ----------------------------------------- */
 };
+
 const simulationStateSlice: StateCreator<RFState, [], [], SimulationState> = (
   set,
   get
-) => ({
-  /* ------------ SIMULATION FLOW ------------ */
-  simNodes: [],
-  simEdges: [],
-  simulationFlow: false,
-  setSimulationFlow(value: boolean) {
-    get().log(value ? "Simulation started." : "Simulation stopped.");
-    set({
-      simulationFlow: value,
-    });
-  },
-  onClickSimulationToggle() {
-    const value = !get().simulationFlow;
-    get().setSimulationFlow(value);
+) => {
+  const isExecutable = (marking: SimulationMarkingType): boolean => {
+    return (
+      marking.included &&
+      marking.conditions.length === 0 &&
+      marking.milestones.length === 0
+    );
+  };
 
-    if (value) {
-      set({
-        simNodes: get().nodes.map((node) => {
-          const marking = node.data.marking as MarkingType;
+  const getConditionSources = (targetId: string): string[] => {
+    return get()
+      .edges.filter((ed) => ed.type === "condition" && ed.target === targetId)
+      .map((ed) => ed.source);
+  };
 
-          let isParentSub = get().nodes.some(
-            (sub) => sub.id === node.parentId && sub.type === "subprocess"
-          );
+  const getMilestoneSources = (targetId: string): string[] => {
+    return get()
+      .edges.filter((ed) => {
+        if (ed.type === "milestone" && ed.target === targetId) {
+          const sourceNode = get().getNode(ed.source);
+          if (sourceNode) {
+            const sourceMarking = sourceNode.data.marking as MarkingType;
+            return sourceMarking.pending;
+          }
+        }
+        return false;
+      })
+      .map((ed) => ed.source);
+  };
 
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              marking: {
-                ...marking,
-                executable:
-                  marking.included &&
-                  !get().edges.some(
-                    (edge) =>
-                      edge.target === node.id &&
-                      (edge.type === "condition" ||
-                        (edge.type === "milestone" &&
-                          get().nodes.some(
-                            (nd) =>
-                              nd.id === edge.source &&
-                              (nd.data.marking as Record<string, boolean>)
-                                .pending
-                          )))
-                  ),
-                executed: false,
-                ...(node.type === "subprocess" && { spawned: false }),
-              },
-              conditions: get().edges.filter((ed) => {
-                return (
-                  ed.target === node.id && ed.type && ed.type === "condition"
-                );
-              }).length,
-              milestones: get().edges.filter((ed) => {
-                return (
-                  ed.target === node.id &&
-                  ed.type &&
-                  ed.type === "milestone" &&
-                  get().nodes.some(
-                    (nd) =>
-                      nd.id === ed.source &&
-                      (nd.data.marking as Record<string, boolean>).pending
-                  )
-                );
-              }).length,
-            },
-            hidden: isParentSub,
-            selected: false,
-          };
-        }),
-        simEdges: get().edges.map((edge) => ({ ...edge, selected: false })),
-      });
-    } else
-      get().setNodes(get().nodes.map((nd) => ({ ...nd, selected: false })));
-  },
-  onNodeClickSimulation(event: any, node: Node) {
-    event.preventDefault();
-    const marking = node.data.marking as SimulationMarkingType;
-    if (!marking.executable) return;
+  const hasParentSubprocess = (nodeId: string): boolean => {
+    const node = get().nodes.find((n) => n.id === nodeId);
+    if (!node?.parentId) return false;
 
-    const updatedSimNodes = get().simNodes.map((nd) => {
-      let newMarking: SimulationMarkingType = nd.data
-        .marking as SimulationMarkingType;
-      let { conditions, milestones } = nd.data as {
-        conditions: number;
-        milestones: number;
-      };
+    return get().nodes.some(
+      (sub) => sub.id === node.parentId && sub.type === "subprocess"
+    );
+  };
 
-      if (nd.id === node.id)
-        newMarking = {
-          ...newMarking,
-          executed: true,
-          pending: false,
+  const createSimulationMarking = (node: Node): SimulationMarkingType => {
+    const marking = node.data.marking as MarkingType;
+    const conditions = getConditionSources(node.id);
+    const milestones = getMilestoneSources(node.id);
+    const isParentSub = hasParentSubprocess(node.id);
+
+    return {
+      ...marking,
+      conditions,
+      milestones,
+      executable: isExecutable({
+        ...marking,
+        conditions,
+        milestones,
+      } as SimulationMarkingType),
+      executed: false,
+      isParentSub,
+      ...(node.type === "subprocess" && { spawned: false }),
+    };
+  };
+
+  const updateMarkingByEdgeType = (
+    marking: SimulationMarkingType,
+    edgeType: string,
+    sourceNodeId: string
+  ): SimulationMarkingType => {
+    switch (edgeType) {
+      case "condition": {
+        const conditions = marking.conditions.filter(
+          (cond) => cond !== sourceNodeId
+        );
+        return {
+          ...marking,
+          conditions,
+          executable: isExecutable({ ...marking, conditions }),
+        };
+      }
+
+      case "response":
+        return { ...marking, pending: true };
+
+      case "include":
+        return {
+          ...marking,
+          included: true,
+          executable: isExecutable({ ...marking, included: true }),
         };
 
-      for (const ed of get().simEdges) {
-        if (ed.type) {
-          if (ed.source === node.id) {
-            if (ed.target === nd.id) {
-              if (nd.id === node.id) {
-                switch (ed.type) {
-                  case "response":
-                    newMarking = {
-                      ...newMarking,
-                      pending: true,
-                    };
-                    break;
-                  case "exclude":
-                    newMarking = {
-                      ...newMarking,
-                      included: false,
-                      executable: false,
-                    };
-                    break;
-                }
-              } else {
-                switch (ed.type) {
-                  case "condition":
-                    conditions = conditions - 1;
-                    newMarking = {
-                      ...newMarking,
-                      executable:
-                        conditions === 0 &&
-                        milestones === 0 &&
-                        newMarking.included,
-                    };
-                    console.log(newMarking);
-                    break;
-                  case "response":
-                    newMarking = {
-                      ...newMarking,
-                      pending: true,
-                    };
-                    break;
-                  case "include":
-                    newMarking = {
-                      ...newMarking,
-                      included: true,
-                      executable: conditions === 0 && milestones === 0,
-                    };
-                    break;
-                  case "exclude":
-                    newMarking = {
-                      ...newMarking,
-                      included: false,
-                      executable: false,
-                    };
-                    break;
-                  case "milestone":
-                    milestones = marking.pending ? milestones - 1 : milestones;
-                    newMarking = {
-                      ...newMarking,
-                      executable:
-                        conditions === 0 &&
-                        milestones === 0 &&
-                        newMarking.included,
-                    };
-                    break;
-                  case "spawn":
-                    newMarking = {
-                      ...newMarking,
-                      spawned: true,
-                    };
-                    break;
-                }
-              }
-            }
-          }
+      case "exclude":
+        return {
+          ...marking,
+          included: false,
+          executable: false,
+        };
+
+      case "milestone": {
+        const milestones = marking.milestones.filter(
+          (mil) => mil !== sourceNodeId
+        );
+        return {
+          ...marking,
+          milestones,
+          executable: isExecutable({ ...marking, milestones }),
+        };
+      }
+
+      case "spawn":
+        return marking.spawned ? marking : { ...marking, spawned: true };
+
+      default:
+        return marking;
+    }
+  };
+
+  return {
+    /* ------------ SIMULATION FLOW ------------ */
+    nodeProperties: new Map<string, SimulationMarkingType>(),
+    simNodes: [],
+    simEdges: [],
+    simulationFlow: false,
+
+    setSimulationFlow(value: boolean) {
+      get().log(value ? "Simulation started." : "Simulation stopped.");
+      set({
+        simulationFlow: value,
+      });
+    },
+    onClickSimulationToggle() {
+      const value = !get().simulationFlow;
+      get().setSimulationFlow(value);
+
+      if (value) get().startSimulation();
+      else
+        get().setNodes(get().nodes.map((nd) => ({ ...nd, selected: false })));
+    },
+    startSimulation() {
+      // Create a single map for all node properties
+      const newNodeProperties = new Map<string, SimulationMarkingType>();
+
+      const simNodes = get().nodes.map((node) => {
+        const simulationMarking = createSimulationMarking(node);
+        newNodeProperties.set(node.id, simulationMarking);
+
+        return simulationMarking.isParentSub
+          ? { ...node, hidden: true, selected: false }
+          : { ...node, selected: false };
+      });
+
+      const simEdges = get().edges.map((edge) => ({
+        ...edge,
+        selected: false,
+      }));
+
+      set({
+        nodeProperties: newNodeProperties,
+        simNodes,
+        simEdges,
+      });
+    },
+    async onNodeClickSimulation(event: any, node: Node) {
+      event.preventDefault();
+
+      const newMapClone = cloneMap(get().nodeProperties);
+      const simulationMarking = newMapClone.get(node.id);
+
+      if (!simulationMarking?.executable) return;
+
+      // Update current node marking
+      const updatedMarking = {
+        ...simulationMarking,
+        pending: false,
+        executed: true,
+      };
+
+      const outEdges = get().simEdges.filter((ed) => ed.source === node.id);
+      const milestonesArr: string[] = [];
+      const spawnedParents: string[] = [];
+
+      // Only set current node if it doesn't have self-loop
+      if (!outEdges.some((ed) => ed.target === node.id))
+        newMapClone.set(node.id, updatedMarking);
+
+      // Process all outgoing edges
+      for (const edge of outEdges) {
+        const targetMarking =
+          edge.target === node.id
+            ? updatedMarking
+            : newMapClone.get(edge.target);
+
+        if (!targetMarking || !edge.type) continue;
+
+        const updatedTargetMarking = updateMarkingByEdgeType(
+          targetMarking,
+          edge.type,
+          node.id
+        );
+
+        // Handle special cases for response and spawn edges
+        if (edge.type === "response") milestonesArr.push(edge.target);
+        else if (edge.type === "spawn" && !targetMarking.spawned)
+          spawnedParents.push(edge.target);
+
+        newMapClone.set(edge.target, updatedTargetMarking);
+      }
+
+      await delay(10);
+
+      // Handle milestone propagation
+      for (const milestoneId of milestonesArr) {
+        const milestoneEdges = get().edges.filter(
+          (ed) => ed.source === milestoneId && ed.type === "milestone"
+        );
+
+        for (const edge of milestoneEdges) {
+          const targetMarking = newMapClone.get(edge.target);
+          if (!targetMarking) continue;
+
+          const milestones = [...targetMarking.milestones, edge.source];
+          newMapClone.set(edge.target, {
+            ...targetMarking,
+            milestones,
+            executable: isExecutable({ ...targetMarking, milestones }),
+          });
         }
       }
 
-      return {
-        ...nd,
-        data: {
-          ...nd.data,
-          marking: newMarking,
-          conditions,
-          milestones,
-        },
-      };
-    });
-
-    set({
-      simNodes: updatedSimNodes,
-    });
-
-    get().updateChildEvents();
-  },
-  updateChildEvents() {
-    const change = async () => {
       await delay(10);
 
-      let pendings: string[] = [];
-
-      let updatedSimNodes = get()
-        .simNodes.map((nd) => {
-          if ((nd.data.marking as SimulationMarkingType).pending)
-            pendings.push(nd.id);
-
-          if (nd.parentId) {
-            const parent = get().simNodes.find((n) => n.id === nd.parentId);
-
-            if (
-              parent &&
-              parent.type === "subprocess" &&
-              (parent.data.marking as Record<string, boolean>).spawned &&
-              nd.hidden
-            )
-              return {
-                ...nd,
-                hidden: false,
-              };
-          }
-          return nd;
-        })
-        .map((nd) => {
-          let milestones = 0;
-          get().edges.forEach((ed) => {
-            if (
-              ed.target === nd.id &&
-              ed.type === "milestone" &&
-              pendings.includes(ed.source)
-            )
-              milestones++;
-          });
-          return {
-            ...nd,
-            data: {
-              ...nd.data,
-              marking: {
-                ...(nd.data.marking as SimulationMarkingType),
-                executable: milestones === 0,
-                milestones,
-              },
-            },
-          };
-        });
-
+      // Update state with new properties and visible nodes
       set({
-        simNodes: updatedSimNodes,
-      });
-    };
+        nodeProperties: newMapClone,
+        simNodes: get().simNodes.map((nd) => {
+          if (nd.parentId && spawnedParents.includes(nd.parentId) && nd.hidden)
+            return { ...nd, hidden: false };
 
-    change();
-  },
-  /* ----------------------------------------- */
-});
+          return nd;
+        }),
+      });
+    },
+    /* ----------------------------------------- */
+  };
+};
 
 export default simulationStateSlice;

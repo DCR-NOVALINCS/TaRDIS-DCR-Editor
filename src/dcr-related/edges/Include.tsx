@@ -30,6 +30,67 @@ export const IncludeModel = () => {
  * @param relationProps - The properties of the relation.
  * @returns A React component that renders a include relation.
  */
+export function NewInclude(relationProps: RelationProperties) {
+  return (
+    <>
+      <defs>
+        <marker
+          id="include-markerEnd"
+          viewBox="0 0 10 10"
+          refX="0"
+          refY="5"
+          markerWidth="15"
+          markerHeight="5"
+          orient="auto-start-reverse"
+        >
+          <path d="M -1 4 L 16 4 L 16 6 L -1 6 Z" fill={INCLUDE_COLOR} />
+        </marker>
+        <marker
+          id="include-markerStart"
+          viewBox="0 0 10 10"
+          refX="13"
+          refY="5"
+          markerWidth="15"
+          markerHeight="5"
+          orient="auto-start-reverse"
+        >
+          <rect
+            x="3"
+            y="0"
+            width="10"
+            height="10"
+            rx="1"
+            ry="1"
+            fill={INCLUDE_COLOR}
+          />
+          <text
+            x="10.5"
+            y="2.8"
+            fontSize="8"
+            fill="white"
+            stroke="white"
+            strokeWidth={0.1}
+            rotate={180}
+          >
+            +
+          </text>
+        </marker>
+      </defs>
+      <BaseRelation
+        {...relationProps}
+        markerStart="url(#include-markerStart)"
+        markerEnd="url(#include-markerEnd)"
+        style={{ stroke: INCLUDE_COLOR }}
+      />
+    </>
+  );
+}
+
+/**
+ * Include relation component.
+ * @param relationProps - The properties of the relation.
+ * @returns A React component that renders a include relation.
+ */
 export default function Include(relationProps: RelationProperties) {
   return (
     <>

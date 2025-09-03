@@ -337,6 +337,7 @@ export const Modal = ({
       className={`fixed inset-0 flex justify-center items-center transition-colors ${
         open ? "visible bg-black/20" : "invisible"
       }`}
+      style={{ zIndex: 1000 }}
     >
       <div
         onClick={(e) => e.stopPropagation()}

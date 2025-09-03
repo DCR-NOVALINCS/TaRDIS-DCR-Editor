@@ -21,6 +21,44 @@ export function ConditionModel() {
  * @param relationProps - The properties of the relation.
  * @returns A React component that renders a condition relation.
  */
+export function NewCondition(relationProps: RelationProperties) {
+  return (
+    <>
+      <defs>
+        <marker
+          id="condition-markerEnd"
+          viewBox="0 0 10 10"
+          refX="0"
+          refY="5"
+          markerWidth="15"
+          markerHeight="5"
+          orient="auto-start-reverse"
+        >
+          <path d="M -1 4 L 8 4 L 8 6 L -1 6 Z" fill={CONDITION_COLOR} />
+          <circle
+            cx="12"
+            cy="5"
+            r="4"
+            fill="none"
+            stroke={CONDITION_COLOR}
+            strokeWidth="1.5"
+          />
+        </marker>
+      </defs>
+      <BaseRelation
+        {...relationProps}
+        markerEnd="url(#condition-markerEnd)"
+        style={{ stroke: CONDITION_COLOR }}
+      />
+    </>
+  );
+}
+
+/**
+ * Condition relation component.
+ * @param relationProps - The properties of the relation.
+ * @returns A React component that renders a condition relation.
+ */
 export default function Condition(relationProps: RelationProperties) {
   return (
     <>
