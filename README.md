@@ -1,4 +1,4 @@
-# DCR Choregraphies Visual Editor
+# DCR Choreographies Visual Editor
 
 To execute the editor:
 
