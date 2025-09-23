@@ -126,7 +126,7 @@ export const relationsMap: { [rel: string]: string } = {
   response: "*-->",
   include: "-->+",
   exclude: "-->%",
-  milestone: "--<>",
+  milestone: "--><>",
   spawn: "-->>",
 };
 
@@ -135,7 +135,7 @@ export const reversedRelationsMap: { [rel: string]: string } = {
   "*-->": "response",
   "-->+": "include",
   "-->%": "exclude",
-  "--<>": "milestone",
+  "--><>": "milestone",
   "-->>": "spawn",
 };
 

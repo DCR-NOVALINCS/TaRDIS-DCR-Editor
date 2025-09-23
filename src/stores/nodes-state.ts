@@ -146,6 +146,26 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
     return updatedNode;
   };
 
+  const updateEdgesForNodeTypeChange = async (
+    id: string,
+    newId: string
+  ): Promise<void> => {
+    await delay(10);
+    set({
+      edges: get()
+        .edges.filter((edge) => (edge.data?.parent as string) !== id)
+        .map((edge) => {
+          if (edge.source === id) return { ...edge, source: newId };
+          else if (edge.target === id) {
+            if (edge.type !== "spawn") return { ...edge, target: newId };
+          }
+
+          return edge;
+        }),
+    });
+    get().saveState();
+  };
+
   const convertNestToSubprocess = (
     currentNode: Node,
     updatedNode: Node
@@ -458,10 +478,13 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
       if (!currentNode) throw new Error(`Node with id ${id} not found`);
 
       let nodeToUpdate = updatedNode;
+      let typeChanged = false;
 
       // Handle node type conversions
-      if (currentNode.type !== updatedNode.type)
+      if (currentNode.type !== updatedNode.type) {
         nodeToUpdate = handleNodeTypeConversion(currentNode, updatedNode);
+        typeChanged = true;
+      }
 
       // Handle parent changes
       if (updatedNode.parentId && updatedNode.parentId !== currentNode.parentId)
@@ -481,7 +504,10 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
       get().log(`${capitalizedType} ${id} updated.`);
 
       updateParenting(nodeToUpdate);
-      get().saveState();
+
+      if (typeChanged) updateEdgesForNodeTypeChange(id, nodeToUpdate.id);
+      else get().saveState();
+
       return nodeToUpdate.id;
     },
 

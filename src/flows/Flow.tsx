@@ -215,6 +215,12 @@ function FlowWithoutProvider() {
     return null;
   };
 
+  const reactFlow = useReactFlow();
+
+  useEffect(() => {
+    reactFlow.fitView({ maxZoom: 1 });
+  }, [currentProjection]);
+
   return (
     <ReactFlow
       ref={flowRef}
@@ -262,20 +268,24 @@ function FlowWithoutProvider() {
         position="top-left"
         style={{
           display: "flex",
-          width: "600px",
+          width: currentProjection === "global" ? "600px" : "193px",
           gap: 10,
           zIndex: 10,
         }}
       >
         <Button
-          className="flex items-center justify-center gap-2 w-full"
+          className={`flex items-center justify-center gap-2 w-full`}
           onClick={onClickSimulationToggle}
         >
           Start Simulation
           <Pickaxe size={20} />
         </Button>
-        <ImportButton />
-        <ExportButton />
+        {currentProjection === "global" && (
+          <>
+            <ImportButton />
+            <ExportButton />
+          </>
+        )}
       </Panel>
     </ReactFlow>
   );

@@ -163,14 +163,11 @@ export default function Drawer() {
                   drawerSelectedCode
                 );
                 const isLastTab = index === currentTabs.length - 1;
-
                 return (
                   <div
                     key={tab.id}
                     className={`
-                      cursor-pointer w-1/${
-                        currentTabs.length
-                      } p-2 justify-center flex items-center gap-2
+                      cursor-pointer w-full p-2 justify-center flex items-center gap-2
                       ${getTabColor(isActive)}
                       ${!isLastTab ? "border-r-2 border-[#CCCCCC]" : ""}
                     `}

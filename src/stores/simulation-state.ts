@@ -29,16 +29,31 @@ const simulationStateSlice: StateCreator<RFState, [], [], SimulationState> = (
     );
   };
 
-  const getConditionSources = (targetId: string): string[] => {
-    return get()
-      .edges.filter((ed) => ed.type === "condition" && ed.target === targetId)
+  const getConditionSources = (
+    targetId: string,
+    simEdges: Edge[]
+  ): string[] => {
+    return simEdges
+      .filter(
+        (ed) =>
+          ed.type === "condition" &&
+          ed.target === targetId &&
+          get().nodes.find((nd) => nd.id === ed.source)?.type === "event"
+      )
       .map((ed) => ed.source);
   };
 
-  const getMilestoneSources = (targetId: string): string[] => {
-    return get()
-      .edges.filter((ed) => {
-        if (ed.type === "milestone" && ed.target === targetId) {
+  const getMilestoneSources = (
+    targetId: string,
+    simEdges: Edge[]
+  ): string[] => {
+    return simEdges
+      .filter((ed) => {
+        if (
+          ed.type === "milestone" &&
+          ed.target === targetId &&
+          get().nodes.find((nd) => nd.id === ed.source)?.type === "event"
+        ) {
           const sourceNode = get().getNode(ed.source);
           if (sourceNode) {
             const sourceMarking = sourceNode.data.marking as MarkingType;
@@ -59,10 +74,13 @@ const simulationStateSlice: StateCreator<RFState, [], [], SimulationState> = (
     );
   };
 
-  const createSimulationMarking = (node: Node): SimulationMarkingType => {
+  const createSimulationMarking = (
+    node: Node,
+    simEdges: Edge[]
+  ): SimulationMarkingType => {
     const marking = node.data.marking as MarkingType;
-    const conditions = getConditionSources(node.id);
-    const milestones = getMilestoneSources(node.id);
+    const conditions = getConditionSources(node.id, simEdges);
+    const milestones = getMilestoneSources(node.id, simEdges);
     const isParentSub = hasParentSubprocess(node.id);
 
     return {
@@ -158,19 +176,59 @@ const simulationStateSlice: StateCreator<RFState, [], [], SimulationState> = (
       // Create a single map for all node properties
       const newNodeProperties = new Map<string, SimulationMarkingType>();
 
+      const simEdges: Edge[] = [];
+
+      get().edges.forEach((edge) => {
+        const sourceNode = get().nodes.find((nd) => nd.id === edge.source);
+        const targetNode = get().nodes.find((nd) => nd.id === edge.target);
+
+        if (sourceNode && targetNode) {
+          if (sourceNode.type === "event") {
+            if (targetNode.type === "event")
+              simEdges.push({ ...edge, selected: false });
+            else {
+              if (targetNode.type === "subprocess" && edge.type === "spawn")
+                simEdges.push({ ...edge, selected: false });
+
+              if (edge.type !== "spawn") {
+                simEdges.push(
+                  ...get()
+                    .nodes.filter((nd) => nd.parentId === edge.target)
+                    .map((n) => ({
+                      id: `${edge.id}-${n.id}`,
+                      type: edge.type,
+                      source: edge.source,
+                      target: n.id,
+                      selected: false,
+                      hidden: false,
+                    }))
+                );
+              }
+            }
+          } else
+            simEdges.push(
+              ...get()
+                .nodes.filter((nd) => nd.parentId === edge.source)
+                .map((n) => ({
+                  id: `${edge.id}-${n.id}`,
+                  type: edge.type,
+                  source: n.id,
+                  target: edge.target,
+                  selected: false,
+                  hidden: false,
+                }))
+            );
+        }
+      });
+
       const simNodes = get().nodes.map((node) => {
-        const simulationMarking = createSimulationMarking(node);
+        const simulationMarking = createSimulationMarking(node, simEdges);
         newNodeProperties.set(node.id, simulationMarking);
 
         return simulationMarking.isParentSub
           ? { ...node, hidden: true, selected: false }
           : { ...node, selected: false };
       });
-
-      const simEdges = get().edges.map((edge) => ({
-        ...edge,
-        selected: false,
-      }));
 
       set({
         nodeProperties: newNodeProperties,
@@ -228,7 +286,7 @@ const simulationStateSlice: StateCreator<RFState, [], [], SimulationState> = (
 
       // Handle milestone propagation
       for (const milestoneId of milestonesArr) {
-        const milestoneEdges = get().edges.filter(
+        const milestoneEdges = get().simEdges.filter(
           (ed) => ed.source === milestoneId && ed.type === "milestone"
         );
 

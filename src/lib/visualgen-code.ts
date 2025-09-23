@@ -279,7 +279,7 @@ function genGraph(
           case "-->%":
             type = "exclude";
             break;
-          case "--<>":
+          case "--><>":
             type = "milestone";
             break;
         }

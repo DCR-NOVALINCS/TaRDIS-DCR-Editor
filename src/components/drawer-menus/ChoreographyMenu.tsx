@@ -260,25 +260,29 @@ const RoleList = ({
       )}
       <p>
         There {getRoleCountText(roles.length)} in the system:
-        {roles.map((role, index) => {
-          const projection = projectionInfo.get(role.label);
-          const isClickable = !!projection;
+        <p className="px-5">
+          {roles.map((role, index) => {
+            const projection = projectionInfo.get(role.label);
+            const isClickable = !!projection;
 
-          return (
-            <li
-              key={index}
-              className={`font-bold italic select-none ${
-                isClickable
-                  ? "cursor-pointer hover:underline hover:opacity-75"
-                  : ""
-              }`}
-              onClick={isClickable ? () => onRoleClick(role.label) : undefined}
-              draggable={false}
-            >
-              {role.role}
-            </li>
-          );
-        })}
+            return (
+              <li
+                key={index}
+                className={`font-bold italic select-none ${
+                  isClickable
+                    ? "cursor-pointer hover:underline hover:opacity-75"
+                    : ""
+                }`}
+                onClick={
+                  isClickable ? () => onRoleClick(role.label) : undefined
+                }
+                draggable={false}
+              >
+                {role.role}
+              </li>
+            );
+          })}
+        </p>
       </p>
       {currentProjection !== "global" && (
         <p
