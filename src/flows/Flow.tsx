@@ -21,7 +21,10 @@ import { useEffect, useRef, useState } from "react";
 import Condition, { NewCondition } from "../dcr-related/edges/Condition";
 import Response, { NewResponse } from "../dcr-related/edges/Response";
 import Include, { NewInclude } from "../dcr-related/edges/Include";
-import Exclude, { NewExclude } from "../dcr-related/edges/Exclude";
+import Exclude, {
+  NewExclude,
+  SelfNewExclude,
+} from "../dcr-related/edges/Exclude";
 import Milestone, { NewMilestone } from "../dcr-related/edges/Milestone";
 import Spawn, { NewSpawn } from "../dcr-related/edges/Spawn";
 import CustomConnectionLine from "../dcr-related/edges/ConnectionLine";
@@ -35,6 +38,7 @@ import ToolPallete from "../components/tool-pallete";
 import { Pickaxe } from "lucide-react";
 import ImportButton from "../components/import-button";
 import ExportButton from "../components/export-button";
+import { delay } from "@/lib/utils";
 
 type History = {
   nodes: Node[];
@@ -71,6 +75,7 @@ const selector = (state: RFState) => ({
   onEdgesDelete: state.onEdgesDelete,
   onClickSimulationToggle: state.onClickSimulationToggle,
   currentProjection: state.currentProjection,
+  edgesTypes: state.edgesTypes,
 });
 
 const nodeOrigin: NodeOrigin = [0.5, 0.5];
@@ -88,7 +93,7 @@ const newEdgeTypes = {
   condition: NewCondition,
   response: NewResponse,
   include: NewInclude,
-  exclude: NewExclude,
+  exclude: SelfNewExclude,
   milestone: NewMilestone,
   spawn: NewSpawn,
 };
@@ -130,6 +135,7 @@ function FlowWithoutProvider() {
     onEdgesDelete,
     onClickSimulationToggle,
     currentProjection,
+    edgesTypes,
   } = useStore(selector, shallow);
 
   const flowRef = useRef<HTMLDivElement>(null);
@@ -218,7 +224,10 @@ function FlowWithoutProvider() {
   const reactFlow = useReactFlow();
 
   useEffect(() => {
-    reactFlow.fitView({ maxZoom: 1 });
+    const fitViewTimeout = setTimeout(() => {
+      reactFlow.fitView({ maxZoom: 1 });
+    }, 10);
+    return () => clearTimeout(fitViewTimeout);
   }, [currentProjection]);
 
   return (
@@ -227,7 +236,7 @@ function FlowWithoutProvider() {
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
-      edgeTypes={edgeTypes}
+      edgeTypes={edgesTypes === "old" ? edgeTypes : newEdgeTypes}
       nodeOrigin={nodeOrigin}
       onNodesChange={onNodesChange}
       onNodeClick={onNodeClick}
@@ -257,6 +266,7 @@ function FlowWithoutProvider() {
       elevateNodesOnSelect={false}
       onPaneMouseEnter={() => setKeyPressOn(true)}
       onPaneMouseLeave={() => setKeyPressOn(false)}
+      deleteKeyCode={["Backspace", "Delete"]}
       className="select-none"
     >
       {keyPressOn && <KeyPressListener />}
@@ -282,7 +292,7 @@ function FlowWithoutProvider() {
         </Button>
         {currentProjection === "global" && (
           <>
-            <ImportButton />
+            <ImportButton reactFlow={reactFlow} />
             <ExportButton />
           </>
         )}

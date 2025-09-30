@@ -277,3 +277,7 @@ export async function setState(name: string = "current") {
 export const cloneMap = <K, V>(originalMap: Map<K, V>): Map<K, V> => {
   return new Map(originalMap);
 };
+
+export function shallowEqual(objA: any, objB: any) {
+  return JSON.stringify(objA) === JSON.stringify(objB);
+}

@@ -26,7 +26,7 @@ import Subprocess from "@/dcr-related/nodes/Subprocess";
 
 const selector = (state: RFState) => ({
   nodes: state.simNodes,
-  edges: state.simEdges,
+  edges: state.edges,
   onNodeClick: state.onNodeClickSimulation,
   onClickSimulationToggle: state.onClickSimulationToggle,
 });

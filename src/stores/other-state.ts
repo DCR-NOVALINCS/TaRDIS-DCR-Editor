@@ -163,6 +163,9 @@ export type OtherState = {
   /** Opens an element in the drawer */
   openElementInDrawer(element: Node | Edge): void;
 
+  edgesTypes: "old" | "new";
+  setEdgesTypes(type: "old" | "new"): void;
+
   saveState(): Promise<void>;
 };
 
@@ -230,7 +233,7 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
     const logEntry = createLogEntry(message);
 
     set({
-      logs: [...get().logs, logEntry],
+      logs: [logEntry, ...get().logs],
     });
   },
 
@@ -325,6 +328,11 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
     get().setDrawerSelectedCode(drawerConfig.selectedCode!);
     get().setDrawerWidth(drawerConfig.width!);
     get().setDrawerOpen(drawerConfig.open!);
+  },
+
+  edgesTypes: "old",
+  setEdgesTypes(type: "old" | "new"): void {
+    set({ edgesTypes: type });
   },
 
   async saveState(): Promise<void> {

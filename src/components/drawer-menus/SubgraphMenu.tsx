@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Group } from "lucide-react";
 import { Node } from "@xyflow/react";
 import useStore, { RFState } from "@/stores/store";
@@ -13,6 +13,7 @@ import {
   FormSelect,
   FormTextarea,
 } from "@/lib/reusable-comps";
+import { shallowEqual } from "@/lib/utils";
 
 const selector = (state: RFState) => ({
   nodes: state.nodes,
@@ -64,6 +65,7 @@ const SubgraphMenu = ({ nest }: { nest: Node }) => {
   const family = getFamily(id);
 
   const isGlobalProjection = currentProjection === "global";
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const handleEdgeManagement = (children: Node[]) => {
     if (type !== "nest") return;
@@ -91,7 +93,7 @@ const SubgraphMenu = ({ nest }: { nest: Node }) => {
     }
   };
 
-  const handleSave = () => {
+  /* const handleSave = () => {
     const newData = { label, nestType, marking };
     const nodeUpdate: Node = {
       ...nest,
@@ -120,7 +122,69 @@ const SubgraphMenu = ({ nest }: { nest: Node }) => {
 
     // Handle edge management
     handleEdgeManagement(children);
-  };
+  }; */
+
+  useEffect(() => {
+    if (!isGlobalProjection) return;
+
+    const storeNode = nodes.find((n) => n.id === id);
+    if (!storeNode) return;
+
+    const newData = { label, nestType, marking };
+    // Only update if data actually changed
+    if (
+      shallowEqual(storeNode.data, newData) &&
+      storeNode.type === type &&
+      storeNode.parentId === parent
+    )
+      return;
+
+    if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    debounceTimeout.current = setTimeout(() => {
+      const nodeUpdate: Node = {
+        ...storeNode,
+        type,
+        data: newData,
+        ...(parent
+          ? { parentId: parent, expandParent: true, extent: "parent" }
+          : { parentId: "" }),
+      };
+
+      const newId = updateNode(id, nodeUpdate);
+      const children = nodes.filter((nd) => nd.parentId === id);
+
+      // Update children
+      children.forEach((child) => {
+        updateNodeInfo(child.id, {
+          id: "",
+          initiators: [],
+          label: "",
+          marking,
+          name: "",
+          security: "",
+          parent: newId,
+        });
+      });
+
+      // Handle edge management
+      handleEdgeManagement(children);
+    }, 10);
+
+    return () => {
+      if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    type,
+    label,
+    marking,
+    nestType,
+    parent,
+    isGlobalProjection,
+    id,
+    nodes,
+    edges,
+  ]);
 
   const toggleMarking = (field: keyof MarkingType) => {
     setMarking((prev) => ({ ...prev, [field]: !prev[field] }));
@@ -167,7 +231,7 @@ const SubgraphMenu = ({ nest }: { nest: Node }) => {
         <FormField label="Label">
           <FormTextarea
             value={label}
-            onChange={(e) => setLabel(e.target.value)}
+            onChange={(e) => setLabel(e.target.value.replace(" ", "_"))}
             placeholder={type === "nest" ? `Nest label` : "Subprocess Label"}
             disabled={!isGlobalProjection}
           />
@@ -225,9 +289,9 @@ const SubgraphMenu = ({ nest }: { nest: Node }) => {
         )}
 
         {/* Save Button */}
-        {isGlobalProjection && (
+        {/* isGlobalProjection && (
           <Button onClick={handleSave}>Save Changes</Button>
-        )}
+        ) */}
       </div>
     </DrawerMenu>
   );

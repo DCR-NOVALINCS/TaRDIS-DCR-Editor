@@ -12,6 +12,7 @@ import useStore, { RFState } from "@/stores/store";
 
 const selector = (state: RFState) => ({
   simulationFlow: state.simulationFlow,
+  edgesTypes: state.edgesTypes,
 });
 
 /**
@@ -41,7 +42,7 @@ export default function BaseRelation({
   relationPath,
   ...props
 }: RelationProperties) {
-  const { simulationFlow } = useStore(selector);
+  const { simulationFlow, edgesTypes } = useStore(selector);
   const { id, source, target, markerStart, markerEnd, selected, style } = props;
 
   if (relationPath) {
@@ -70,13 +71,20 @@ export default function BaseRelation({
 
   let initialPoints: { x: number; y: number }[] = [];
   if (source === target) {
-    initialPoints = [
-      { x: sourceX - 50, y: sourceY - 35 },
-      { x: sourceX - 60, y: sourceY - 35 },
-      { x: sourceX - 60, y: sourceY - 75 },
-      { x: sourceX - 35, y: sourceY - 75 },
-      { x: sourceX - 35, y: sourceY - 66 },
-    ];
+    if (edgesTypes === "old") {
+      initialPoints = [
+        { x: sourceX - 50, y: sourceY - 35 },
+        { x: sourceX - 60, y: sourceY - 35 },
+        { x: sourceX - 60, y: sourceY - 75 },
+        { x: sourceX - 35, y: sourceY - 75 },
+        { x: sourceX - 35, y: sourceY - 66 },
+      ];
+    } else {
+      initialPoints = [
+        { x: sourceX - 45, y: sourceY - 55 },
+        { x: sourceX - 50, y: sourceY - 55 },
+      ];
+    }
   } else {
     const unitsX: number =
       targetPos === "left" ? -16 : targetPos === "right" ? 16 : 0;
@@ -120,70 +128,102 @@ export default function BaseRelation({
 
       {/* RELATION PATH POINTS */}
       {!simulationFlow && selected ? (
-        points.map((point, index) => {
-          return (
-            <circle
-              key={index}
-              cx={point.x}
-              cy={point.y}
-              fill={style?.stroke}
-              opacity={"50%"}
-              r={5}
-              style={{ pointerEvents: "all" }}
-              tabIndex={0}
-              onDoubleClick={() => {
-                setPoints([
-                  ...points.slice(0, index + 1),
-                  point,
-                  ...points.slice(index + 1),
-                ]);
-              }}
-              onMouseDown={() => (isMouseDown.current = true)}
-              onMouseUp={() => (isMouseDown.current = false)}
-              onMouseLeave={() => (isMouseDown.current = false)}
-              onMouseMove={(e) => {
-                if (!isMouseDown.current) return;
-                e.preventDefault();
+        points.length > 2 ? (
+          points.map((point, index) => {
+            return (
+              <circle
+                key={index}
+                cx={point.x}
+                cy={point.y}
+                fill={style?.stroke}
+                opacity={"50%"}
+                r={5}
+                style={{ pointerEvents: "all" }}
+                tabIndex={0}
+                onDoubleClick={() => {
+                  setPoints([
+                    ...points.slice(0, index + 1),
+                    point,
+                    ...points.slice(index + 1),
+                  ]);
+                }}
+                onMouseDown={() => (isMouseDown.current = true)}
+                onMouseUp={() => (isMouseDown.current = false)}
+                onMouseLeave={() => (isMouseDown.current = false)}
+                onMouseMove={(e) => {
+                  if (!isMouseDown.current) return;
+                  e.preventDefault();
 
-                const dragX = e.clientX;
-                const dragY = e.clientY;
+                  const dragX = e.clientX;
+                  const dragY = e.clientY;
 
-                const pointsArr = [...points];
-                const newPoint = screenToFlowPosition(
-                  { x: dragX, y: dragY },
-                  { snapToGrid: false }
-                );
+                  const pointsArr = [...points];
+                  const newPoint = screenToFlowPosition(
+                    { x: dragX, y: dragY },
+                    { snapToGrid: false }
+                  );
 
-                const allPointsX =
-                  pointsArr.filter((pt) => pt.x === pointsArr[0].x).length ===
-                  pointsArr.length;
-                const allPointsY =
-                  pointsArr.filter((pt) => pt.y === pointsArr[0].y).length ===
-                  pointsArr.length;
-                if (e.shiftKey) {
-                  if (allPointsX) {
-                    pointsArr.forEach((pt) => {
-                      pt.x = Math.trunc(newPoint.x);
-                    });
-                  } else if (allPointsY) {
-                    pointsArr.forEach((pt) => {
-                      pt.y = Math.trunc(newPoint.y);
-                    });
+                  const allPointsX =
+                    pointsArr.filter((pt) => pt.x === pointsArr[0].x).length ===
+                    pointsArr.length;
+                  const allPointsY =
+                    pointsArr.filter((pt) => pt.y === pointsArr[0].y).length ===
+                    pointsArr.length;
+                  if (e.shiftKey) {
+                    if (allPointsX) {
+                      pointsArr.forEach((pt) => {
+                        pt.x = Math.trunc(newPoint.x);
+                      });
+                    } else if (allPointsY) {
+                      pointsArr.forEach((pt) => {
+                        pt.y = Math.trunc(newPoint.y);
+                      });
+                    }
+                  } else {
+                    pointsArr[index] = {
+                      x: Math.trunc(newPoint.x),
+                      y: Math.trunc(newPoint.y),
+                    };
                   }
-                } else {
-                  pointsArr[index] = {
-                    x: Math.trunc(newPoint.x),
-                    y: Math.trunc(newPoint.y),
-                  };
-                }
-                setPoints(pointsArr);
-              }}
-            />
-          );
-        })
-      ) : (
-        <></>
-      )}
+                  setPoints(pointsArr);
+                }}
+              />
+            );
+          })
+        ) : (
+          <circle
+            key={points[0].x}
+            cx={points[0].x}
+            cy={points[0].y}
+            fill={style?.stroke}
+            opacity={"50%"}
+            r={5}
+            style={{ pointerEvents: "all" }}
+            tabIndex={0}
+            onMouseDown={() => (isMouseDown.current = true)}
+            onMouseUp={() => (isMouseDown.current = false)}
+            onMouseLeave={() => (isMouseDown.current = false)}
+            onMouseMove={(e) => {
+              if (!isMouseDown.current) return;
+              e.preventDefault();
+
+              const dragX = e.clientX;
+              const dragY = e.clientY;
+
+              const newPoint = screenToFlowPosition(
+                { x: dragX, y: dragY },
+                { snapToGrid: false }
+              );
+
+              const pointToAdd = {
+                x: Math.trunc(newPoint.x),
+                y: Math.trunc(newPoint.y),
+              };
+              setPoints([pointToAdd, pointToAdd]);
+            }}
+          />
+        )
+      ) : null}
     </>
   );
 }

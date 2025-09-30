@@ -143,6 +143,12 @@ function processDataExpr(dataExpr: Expression): string {
   else if ("stringLit" in dataExpr) return `'${dataExpr.stringLit.value}'`;
   else if ("boolLit" in dataExpr) return dataExpr.boolLit.value.toString();
   else if ("floatLit" in dataExpr) return dataExpr.floatLit.value.toString();
+  else if ("record" in dataExpr) {
+    const fields = dataExpr.record.fields
+      .map((field) => `${field.name}=${processDataExpr(field.value)}`)
+      .join("; ");
+    return `{${fields}}`;
+  }
   return "";
 }
 
@@ -327,6 +333,8 @@ function processChoreographyGraph(
               receivers,
               instantiationConstraint
             );
+
+            console.log(dataExpr);
 
             const input = processDataType(dataType);
 

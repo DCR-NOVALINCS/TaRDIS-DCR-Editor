@@ -509,7 +509,9 @@ function formatEvent(event: EventType): string {
   } else if (event.expression) eventContent += event.expression;
 
   const receivers = event.receivers?.length
-    ? ` -> ${event.receivers.join(", ")}`
+    ? event.receivers.length > 0 && event.receivers[0]
+      ? ` -> ${event.receivers.join(", ")}`
+      : ""
     : "";
 
   eventContent += `] [${event.initiators.join(", ")}${receivers}]`;

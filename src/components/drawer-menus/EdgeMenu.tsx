@@ -1,6 +1,6 @@
 import { MoveRight } from "lucide-react";
 import { Edge } from "@xyflow/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
 import {
@@ -40,14 +40,35 @@ const EdgeMenu = ({ edge }: { edge: Edge }) => {
   const [guard, setGuard] = useState(data.guard || "");
 
   const isGlobalProjection = currentProjection === "global";
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  const handleSave = () => {
+  useEffect(() => {
+    if (!isGlobalProjection) return;
+    // Only update if guard actually changed
+    if (data.guard === guard) return;
+
+    if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    debounceTimeout.current = setTimeout(() => {
+      updateEdge(id, {
+        ...edge,
+        data: { ...data, guard },
+        selected: true,
+      });
+    }, 200);
+
+    return () => {
+      if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guard, isGlobalProjection, id, data, edge]);
+
+  /* const handleSave = () => {
     updateEdge(id, {
       ...edge,
       data: { ...data, guard },
       selected: true,
     });
-  };
+  }; */
 
   return (
     <DrawerMenu>
@@ -78,9 +99,9 @@ const EdgeMenu = ({ edge }: { edge: Edge }) => {
         </FormField>
 
         {/* Save Button */}
-        {isGlobalProjection && (
+        {/* isGlobalProjection && (
           <Button onClick={handleSave}>Save Changes</Button>
-        )}
+        )*/}
       </div>
     </DrawerMenu>
   );

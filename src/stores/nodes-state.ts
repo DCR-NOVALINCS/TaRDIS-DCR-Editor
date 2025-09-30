@@ -475,7 +475,7 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
 
     updateNode(id: string, updatedNode: Node): string {
       const currentNode = get().getNode(id);
-      if (!currentNode) throw new Error(`Node with id ${id} not found`);
+      if (!currentNode) return id;
 
       let nodeToUpdate = updatedNode;
       let typeChanged = false;
@@ -611,6 +611,7 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
 
       if (projection) {
         get().setCurrentProjection(projectionKey);
+        console.log(projectionKey);
         get().setNodes(projection.nodes);
         get().setEdges(projection.edges);
       }

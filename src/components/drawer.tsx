@@ -21,6 +21,7 @@ const selector = (state: RFState) => ({
   drawerWidth: state.drawerWidth,
   setDrawerWidth: state.setDrawerWidth,
   currentProjection: state.currentProjection,
+  setSelectedElement: state.setSelectedElement,
 });
 
 const DRAWER_CLOSED_WIDTH = 16;
@@ -90,17 +91,22 @@ export default function Drawer() {
     drawerWidth,
     setDrawerWidth,
     currentProjection,
+    setSelectedElement,
   } = useStore(selector, shallow);
 
   const currentTabs = currentProjection === "global" ? MAIN_TABS : TABS;
 
   const handleTabClick = (tabId: string, width: string) => {
-    const isLogs = tabId === "logs";
-    const isCode = tabId === "code";
+    if (tabId === "properties" && !drawerSelectedLogs && !drawerSelectedCode)
+      setSelectedElement(undefined);
+    else {
+      const isLogs = tabId === "logs";
+      const isCode = tabId === "code";
 
-    setDrawerSelectedLogs(isLogs);
-    setDrawerSelectedCode(isCode);
-    setDrawerWidth(width);
+      setDrawerSelectedLogs(isLogs);
+      setDrawerSelectedCode(isCode);
+      setDrawerWidth(width);
+    }
   };
 
   const getTabColor = (isActive: boolean) =>

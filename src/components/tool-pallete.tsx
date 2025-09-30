@@ -156,23 +156,35 @@ export default function ToolPallete() {
         {/* SUBGRAPHS */}
         <div className="flex gap-5">
           {subgraphItems.map(({ component: Component, type, category }) => (
-            <Component
-              key={type}
-              onDragStart={(event: any) => onDragStart(event, type, category)}
-              onDragEnd={onDragEnd}
-            />
+            <div className="relative group" key={type}>
+              <Component
+                key={type}
+                onDragStart={(event: any) => onDragStart(event, type, category)}
+                onDragEnd={onDragEnd}
+              />
+              {/* Tooltip */}
+              <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-black text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap pointer-events-none">
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </span>
+            </div>
           ))}
         </div>
 
         {/* EVENTS */}
         <div className="flex gap-5">
           {eventItems.map(({ component: Component, type, category, props }) => (
-            <Component
-              key={type}
-              onDragStart={(event: any) => onDragStart(event, type, category)}
-              onDragEnd={onDragEnd}
-              {...(props || {})}
-            />
+            <div className="relative group" key={type}>
+              <Component
+                key={type}
+                onDragStart={(event: any) => onDragStart(event, type, category)}
+                onDragEnd={onDragEnd}
+                {...(props || {})}
+              />
+              {/* Tooltip */}
+              <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-black text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap pointer-events-none">
+                {type === "i" ? "Input Event" : "Computation Event"}
+              </span>
+            </div>
           ))}
         </div>
       </>
@@ -185,7 +197,7 @@ export default function ToolPallete() {
       animate={{ width: open ? PALETTE_WIDTH : PALETTE_COLLAPSED_WIDTH }}
       exit={{ width: PALETTE_WIDTH }}
       transition={{ duration: ANIMATION_DURATION, ease: "easeInOut" }}
-      className="absolute h-[50%] top-[25%] bg-[#D9D9D9] rounded-tr-lg rounded-br-lg justify-center shadow-lg flex flex-col py-10 items-center gap-10 overflow-hidden z-10"
+      className="absolute h-[55%] top-[25%] bg-[#D9D9D9] rounded-tr-lg rounded-br-lg justify-center shadow-lg flex flex-col py-10 items-center gap-10 overflow-hidden z-10"
     >
       {/* TOOL PALETTE CONTENT */}
       <AnimatePresence>
@@ -207,9 +219,16 @@ export default function ToolPallete() {
                 <div
                   key={relation.type}
                   onClick={() => handleRelationClick(index)}
-                  className={getRelationClasses(relation.selected)}
+                  className={`${getRelationClasses(
+                    relation.selected
+                  )} relative group`}
                 >
                   {relation.component}
+                  {/* Tooltip */}
+                  <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-black text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap pointer-events-none">
+                    {relation.type.charAt(0).toUpperCase() +
+                      relation.type.slice(1)}
+                  </span>
                 </div>
               ))}
             </div>

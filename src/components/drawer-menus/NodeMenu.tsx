@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
 import { SquareMousePointer } from "lucide-react";
@@ -15,6 +15,7 @@ import {
   FormTextarea,
   RecordFieldManager,
 } from "@/lib/reusable-comps";
+import { shallowEqual } from "@/lib/utils";
 
 const selector = (state: RFState) => ({
   nodes: state.nodes,
@@ -171,7 +172,7 @@ const NodeProperties = ({
   ];
 
   return (
-    <div className="flex flex-col p-3 gap-2 border-b-2 border-[#CCCCCC] overflow-y-auto h-full">
+    <div className="flex flex-col p-3 gap-2 overflow-y-auto h-full">
       {/* Basic Properties */}
       <FormField label="Initiators">
         <FormTextarea
@@ -204,7 +205,7 @@ const NodeProperties = ({
       <FormField label="Label">
         <FormTextarea
           value={label}
-          onChange={(e) => setLabel(e.target.value)}
+          onChange={(e) => setLabel(e.target.value.replace(" ", "_"))}
           placeholder="Event label"
           required
           disabled={disabled}
@@ -214,7 +215,7 @@ const NodeProperties = ({
       <FormField label="Event">
         <FormTextarea
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => setName(e.target.value.replace(" ", "_"))}
           placeholder="Event name"
           required
           disabled={disabled}
@@ -333,6 +334,66 @@ const NodeMenu = ({ node }: { node: Node }) => {
 
   const isGlobalProjection = currentProjection === "global";
 
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!isGlobalProjection) return;
+    const storeNode = nodes.find((n) => n.id === id);
+    if (!storeNode) return;
+
+    const newData = {
+      initiators,
+      receivers,
+      type,
+      label,
+      name,
+      marking,
+      ...(type === "i" ? { input } : { expression }),
+      security,
+    };
+
+    // Only update if data actually changed
+    if (shallowEqual(storeNode.data, newData) && storeNode.parentId === parent)
+      return;
+
+    // Debounce the update to avoid rapid flashing
+    if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    debounceTimeout.current = setTimeout(() => {
+      updateNode(id, {
+        ...storeNode,
+        data: newData,
+        selected: true,
+        ...(parent
+          ? {
+              parentId: parent,
+              expandParent: true,
+              extent: "parent",
+            }
+          : { parentId: "" }),
+      });
+    }, 10);
+
+    // Cleanup on unmount
+    return () => {
+      if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    initiators,
+    receivers,
+    type,
+    label,
+    name,
+    marking,
+    parent,
+    security,
+    input,
+    expression,
+    isGlobalProjection,
+    id,
+    nodes,
+  ]);
+  /* 
   const handleSaveChanges = () => {
     const newData = {
       initiators,
@@ -357,7 +418,7 @@ const NodeMenu = ({ node }: { node: Node }) => {
           }
         : { parentId: "" }),
     });
-  };
+  }; */
 
   return (
     <DrawerMenu>
@@ -404,13 +465,13 @@ const NodeMenu = ({ node }: { node: Node }) => {
       />
 
       {/* Save Button */}
-      {isGlobalProjection && (
+      {/* isGlobalProjection && (
         <div className="flex justify-center m-2">
           <Button onClick={handleSaveChanges} className="min-h-8 w-full">
             Save Changes
           </Button>
         </div>
-      )}
+      )} */}
     </DrawerMenu>
   );
 };

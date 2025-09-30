@@ -3,6 +3,7 @@ import { State } from "@/lib/types";
 import { getLayoutedElements, delay } from "@/lib/utils";
 import { visualGen } from "@/lib/visualgen-code";
 import useStore, { RFState } from "@/stores/store";
+import { ReactFlowInstance, Node, Edge } from "@xyflow/react";
 import { FolderInput } from "lucide-react";
 import { useState } from "react";
 import { shallow } from "zustand/shallow";
@@ -20,7 +21,7 @@ const selector = (state: RFState) => ({
   setSelectedElement: state.setSelectedElement,
 });
 
-export default function ImportButton() {
+const ImportButton = ({ reactFlow }: { reactFlow: ReactFlowInstance }) => {
   const {
     setNodes,
     setEdges,
@@ -49,6 +50,8 @@ export default function ImportButton() {
     setIds(state.nextNodeId, state.nextGroupId, state.nextSubprocessId);
     setProjectionInfo("global", { nodes: state.nodes, edges: state.edges });
     setSelectedElement(undefined);
+    await delay(10);
+    reactFlow.fitView({ maxZoom: 1 });
   };
 
   const treatCode = async (code: string) => {
@@ -95,7 +98,6 @@ export default function ImportButton() {
             nextGroupId: json.nextGroupId,
             nextSubprocessId: json.nextSubprocessId,
           });
-          setCode("");
           log("Graph generated using JSON import.");
         } else if (name.endsWith(".tardisdcr")) treatCode(text);
       });
@@ -146,4 +148,6 @@ export default function ImportButton() {
       </Modal>
     </>
   );
-}
+};
+
+export default ImportButton;

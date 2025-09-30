@@ -25,6 +25,50 @@ export const ExcludeModel = () => {
   );
 };
 
+export function SelfNewExclude(relationProps: RelationProperties) {
+  return (
+    <>
+      <defs>
+        <marker
+          id="exclude-markerStart"
+          viewBox="0 0 10 10"
+          refX="13"
+          refY="5"
+          markerWidth="15"
+          markerHeight="5"
+          orient="auto-start-reverse"
+        >
+          <rect
+            x="3"
+            y="0"
+            width="10"
+            height="10"
+            rx="1"
+            ry="1"
+            fill={EXCLUDE_COLOR}
+          />
+          <text
+            x="10"
+            y="2.3"
+            fontSize="10"
+            fill="white"
+            stroke="white"
+            strokeWidth={0.1}
+            rotate={180}
+          >
+            -
+          </text>
+        </marker>
+      </defs>
+      <BaseRelation
+        {...relationProps}
+        markerStart="url(#exclude-markerStart)"
+        style={{ stroke: EXCLUDE_COLOR }}
+      />
+    </>
+  );
+}
+
 /**
  * Exclude relation component.
  * @param relationProps - The properties of the relation.

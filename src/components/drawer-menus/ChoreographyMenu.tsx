@@ -22,6 +22,14 @@ const selector = (state: RFState) => ({
   projectionInfo: state.projectionInfo,
   currentProjection: state.currentProjection,
   changeNodes: state.changeNodes,
+  setCode: state.setCode,
+  setNodes: state.setNodes,
+  setEdges: state.setEdges,
+  setCurrentProjection: state.setCurrentProjection,
+  setIds: state.setIds,
+  setRoles: state.setRoles,
+  setSelectedElement: state.setSelectedElement,
+  clearProjections: state.clearProjections,
 });
 
 const ParameterManager = ({
@@ -258,7 +266,7 @@ const RoleList = ({
       ) : (
         <p>Currently, the system has {nodesCount} events.</p>
       )}
-      <p>
+      <div className="flex flex-col gap-2">
         There {getRoleCountText(roles.length)} in the system:
         <p className="px-5">
           {roles.map((role, index) => {
@@ -283,14 +291,11 @@ const RoleList = ({
             );
           })}
         </p>
-      </p>
+      </div>
       {currentProjection !== "global" && (
-        <p
-          className="font-bold cursor-pointer hover:underline select-none hover:opacity-75"
-          onClick={seeGlobalClick}
-        >
-          See global projection.
-        </p>
+        <Button variant="primary" onClick={seeGlobalClick} className="w-full">
+          See Global Projection
+        </Button>
       )}
     </>
   );
@@ -322,6 +327,14 @@ export default function ChoreographyMenu() {
     projectionInfo,
     currentProjection,
     changeNodes,
+    setCode,
+    setNodes,
+    setEdges,
+    setCurrentProjection,
+    setIds,
+    setRoles,
+    setSelectedElement,
+    clearProjections,
   } = useStore(selector, shallow);
 
   const { nodesCount, roles } = getChoreographyInfo();
@@ -340,6 +353,18 @@ export default function ChoreographyMenu() {
 
   const handleGlobalProjectionClick = () => {
     changeNodes(currentProjection, key);
+  };
+
+  const resetInfo = () => {
+    setCurrentProjection("global");
+    setIds([0], [0], [0]);
+    setRoles([]);
+    setSelectedElement(undefined);
+    setNodes([]);
+    setEdges([]);
+    setCode("");
+    setSecurity("");
+    clearProjections(true);
   };
 
   return (
@@ -374,12 +399,14 @@ export default function ChoreographyMenu() {
             {currentProjection === "global" && (
               <>
                 <div className="flex flex-col items-center gap-2">
-                  <label className="font-bold select-none">Security</label>
+                  <label className="font-bold select-none">
+                    Security Lattice
+                  </label>
                   <textarea
                     className="bg-white rounded-sm min-h-24 max-h-64 px-1 w-full font-mono"
                     value={security}
                     onChange={(e) => setSecurity(e.target.value)}
-                    placeholder="Security Lattice"
+                    placeholder="Set security lattice..."
                   />
                 </div>
 
@@ -390,6 +417,13 @@ export default function ChoreographyMenu() {
                     className="w-full"
                   >
                     Roles
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={resetInfo}
+                    className="w-full"
+                  >
+                    Reset Info
                   </Button>
                 </div>
               </>

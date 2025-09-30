@@ -139,7 +139,8 @@ export const reversedRelationsMap: { [rel: string]: string } = {
   "-->>": "spawn",
 };
 
-export const eventRegex = /\(([^)]+)\) \(([^)]+)\) \[([^\]]+)\] \[([^\]]+)\]/;
+export const eventRegex =
+  /\(([^)]+)\)\s*\(([^)]+)\)\s*\[([^\]]+)\]\s*\[([^\]]+)\]/;
 
 type EventRelation =
   | "condition"
@@ -206,6 +207,7 @@ type Value =
   | { stringLit: { value: string } }
   | { boolLit: { value: boolean } }
   | { floatLit: { value: number } }
+  | { record: { fields: { name: string; value: Expression }[] } }
   | PropBasedExpr;
 
 export type Expression =
