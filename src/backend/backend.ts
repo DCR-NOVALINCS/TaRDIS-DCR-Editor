@@ -13,15 +13,12 @@ app.use(express.json());
 app.post("/code", (req, res) => {
   const { code } = req.body;
   fs.writeFileSync("regrada.tardisdcr", code);
-  exec(
-    "type regrada.tardisdcr | node main_js.bc.js",
-    (error, stdout, sterr) => {
-      console.log(error, sterr);
-      res.send(
-        `CODE:\n\n${code}\n\n--------------------------------------------------------------\n\nOUTPUT:\n\n${stdout}`
-      );
-    }
-  );
+  exec("type regrada.tardisdcr | node compiler.js", (error, stdout, sterr) => {
+    console.log(error, sterr);
+    res.send(
+      `CODE:\n\n${code}\n\n--------------------------------------------------------------\n\nOUTPUT:\n\n${stdout}`
+    );
+  });
 });
 
 app.post("/example", (req, res) => {
@@ -49,9 +46,9 @@ app.get("/projections", (req, res) => {
   });
 });
 
-app.post("/specific-example", (req, res) => {
-  const { name } = req.body;
-  const examplesDir = path.join(__dirname, "examples");
+app.post("/retrieve-file", (req, res) => {
+  const { dir, name } = req.body;
+  const examplesDir = path.join(__dirname, dir);
 
   fs.readdir(examplesDir, (err, files) => {
     if (err) return res.status(500).send("Error reading dir.");

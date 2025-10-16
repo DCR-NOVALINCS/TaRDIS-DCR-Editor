@@ -4,7 +4,8 @@ import { shallow } from "zustand/shallow";
 
 import Editor, { useMonaco } from "@monaco-editor/react";
 import * as monacoEditor from "monaco-editor";
-import { delay, getLayoutedElements } from "@/lib/utils";
+import { delay } from "@/lib/utils";
+import { getLayoutedElements } from "@/lib/elk";
 
 import { visualGen } from "@/lib/visualgen-code";
 import { processChoregraphyModel } from "@/lib/visualgen-json";
@@ -145,7 +146,7 @@ export default function CodeMenu() {
     setDrawerWidth(DRAWER_CONFIG.WIDTH);
   };
 
-  const processProjection = (proj: ChoreographyModel, index: number) => {
+  const processProjection = async (proj: ChoreographyModel, index: number) => {
     if (index === 0) {
       clearErrors();
       switchToLogsTab();
@@ -154,7 +155,10 @@ export default function CodeMenu() {
 
     if (proj.graph.events || proj.graph.relations) {
       const result = processChoregraphyModel(proj);
-      const layoutedResult = getLayoutedElements(result.nodes, result.edges);
+      const layoutedResult = await getLayoutedElements(
+        result.nodes,
+        result.edges
+      );
       setProjectionInfo(proj.role.label, layoutedResult);
       log(`Projection for role ${proj.role.label} created.`);
     }
@@ -171,10 +175,8 @@ export default function CodeMenu() {
       nodeId,
       subId,
     } = visualGen(code);
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-      newNodes,
-      newEdges
-    );
+    const { nodes: layoutedNodes, edges: layoutedEdges } =
+      await getLayoutedElements(newNodes, newEdges);
 
     clearProjections(true);
     await delay(DELAYS.CLEAR_PROJECTIONS);
@@ -204,15 +206,24 @@ export default function CodeMenu() {
       await delay(DELAYS.FETCH_PROJECTIONS);
 
       // Fetch projections
-      const response = await fetch("/api/projections");
+      /* const response = await fetch("/api/projections");
       const projections: ChoreographyModel[] | CompileError[] =
-        await response.json();
+        await response.json(); */
+
+      const response = await fetch("/api/retrieve-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dir: "_out", name: "choreo.json" }),
+      });
+      const projections = (await response.json()) as
+        | ChoreographyModel[]
+        | CompileError[];
 
       // Process each projection
-      projections.forEach((proj, index) => {
+      for (const [index, proj] of projections.entries()) {
         if ("compileError" in proj) treatErrors(proj);
-        else processProjection(proj, index);
-      });
+        else await processProjection(proj, index);
+      }
     } catch (error) {
       console.error("Compilation failed:", error);
       log("Compilation failed. Please check your code.");

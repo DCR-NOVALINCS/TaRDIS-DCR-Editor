@@ -115,6 +115,7 @@ const simulationStateSlice: StateCreator<RFState, [], [], SimulationState> = (
       simNodes.push({
         ...event,
         hidden: isParentSub,
+        selected: false,
       });
     }
 
@@ -149,20 +150,15 @@ const simulationStateSlice: StateCreator<RFState, [], [], SimulationState> = (
 
     if (!simulationMarking || !simulationMarking.executable) return;
 
-    let affectedNodes = [nodeId];
-    nodeProperties.set(nodeId, {
-      ...simulationMarking,
-      pending: false,
-      executed: true,
-    });
-
     const fromEdges = edges.filter((e) => e.source === nodeId);
+    const includes: string[] = [],
+      excludes: string[] = [],
+      milestonesReached: string[] = [];
     for (const edge of fromEdges) {
       const { target, type } = edge;
       const targetMarking = nodeProperties.get(target);
 
       if (!targetMarking) continue;
-      if (!affectedNodes.includes(target)) affectedNodes.push(target);
 
       let included = targetMarking.included,
         pending = targetMarking.pending;
@@ -175,17 +171,26 @@ const simulationStateSlice: StateCreator<RFState, [], [], SimulationState> = (
             conditions = conditions.filter((c) => c !== nodeId);
           break;
         case "response":
-          if (!pending) pending = true;
+          if (!pending) {
+            pending = true;
+            milestonesReached.push(target);
+          }
           break;
         case "milestone":
           if (milestones.includes(nodeId) && simulationMarking.pending)
             milestones = milestones.filter((m) => m !== nodeId);
           break;
         case "include":
-          if (!included) included = true;
+          if (!included) {
+            included = true;
+            includes.push(target);
+          }
           break;
         case "exclude":
-          if (included) included = false;
+          if (included) {
+            included = false;
+            excludes.push(target);
+          }
           break;
         case "spawn":
           if ("spawned" in targetMarking && !spawned) {
@@ -213,64 +218,114 @@ const simulationStateSlice: StateCreator<RFState, [], [], SimulationState> = (
     }
 
     set({ nodeProperties });
-    //updateAll(affectedNodes);
+    if (
+      includes.length > 0 ||
+      excludes.length > 0 ||
+      milestonesReached.length > 0
+    )
+      updateAll(includes, excludes, milestonesReached);
+    console.log(nodeProperties);
   }
 
-  async function updateAll(affectedNodes: string[]) {
+  async function updateAll(
+    includes: string[],
+    excludes: string[],
+    milestonesReached: string[]
+  ) {
     await delay(10);
     const nodeProperties = cloneMap(get().nodeProperties);
-    for (const [nodeId, marking] of nodeProperties) {
-      let conditions = marking.conditions.filter((c) => {
-        const cMarking = nodeProperties.get(c);
-        return !cMarking || !cMarking.executable;
-      });
-      let milestones = marking.milestones.filter((m) => {
-        const mMarking = nodeProperties.get(m);
-        return !mMarking || !mMarking.executable;
-      });
 
-      const toEdges = get().simEdges.filter((e) => e.target === nodeId);
-      for (const edge of toEdges) {
-        const { source, type } = edge;
-        const sourceMarking = nodeProperties.get(source);
+    for (const nodeId of includes) {
+      const sourceMarking = nodeProperties.get(nodeId);
+      if (!sourceMarking) continue;
 
-        if (!sourceMarking) continue;
+      const fromEdges = get().simEdges.filter(
+        (e) =>
+          e.source === nodeId &&
+          (e.type === "condition" || e.type === "milestone")
+      );
+      for (const edge of fromEdges) {
+        const { target, type } = edge;
 
-        if (sourceMarking.executable) {
-          switch (type) {
-            case "condition":
-              if (!conditions.includes(source)) conditions.push(source);
-              break;
-            case "milestone":
-              if (!milestones.includes(source) && sourceMarking.pending)
-                milestones.push(source);
-              break;
-          }
-        } else {
-          switch (type) {
-            case "condition":
-              if (conditions.includes(source))
-                conditions = conditions.filter((c) => c !== source);
-              break;
-            case "milestone":
-              if (milestones.includes(source) && sourceMarking.pending)
-                milestones = milestones.filter((m) => m !== source);
-              break;
-          }
-        }
+        const targetMarking = nodeProperties.get(target);
+        if (!targetMarking) continue;
+
+        const { conditions, milestones, included } = targetMarking;
+        if (type === "condition" && !conditions.includes(nodeId))
+          conditions.push(nodeId);
+        else if (
+          type === "milestone" &&
+          !milestones.includes(nodeId) &&
+          sourceMarking.pending
+        )
+          milestones.push(nodeId);
+
+        nodeProperties.set(target, {
+          ...targetMarking,
+          conditions,
+          milestones,
+          executable:
+            conditions.length === 0 && milestones.length === 0 && included,
+        });
       }
-
-      nodeProperties.set(nodeId, {
-        ...marking,
-        conditions,
-        milestones,
-        executable:
-          conditions.length === 0 &&
-          milestones.length === 0 &&
-          marking.included,
-      });
     }
 
+    for (const nodeId of excludes) {
+      const sourceMarking = nodeProperties.get(nodeId);
+      if (!sourceMarking) continue;
+
+      const fromEdges = get().simEdges.filter(
+        (e) =>
+          e.source === nodeId &&
+          (e.type === "condition" || e.type === "milestone")
+      );
+      for (const edge of fromEdges) {
+        const { target, type } = edge;
+        const targetMarking = nodeProperties.get(target);
+        if (!targetMarking) continue;
+
+        const { conditions, milestones, included } = targetMarking;
+        if (type === "condition" && conditions.includes(nodeId))
+          conditions.splice(conditions.indexOf(nodeId), 1);
+        else if (type === "milestone" && milestones.includes(nodeId))
+          milestones.splice(milestones.indexOf(nodeId), 1);
+
+        nodeProperties.set(target, {
+          ...targetMarking,
+          conditions,
+          milestones,
+          executable:
+            conditions.length === 0 && milestones.length === 0 && included,
+        });
+      }
+    }
+
+    for (const nodeId of milestonesReached) {
+      const sourceMarking = nodeProperties.get(nodeId);
+      if (!sourceMarking) continue;
+
+      const fromEdges = get().simEdges.filter(
+        (e) => e.source === nodeId && e.type === "milestone"
+      );
+      for (const edge of fromEdges) {
+        const { target, type } = edge;
+        const targetMarking = nodeProperties.get(target);
+        if (!targetMarking) continue;
+
+        const { conditions, milestones, included } = targetMarking;
+        if (type === "milestone") milestones.push(nodeId);
+
+        nodeProperties.set(target, {
+          ...targetMarking,
+          conditions,
+          milestones,
+          executable:
+            conditions.length === 0 && milestones.length === 0 && included,
+        });
+      }
+    }
+
+    console.log(nodeProperties);
     set({ nodeProperties });
   }
 

@@ -1,9 +1,10 @@
 import { Button, Modal } from "@/lib/reusable-comps";
 import { State } from "@/lib/types";
-import { getLayoutedElements, delay } from "@/lib/utils";
+import { delay } from "@/lib/utils";
+import { getLayoutedElements } from "@/lib/elk";
 import { visualGen } from "@/lib/visualgen-code";
 import useStore, { RFState } from "@/stores/store";
-import { ReactFlowInstance, Node, Edge } from "@xyflow/react";
+import { ReactFlowInstance } from "@xyflow/react";
 import { FolderInput } from "lucide-react";
 import { useState } from "react";
 import { shallow } from "zustand/shallow";
@@ -64,10 +65,8 @@ const ImportButton = ({ reactFlow }: { reactFlow: ReactFlowInstance }) => {
       nodeId: nextNodeId,
       subId: nextSubprocessId,
     } = visualGen(code);
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-      newNodes,
-      newEdges
-    );
+    const { nodes: layoutedNodes, edges: layoutedEdges } =
+      await getLayoutedElements(newNodes, newEdges);
 
     changeClearSet({
       nodes: layoutedNodes,

@@ -263,10 +263,10 @@ export function generateJsonData(
 }
 
 export async function setState(name: string = "current") {
-  const response = await fetch("/api/specific-example", {
+  const response = await fetch("/api/retrieve-file", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ dir: "examples", name: name }),
   });
   return (await response.json()) as State;
 }

@@ -660,6 +660,7 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
 
     onNodeClick(event: any, node: Node): void {
       event.preventDefault();
+      console.log("Node clicked:", node);
       get().setSelectedElement(node);
     },
 
