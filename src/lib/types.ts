@@ -454,3 +454,5 @@ export type State = {
   nextGroupId: number[];
   nextSubprocessId: number[];
 };
+
+export type Setter<T> = (value: T | ((prevState: T) => T)) => void;
