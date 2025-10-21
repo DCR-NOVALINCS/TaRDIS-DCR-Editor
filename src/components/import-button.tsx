@@ -48,7 +48,11 @@ const ImportButton = ({ reactFlow }: { reactFlow: ReactFlowInstance }) => {
     setNodes(state.nodes);
     setCode(state.code);
     setEdges(state.edges);
-    setIds(state.nextNodeId, state.nextGroupId, state.nextSubprocessId);
+    setIds({
+      nextNodeId: state.nextNodeId,
+      nextGroupId: state.nextGroupId,
+      nextSubprocessId: state.nextSubprocessId,
+    });
     setProjectionInfo("global", { nodes: state.nodes, edges: state.edges });
     setSelectedElement(undefined);
     await delay(10);

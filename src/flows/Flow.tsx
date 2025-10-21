@@ -16,15 +16,12 @@ import { shallow } from "zustand/shallow";
 
 import useStore, { RFState } from "../stores/store";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import Condition, { NewCondition } from "../dcr-related/edges/Condition";
 import Response, { NewResponse } from "../dcr-related/edges/Response";
 import Include, { NewInclude } from "../dcr-related/edges/Include";
-import Exclude, {
-  NewExclude,
-  SelfNewExclude,
-} from "../dcr-related/edges/Exclude";
+import Exclude, { NewExclude } from "../dcr-related/edges/Exclude";
 import Milestone, { NewMilestone } from "../dcr-related/edges/Milestone";
 import Spawn, { NewSpawn } from "../dcr-related/edges/Spawn";
 import CustomConnectionLine from "../dcr-related/edges/ConnectionLine";
@@ -38,7 +35,6 @@ import ToolPallete from "../components/tool-pallete";
 import { Pickaxe } from "lucide-react";
 import ImportButton from "../components/import-button";
 import ExportButton from "../components/export-button";
-import { delay } from "@/lib/utils";
 
 type History = {
   nodes: Node[];
@@ -76,6 +72,8 @@ const selector = (state: RFState) => ({
   onClickSimulationToggle: state.onClickSimulationToggle,
   currentProjection: state.currentProjection,
   edgesTypes: state.edgesTypes,
+  selectedElement: state.selectedElement,
+  setSelectedElement: state.setSelectedElement,
 });
 
 const nodeOrigin: NodeOrigin = [0.5, 0.5];
@@ -93,7 +91,7 @@ const newEdgeTypes = {
   condition: NewCondition,
   response: NewResponse,
   include: NewInclude,
-  exclude: SelfNewExclude,
+  exclude: NewExclude,
   milestone: NewMilestone,
   spawn: NewSpawn,
 };
@@ -136,6 +134,8 @@ function FlowWithoutProvider() {
     onClickSimulationToggle,
     currentProjection,
     edgesTypes,
+    selectedElement,
+    setSelectedElement,
   } = useStore(selector, shallow);
 
   const flowRef = useRef<HTMLDivElement>(null);
@@ -198,11 +198,11 @@ function FlowWithoutProvider() {
             case "z":
               setNodes(history.nodes);
               setEdges(history.edges);
-              setIds(
-                history.nextNodeId,
-                history.nextGroupId,
-                history.nextSubprocessId
-              );
+              setIds({
+                nextNodeId: history.nextNodeId,
+                nextGroupId: history.nextGroupId,
+                nextSubprocessId: history.nextSubprocessId,
+              });
               if (history.history) setHistory(history.history);
               break;
           }

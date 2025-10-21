@@ -8,8 +8,28 @@ import {
   SimpleRole,
 } from "./types";
 
+type Graph = {
+  roles: SimpleRole[];
+  security: string;
+  nodes: Node[];
+  edges: Edge[];
+  nodeId: number;
+  subId: number;
+};
+
 let nodeId = 0;
 let subId = 0;
+
+function isValidType(type: string): boolean {
+  return (
+    type === "-->*" ||
+    type === "*-->" ||
+    type === "-->+" ||
+    type === "-->%" ||
+    type === "--><>" ||
+    type === "-->>"
+  );
+}
 
 function untilRegex(
   code: string,
@@ -86,18 +106,15 @@ function genGraph(
   let result = untilRegex(code, ";");
 
   let nodes: Node[] = nds ? nds : [];
-  result.part.forEach((ev) => {
+  for (const ev of result.part) {
     const match = eventRegex.exec(ev);
 
-    let eventInfo, ifc, typeInfo, initRecv;
     if (match) {
-      eventInfo = match[1].replace(/\s/g, "");
-      ifc = match[2].replace(/\s/g, "");
-      typeInfo = match[3].replace(/\s/g, "");
-      initRecv = match[4].replace(" -> ", "->");
-    }
+      const eventInfo = match[1].replace(/\s/g, "") || "";
+      const ifc = match[2].replace(/\s/g, "") || "";
+      const typeInfo = match[3].replace(/\s/g, "") || "";
+      const initRecv = match[4].replace(" -> ", "->") || "";
 
-    if (eventInfo && ifc && typeInfo && initRecv) {
       const marking: MarkingType = {
         included: !ev.includes("%"),
         pending: ev.includes("!"),
@@ -140,7 +157,7 @@ function genGraph(
         .split("->");
 
       nodes.push({
-        id: `e${nodeId++}`,
+        id: `e${++nodeId}`,
         type: "event",
         data: {
           initiators: initiators.split(","),
@@ -160,7 +177,7 @@ function genGraph(
         zIndex: 10000,
       });
     }
-  });
+  }
 
   let edges: Edge[] = eds ? eds : [];
   let str = result.code.replace(/[\r\t]/g, "").split("\n");
@@ -171,7 +188,7 @@ function genGraph(
 
     if (line) {
       if (line.endsWith("{")) {
-        let triggerId: string = "";
+        let trigger: Node | undefined = undefined;
         if (
           parentId &&
           nodes.some(
@@ -179,16 +196,14 @@ function genGraph(
               ev.data.label === line.split(" ")[0] && ev.parentId === parentId
           )
         )
-          triggerId = (
-            nodes.find(
-              (ev) =>
-                ev.data.label === line.split(" ")[0] && ev.parentId === parentId
-            ) as Node
-          ).id;
-        else
-          triggerId = (
-            nodes.find((ev) => ev.data.label === line.split(" ")[0]) as Node
-          ).id;
+          trigger = nodes.find(
+            (ev) =>
+              ev.data.label === line.split(" ")[0] && ev.parentId === parentId
+          );
+        else trigger = nodes.find((ev) => ev.data.label === line.split(" ")[0]);
+
+        if (!trigger) continue;
+        const triggerId = trigger.id;
 
         const subprocessId = `s${subId++}`;
 
@@ -240,29 +255,41 @@ function genGraph(
           .replace(/\s{2,}/g, " ")
           .split(" ");
 
-        const sources = src.split(",").map((sr) => {
+        if (!src || !tp || !tgt || !isValidType(tp)) continue;
+
+        const sources: string[] = [];
+        const targets: string[] = [];
+
+        src.split(",").forEach((sr) => {
           if (
             parentId &&
             nodes.some((ev) => ev.data.label === sr && ev.parentId === parentId)
           )
-            return (
-              nodes.find(
-                (ev) => ev.data.label === sr && ev.parentId === parentId
-              ) as Node
-            ).id;
-          else return (nodes.find((ev) => ev.data.label === sr) as Node).id;
+            sources.push(
+              (
+                nodes.find(
+                  (ev) => ev.data.label === sr && ev.parentId === parentId
+                ) as Node
+              ).id
+            );
+          else if (nodes.some((ev) => ev.data.label === sr))
+            sources.push((nodes.find((ev) => ev.data.label === sr) as Node).id);
         });
-        const targets = tgt.split(",").map((tg) => {
+
+        tgt.split(",").map((tg) => {
           if (
             parentId &&
             nodes.some((ev) => ev.data.label === tg && ev.parentId === parentId)
           )
-            return (
-              nodes.find(
-                (ev) => ev.data.label === tg && ev.parentId === parentId
-              ) as Node
-            ).id;
-          else return (nodes.find((ev) => ev.data.label === tg) as Node).id;
+            targets.push(
+              (
+                nodes.find(
+                  (ev) => ev.data.label === tg && ev.parentId === parentId
+                ) as Node
+              ).id
+            );
+          else if (nodes.some((ev) => ev.data.label === tg))
+            targets.push((nodes.find((ev) => ev.data.label === tg) as Node).id);
         });
 
         let type: string = "";
@@ -318,7 +345,7 @@ function cleanCode(code: string): string {
   return codeClean.join("\n");
 }
 
-export function visualGen(code: string) {
+export function visualGen(code: string): Graph {
   let result = untilRegex(cleanCode(code), ";");
   const roles: SimpleRole[] = result.part.map((role) => genRole(role));
 

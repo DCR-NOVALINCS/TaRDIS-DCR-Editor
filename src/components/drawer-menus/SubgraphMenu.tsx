@@ -4,7 +4,6 @@ import { Node } from "@xyflow/react";
 import useStore, { RFState } from "@/stores/store";
 import { MarkingType } from "@/lib/types";
 import {
-  Button,
   DrawerMenu,
   DrawerMenuLabel,
   FormCheckbox,
@@ -24,7 +23,6 @@ const selector = (state: RFState) => ({
   getFamily: state.getFamily,
   documentation: state.documentation,
   addDocumentation: state.addDocumentation,
-  updateNodeInfo: state.updateNodeInfo,
   currentProjection: state.currentProjection,
 });
 
@@ -50,7 +48,6 @@ const SubgraphMenu = ({ nest }: { nest: Node }) => {
     getFamily,
     documentation,
     addDocumentation,
-    updateNodeInfo,
     currentProjection,
   } = useStore(selector);
   const { id, data, parentId } = nest;
@@ -155,14 +152,13 @@ const SubgraphMenu = ({ nest }: { nest: Node }) => {
 
       // Update children
       children.forEach((child) => {
-        updateNodeInfo(child.id, {
-          id: "",
-          initiators: [],
-          label: "",
-          marking,
-          name: "",
-          security: "",
-          parent: newId,
+        updateNode(child.id, {
+          ...child,
+          parentId: newId,
+          data: {
+            ...child.data,
+            marking,
+          },
         });
       });
 

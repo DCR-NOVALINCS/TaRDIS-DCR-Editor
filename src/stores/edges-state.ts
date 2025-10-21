@@ -9,7 +9,7 @@ import {
 } from "@xyflow/react";
 import { StateCreator } from "zustand/vanilla";
 import { RFState } from "./store";
-import { state, TempEdge } from "@/lib/types";
+import { Setter, state, TempEdge } from "@/lib/types";
 
 /**
  * Creates an edge object with default properties
@@ -56,13 +56,13 @@ export type EdgesState = {
 
   /* ------------ METHODS ------------ */
   /** Adds a new edge to the state */
-  addEdge(edge: Edge): void;
+  addEdge(...edges: Edge[]): void;
   /** Updates an existing edge by ID */
   updateEdge(id: string, updatedEdge: Edge): void;
   /** Replaces the current edges with a new array */
-  setEdges(newEdges: Edge[]): void;
+  setEdges: Setter<Edge[]>;
   /** Deletes an edge by ID and returns it */
-  deleteEdge(edgeId: string): Edge | null;
+  deleteEdge(...edgeIds: string[]): Edge[];
   /** Sets the current relation type */
   setRelationType(type: string): void;
 
@@ -105,29 +105,30 @@ const edgesStateSlice: StateCreator<RFState, [], [], EdgesState> = (
     relationType: "",
 
     /* ------------ EDGE OPERATIONS ------------ */
-    addEdge(edge: Edge): void {
-      const { source, target, type } = edge;
+    addEdge(...edges: Edge[]): void {
+      for (const edge of edges) {
+        const { source, target, type } = edge;
 
-      // Early return if edge already exists
-      if (type && alreadyExistsEdge({ source, target, type })) return;
+        // Early return if edge already exists
+        if (type && alreadyExistsEdge({ source, target, type })) return;
 
-      get().log(
-        `Added ${edge.type} relation from ${edge.source} to ${edge.target}`
-      );
+        get().log(
+          `Added ${edge.type} relation from ${edge.source} to ${edge.target}`
+        );
 
-      set({
-        edges:
-          edge.type === "spawn"
-            ? [edge, ...get().edges]
-            : [...get().edges, edge],
-        selectedElement: edge,
-      });
+        get().setEdges((prev) =>
+          edge.type === "spawn" ? [edge, ...prev] : [...prev, edge]
+        );
+      }
 
-      get().saveState();
+      get().setSelectedElement(edges.length === 1 ? edges[0] : undefined);
     },
 
-    setEdges(newEdges: Edge[]): void {
-      set({ edges: newEdges });
+    setEdges: (updater) => {
+      set((state) => ({
+        edges: typeof updater === "function" ? updater(state.edges) : updater,
+      }));
+      get().saveState();
     },
 
     updateEdge(id: string, updatedEdge: Edge): void {
@@ -139,28 +140,20 @@ const edgesStateSlice: StateCreator<RFState, [], [], EdgesState> = (
       let newEdges = [...currentEdges];
       newEdges[edgeIndex] = updatedEdge;
 
-      set({
-        edges: newEdges,
-        selectedElement: updatedEdge,
-      });
-
+      get().setEdges(newEdges);
+      get().setSelectedElement(updatedEdge);
       get().log(
         `Updated ${updatedEdge.type} relation between ${updatedEdge.source} and ${updatedEdge.target}`
       );
-      get().saveState();
     },
 
-    deleteEdge(edgeId: string): Edge | null {
-      const currentEdges = get().edges;
-      const edgeToDelete = currentEdges.find((edge) => edge.id === edgeId);
-
-      if (!edgeToDelete) return null;
-
-      set({
-        edges: currentEdges.filter((edge) => edge.id !== edgeId),
+    deleteEdge(...edgeIds: string[]): Edge[] {
+      let deletedEdges: Edge[] = [];
+      get().setEdges((prev) => {
+        deletedEdges = prev.filter((edge) => edgeIds.includes(edge.id));
+        return prev.filter((edge) => !edgeIds.includes(edge.id));
       });
-
-      return edgeToDelete;
+      return deletedEdges;
     },
 
     setRelationType(type: string): void {
@@ -192,19 +185,14 @@ const edgesStateSlice: StateCreator<RFState, [], [], EdgesState> = (
     },
 
     onEdgesChange(changes: EdgeChange[]): void {
-      set({
-        edges: applyEdgeChanges(changes, get().edges),
-      });
-      get().saveState();
+      get().setEdges((prev) => applyEdgeChanges(changes, prev));
     },
 
     onEdgeClick(event: React.MouseEvent, edge: Edge): void {
       event.preventDefault();
 
-      set({
-        edges: updateEdgeSelection(get().edges, edge.id),
-        selectedElement: edge,
-      });
+      get().setEdges((prev) => updateEdgeSelection(prev, edge.id));
+      get().setSelectedElement(edge);
     },
 
     onEdgeDoubleClick(event: React.MouseEvent, edge: Edge): void {
@@ -218,13 +206,15 @@ const edgesStateSlice: StateCreator<RFState, [], [], EdgesState> = (
       const deletedIds = deletedEdges.map((edge) => edge.id);
       get().log(`Deleted edges: ${deletedIds.join(", ")}.`);
 
-      // Remove documentation for deleted edges
-      deletedEdges.forEach((edge) => get().removeDocumentation(edge.id));
-
-      set({
-        edges: get().edges.filter((edge) => !deletedIds.includes(edge.id)),
-      });
-      get().saveState();
+      get().setEdges((prev) =>
+        prev.filter((edge) => {
+          if (!deletedIds.includes(edge.id)) {
+            get().removeDocumentation(edge.id);
+            return true;
+          }
+          return false;
+        })
+      );
     },
     /* ----------------------------------------- */
   };

@@ -21,8 +21,7 @@ const simulationStateSlice: StateCreator<RFState, [], [], SimulationState> = (
   get
 ) => {
   function startSimulation() {
-    const nodes = get().nodes;
-    const edges = get().edges;
+    const { nodes, edges } = get();
 
     const simEdges: Edge[] = [];
     for (const edge of edges) {

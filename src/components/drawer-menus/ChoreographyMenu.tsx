@@ -357,7 +357,7 @@ export default function ChoreographyMenu() {
 
   const resetInfo = () => {
     setCurrentProjection("global");
-    setIds([0], [0], [0]);
+    setIds({ nextNodeId: [0], nextGroupId: [0], nextSubprocessId: [0] });
     setRoles([]);
     setSelectedElement(undefined);
     setNodes([]);

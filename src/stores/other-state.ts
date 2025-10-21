@@ -6,6 +6,7 @@ import {
   type ProjectionInfo,
   type Element,
   state,
+  Setter,
 } from "@/lib/types";
 import type { Edge, Node } from "@xyflow/react";
 import { cloneMap, delay, generateJsonData } from "@/lib/utils";
@@ -103,19 +104,19 @@ export type OtherState = {
   /** The currently selected element in the UI */
   selectedElement: Element;
   /** Sets the selected element */
-  setSelectedElement(element: Element): void;
+  setSelectedElement: Setter<Element | Node[]>;
 
   /* ---------------- SECURITY --------------- */
   /** The current security configuration or mode */
   security: string;
   /** Sets the security mode or configuration */
-  setSecurity(security: string): void;
+  setSecurity: Setter<string>;
 
   /* ------------------ CODE ----------------- */
   /** The current code content */
   code: string;
   /** Updates the code content */
-  setCode(code: string): void;
+  setCode: Setter<string>;
 
   /* ------------------ LOGS ----------------- */
   /** A list of application logs for debugging or tracing */
@@ -123,13 +124,13 @@ export type OtherState = {
   /** Adds a log message to the log history */
   log(message: string): void;
   /** Replaces the current logs with a new array of log entries */
-  setLogs(messages: Log[]): void;
+  setLogs: Setter<Log[]>;
 
   /* -------------- PROJECTIONS -------------- */
   /** Map storing projection information */
   projectionInfo: Map<string, ProjectionInfo>;
   /** Sets projection information for a specific ID */
-  setProjectionInfo(id: string, projectionInfo: ProjectionInfo): void;
+  setProjectionInfo(id: string, projInfo: ProjectionInfo): void;
   /** Clears projections (all or excluding global) */
   clearProjections(all: boolean): Promise<ProjectionInfo>;
   /** Current projection ID */
@@ -192,37 +193,47 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
   addDocumentation(id: string, doc: string): void {
     if (!id.trim()) return;
 
-    let newDocumentation = cloneMap(get().documentation);
-    newDocumentation.set(id, doc);
-
-    set({ documentation: newDocumentation });
+    set((state) => {
+      const documentation = cloneMap(state.documentation);
+      documentation.set(id, doc);
+      return { documentation };
+    });
   },
 
   removeDocumentation(id: string): void {
     if (!id.trim()) return;
 
-    let newDocumentation = cloneMap(get().documentation);
-    const wasDeleted = newDocumentation.delete(id);
-
-    if (!wasDeleted) return;
-
-    set({ documentation: newDocumentation });
+    set((state) => {
+      const documentation = cloneMap(state.documentation);
+      documentation.delete(id);
+      return { documentation };
+    });
   },
 
   /* ----------- SELECTED ELEMENT ------------ */
-  setSelectedElement(element: Element): void {
-    set({ selectedElement: element });
+  setSelectedElement: (updater) => {
+    set((state) => ({
+      selectedElement:
+        typeof updater === "function"
+          ? updater(state.selectedElement)
+          : updater,
+    }));
   },
 
   /* ---------------- SECURITY --------------- */
-  setSecurity(security: string): void {
-    set({ security });
+  setSecurity: (updater) => {
+    set((state) => ({
+      security:
+        typeof updater === "function" ? updater(state.security) : updater,
+    }));
     get().saveState();
   },
 
   /* ------------------ CODE ----------------- */
-  setCode(code: string): void {
-    set({ code });
+  setCode: (updater) => {
+    set((state) => ({
+      code: typeof updater === "function" ? updater(state.code) : updater,
+    }));
     get().saveState();
   },
 
@@ -230,47 +241,43 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
   log(message: string): void {
     if (!message.trim()) return;
 
-    const logEntry = createLogEntry(message);
-
-    set({
-      logs: [logEntry, ...get().logs],
-    });
+    get().setLogs((prev) => [createLogEntry(message), ...prev]);
   },
 
-  setLogs(messages: Log[]): void {
-    set({ logs: messages });
+  setLogs: (updater) => {
+    set((state) => ({
+      logs: typeof updater === "function" ? updater(state.logs) : updater,
+    }));
   },
 
   /* -------------- PROJECTIONS -------------- */
-  setProjectionInfo(id: string, projectionInfo: ProjectionInfo): void {
+  setProjectionInfo(id: string, projInfo: ProjectionInfo): void {
     if (!id.trim()) return;
 
-    let newProjectionInfo = cloneMap(get().projectionInfo);
-    newProjectionInfo.set(id, projectionInfo);
-
-    set({ projectionInfo: newProjectionInfo });
+    set((state) => {
+      const projectionInfo = cloneMap(state.projectionInfo);
+      projectionInfo.set(id, projInfo);
+      return { projectionInfo };
+    });
   },
 
   async clearProjections(all: boolean): Promise<ProjectionInfo> {
     const currentProjections = get().projectionInfo;
-    let newProjectionInfo = cloneMap(currentProjections);
+    let projectionInfo = cloneMap(currentProjections);
 
     // Clear projections based on the 'all' flag
-    for (const [key] of currentProjections) {
-      if (shouldClearProjection(key, all)) newProjectionInfo.delete(key);
-    }
+    for (const [key] of currentProjections)
+      if (shouldClearProjection(key, all)) projectionInfo.delete(key);
 
     await delay(10);
 
-    const globalProjection = newProjectionInfo.get(
-      APP_CONFIG.DEFAULTS.GLOBAL_ID
-    );
+    const globalProjection = projectionInfo.get(APP_CONFIG.DEFAULTS.GLOBAL_ID);
     const nodes: Node[] = globalProjection ? globalProjection.nodes : [];
     const edges: Edge[] = globalProjection ? globalProjection.edges : [];
     set({
       nodes,
       edges,
-      projectionInfo: newProjectionInfo,
+      projectionInfo,
       currentProjection: APP_CONFIG.DEFAULTS.GLOBAL_ID,
     });
 
@@ -300,11 +307,9 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
 
   /* ----------------- HANDLERS -------------- */
   onPaneClick(): void {
-    set({
-      selectedElement: undefined,
-      nodes: updateNodesSelection(get().nodes),
-      edges: updateEdgesSelection(get().edges),
-    });
+    get().setSelectedElement(undefined);
+    get().setNodes((prev) => updateNodesSelection(prev));
+    get().setEdges((prev) => updateEdgesSelection(prev));
   },
 
   getChoreographyInfo(): ChoregraphyInfo {
@@ -340,19 +345,28 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
 
     await delay(100);
 
-    const { nodes, edges } = get();
+    const {
+      nodes,
+      edges,
+      security,
+      roles,
+      code,
+      nextNodeId,
+      nextGroupId,
+      nextSubprocessId,
+    } = get();
 
     const data = JSON.stringify(
       generateJsonData(
         true,
         nodes,
         edges,
-        get().security,
-        get().roles,
-        get().code,
-        get().nextNodeId,
-        get().nextGroupId,
-        get().nextSubprocessId
+        security,
+        roles,
+        code,
+        nextNodeId,
+        nextGroupId,
+        nextSubprocessId
       )
     );
 

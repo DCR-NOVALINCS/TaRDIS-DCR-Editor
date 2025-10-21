@@ -1,6 +1,6 @@
 import { StateCreator } from "zustand/vanilla";
 import { RFState } from "./store";
-import { SimpleRole, state } from "@/lib/types";
+import { Setter, SimpleRole, state } from "@/lib/types";
 
 const fixRole = (role: string) => {
   return role.charAt(0).toUpperCase() + role.slice(1);
@@ -33,7 +33,7 @@ export type RolesState = {
   roles: SimpleRole[];
   addRole(role: SimpleRole): void;
   removeRole(role: string): void;
-  setRoles(roles: SimpleRole[]): void;
+  setRoles: Setter<SimpleRole[]>;
 };
 
 const rolesStateSlice: StateCreator<RFState, [], [], RolesState> = (
@@ -42,30 +42,24 @@ const rolesStateSlice: StateCreator<RFState, [], [], RolesState> = (
 ) => ({
   /* ------------ ROLE OPERATIONS ------------ */
   roles: state.roles ?? [],
-  addRole(role: SimpleRole) {
-    set({
-      roles: [
-        {
-          ...role,
-          role: fixRole(role.role),
-        },
-        ...get().roles,
-      ],
-    });
-    get().log(`Added a new role ${role.role} with label ${role.label}.`);
-    get().saveState();
+  addRole(...roles: SimpleRole[]) {
+    for (const role of roles)
+      get().log(`Added a new role ${role.role} with label ${role.label}.`);
+
+    get().setRoles((prev) => [
+      ...roles.map((r) => ({ ...r, role: fixRole(r.role) })),
+      ...prev,
+    ]);
   },
-  removeRole(role: string) {
-    set({
-      roles: get().roles.filter((rl) => rl.role !== role),
-    });
-    get().log(`Removed role ${role}.`);
-    get().saveState();
+  removeRole(...roles: string[]) {
+    for (const role of roles) get().log(`Removed role ${role}.`);
+
+    get().setRoles((prev) => prev.filter((rl) => !roles.includes(rl.role)));
   },
-  setRoles(roles: SimpleRole[]) {
-    set({
-      roles,
-    });
+  setRoles: (updater) => {
+    set((state) => ({
+      roles: typeof updater === "function" ? updater(state.roles) : updater,
+    }));
     get().saveState();
   },
   /* ----------------------------------------- */

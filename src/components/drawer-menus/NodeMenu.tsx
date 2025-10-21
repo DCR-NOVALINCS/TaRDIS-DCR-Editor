@@ -5,7 +5,6 @@ import { SquareMousePointer } from "lucide-react";
 import { Node } from "@xyflow/react";
 import { FieldType, InputType, inputTypes, MarkingType } from "@/lib/types";
 import {
-  Button,
   DrawerMenu,
   DrawerMenuLabel,
   FormCheckbox,
@@ -362,7 +361,6 @@ const NodeMenu = ({ node }: { node: Node }) => {
       updateNode(id, {
         ...storeNode,
         data: newData,
-        selected: true,
         ...(parent
           ? {
               parentId: parent,

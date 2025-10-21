@@ -1,0 +1,429 @@
+{
+  "nodes": [
+    {
+      "id": "s1",
+      "position": {
+        "x": 262,
+        "y": 12
+      },
+      "width": 450,
+      "height": 210,
+      "type": "subprocess",
+      "parentId": "",
+      "data": {
+        "label": "s1",
+        "marking": {
+          "included": true,
+          "pending": false
+        }
+      },
+      "zIndex": 1000,
+      "measured": {
+        "width": 450,
+        "height": 210
+      },
+      "selected": false
+    },
+    {
+      "id": "e5",
+      "type": "event",
+      "data": {
+        "initiators": [
+          "@Receiver(c)"
+        ],
+        "receivers": [
+          "@Initiator(c)"
+        ],
+        "type": "i",
+        "label": "rep",
+        "name": "reply",
+        "marking": {
+          "included": true,
+          "pending": false
+        },
+        "input": {
+          "type": "Unit"
+        },
+        "security": "Public"
+      },
+      "parentId": "s1",
+      "expandParent": true,
+      "extent": "parent",
+      "position": {
+        "x": 100,
+        "y": 110
+      },
+      "zIndex": 10000,
+      "width": 100,
+      "height": 100,
+      "measured": {
+        "width": 100,
+        "height": 100
+      },
+      "selected": false
+    },
+    {
+      "id": "e6",
+      "type": "event",
+      "data": {
+        "initiators": [
+          "@Initiator(c)"
+        ],
+        "receivers": [
+          "@Receiver(c)"
+        ],
+        "type": "i",
+        "label": "dec",
+        "name": "decision",
+        "marking": {
+          "included": true,
+          "pending": false
+        },
+        "input": {
+          "type": "Unit"
+        },
+        "security": "Public"
+      },
+      "parentId": "s1",
+      "expandParent": true,
+      "extent": "parent",
+      "position": {
+        "x": 350,
+        "y": 110
+      },
+      "zIndex": 10000,
+      "width": 100,
+      "height": 100,
+      "measured": {
+        "width": 100,
+        "height": 100
+      },
+      "selected": false
+    },
+    {
+      "id": "s0",
+      "position": {
+        "x": 262,
+        "y": 242
+      },
+      "width": 200,
+      "height": 210,
+      "type": "subprocess",
+      "parentId": "",
+      "data": {
+        "label": "s0",
+        "marking": {
+          "included": true,
+          "pending": false
+        }
+      },
+      "zIndex": 1000,
+      "measured": {
+        "width": 200,
+        "height": 210
+      },
+      "selected": false
+    },
+    {
+      "id": "e4",
+      "type": "event",
+      "data": {
+        "initiators": [
+          "@Receiver(rq_f)"
+        ],
+        "receivers": [
+          "@Initiator(rq_f)"
+        ],
+        "type": "i",
+        "label": "rp_f",
+        "name": "reply_fcast",
+        "marking": {
+          "included": true,
+          "pending": true
+        },
+        "input": {
+          "type": "Unit"
+        },
+        "security": "Public"
+      },
+      "parentId": "s0",
+      "expandParent": true,
+      "extent": "parent",
+      "position": {
+        "x": 98,
+        "y": 108
+      },
+      "zIndex": 10000,
+      "width": 100,
+      "height": 100,
+      "measured": {
+        "width": 100,
+        "height": 100
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "e1",
+      "type": "event",
+      "data": {
+        "initiators": [
+          "CO(cid=1)"
+        ],
+        "type": "i",
+        "label": "acc",
+        "name": "acc",
+        "marking": {
+          "included": true,
+          "pending": false
+        },
+        "input": {
+          "type": "Unit"
+        },
+        "security": "Public"
+      },
+      "parentId": "",
+      "position": {
+        "x": 260,
+        "y": 530
+      },
+      "zIndex": 10000,
+      "width": 100,
+      "height": 100,
+      "measured": {
+        "width": 100,
+        "height": 100
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "e2",
+      "type": "event",
+      "data": {
+        "initiators": [
+          "CO(#cid as X)"
+        ],
+        "receivers": [
+          "P(id=*; cid=X)"
+        ],
+        "type": "i",
+        "label": "rq_f",
+        "name": "request_fcast",
+        "marking": {
+          "included": true,
+          "pending": false
+        },
+        "input": {
+          "type": "Unit"
+        },
+        "security": "Public"
+      },
+      "parentId": "",
+      "position": {
+        "x": 12,
+        "y": 392
+      },
+      "zIndex": 10000,
+      "width": 100,
+      "height": 100,
+      "measured": {
+        "width": 100,
+        "height": 100
+      },
+      "selected": false
+    },
+    {
+      "id": "e3",
+      "type": "event",
+      "data": {
+        "initiators": [
+          "P(id=*; #cid as X)"
+        ],
+        "receivers": [
+          "P(id=*; cid=X)",
+          " CO(cid=X)"
+        ],
+        "type": "i",
+        "label": "c",
+        "name": "consume",
+        "marking": {
+          "included": true,
+          "pending": false
+        },
+        "input": {
+          "type": "Unit"
+        },
+        "security": "Public"
+      },
+      "parentId": "",
+      "position": {
+        "x": -115,
+        "y": 95
+      },
+      "zIndex": 10000,
+      "width": 100,
+      "height": 100,
+      "measured": {
+        "width": 100,
+        "height": 100
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "s-e2-s0",
+      "type": "spawn",
+      "source": "e2",
+      "target": "s0",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "se-e5",
+      "type": "exclude",
+      "source": "e5",
+      "target": "e5",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "e-e6-e6",
+      "type": "exclude",
+      "source": "e6",
+      "target": "e6",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "c-e5-e6",
+      "type": "condition",
+      "source": "e5",
+      "target": "e6",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "s-e3-s1",
+      "type": "spawn",
+      "source": "e3",
+      "target": "s1",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "se-e4",
+      "type": "exclude",
+      "source": "e4",
+      "target": "e4",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "e-e1-e1",
+      "type": "exclude",
+      "source": "e1",
+      "target": "e1",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "r-e2-e1",
+      "type": "response",
+      "source": "e2",
+      "target": "e1",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "i-e2-e1",
+      "type": "include",
+      "source": "e2",
+      "target": "e1",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    },
+    {
+      "id": "c-e4-e1",
+      "type": "condition",
+      "source": "e4",
+      "target": "e1",
+      "data": {
+        "guard": ""
+      },
+      "zIndex": 20000,
+      "selected": false
+    }
+  ],
+  "security": "Public flows CO\nPublic flows P",
+  "roles": [
+    {
+      "role": "CO",
+      "label": "CO",
+      "types": [
+        {
+          "var": "cid",
+          "type": "Integer"
+        }
+      ]
+    },
+    {
+      "role": "P",
+      "label": "P",
+      "types": [
+        {
+          "var": "id",
+          "type": "Integer"
+        },
+        {
+          "var": "cid",
+          "type": "Integer"
+        }
+      ]
+    },
+    {
+      "role": "Public",
+      "label": "Public",
+      "types": []
+    }
+  ],
+  "code": "CO(cid:Integer)\nP(id:Integer; cid:Integer)\nPublic\n;\nPublic flows CO\nPublic flows P\n;\n(acc:acc) (Public) [?] [CO(cid=1)]\n(rq_f:request_fcast) (Public) [?] [CO(#cid as X) -> P(id=*; cid=X)]\n(c:consume) (Public) [?] [P(id=*; #cid as X) -> P(id=*; cid=X),  CO(cid=X)]\n;\nrq_f -->> {\n\t!(rp_f:reply_fcast) (Public) [?] [@Receiver(rq_f) -> @Initiator(rq_f)]\n\t;\n\trp_f -->% rp_f\n\trp_f -->* acc\n}\nc -->> {\n\t(rep:reply) (Public) [?] [@Receiver(c) -> @Initiator(c)]\n\t(dec:decision) (Public) [?] [@Initiator(c) -> @Receiver(c)]\n\t;\n\trep -->% rep\n\tdec -->% dec\n\trep -->* dec\n}\nacc -->% acc\nrq_f *--> acc\nrq_f -->+ acc",
+  "nextNodeId": [
+    6
+  ],
+  "nextGroupId": [
+    0
+  ],
+  "nextSubprocessId": [
+    2
+  ]
+}

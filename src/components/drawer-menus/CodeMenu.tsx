@@ -4,18 +4,21 @@ import { shallow } from "zustand/shallow";
 
 import Editor, { useMonaco } from "@monaco-editor/react";
 import * as monacoEditor from "monaco-editor";
-import { delay } from "@/lib/utils";
 import { getLayoutedElements } from "@/lib/elk";
 
 import { visualGen } from "@/lib/visualgen-code";
-import { processChoregraphyModel } from "@/lib/visualgen-json";
-import { ChoreographyModel, CompileError } from "@/lib/types";
-import { useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/lib/reusable-comps";
+import { ChoreographyModel, CompileError } from "@/lib/types";
+import { processChoregraphyModel } from "@/lib/visualgen-json";
+import { delay } from "@/lib/utils";
 
 const selector = (state: RFState) => ({
+  nodes: state.nodes,
+  edges: state.edges,
   setNodes: state.setNodes,
   setEdges: state.setEdges,
+  addEdge: state.addEdge,
   roles: state.roles,
   security: state.security,
   code: state.code,
@@ -29,6 +32,7 @@ const selector = (state: RFState) => ({
   setDrawerWidth: state.setDrawerWidth,
   log: state.log,
   setIds: state.setIds,
+  drawerSelectedCode: state.drawerSelectedCode,
 });
 
 const DELAYS = {
@@ -50,7 +54,7 @@ const EDITOR_CONFIG_OPTIONS = {
   scrollBeyondLastLine: false,
 } as const;
 
-const BUTTON_ACTIONS = [
+/*const BUTTON_ACTIONS = [
   {
     label: "Generate Code",
     action: "generateCode",
@@ -63,7 +67,7 @@ const BUTTON_ACTIONS = [
     label: "Generate Graph",
     action: "generateGraph",
   },
-] as const;
+] as const;*/
 
 /**
  * `CodeMenu` is a React functional component that provides a code editor interface
@@ -86,8 +90,11 @@ const BUTTON_ACTIONS = [
  */
 export default function CodeMenu() {
   const {
+    nodes,
+    edges,
     setNodes,
     setEdges,
+    addEdge,
     roles,
     security,
     code,
@@ -101,10 +108,145 @@ export default function CodeMenu() {
     setDrawerWidth,
     log,
     setIds,
+    drawerSelectedCode,
   } = useStore(selector, shallow);
 
   const editorRef = useRef<monacoEditor.editor.IStandaloneCodeEditor>(null);
   const monaco = useMonaco();
+
+  const [isManualEdit, setIsManualEdit] = useState(false);
+
+  const relevantNodeData = useMemo(
+    () =>
+      nodes.map(({ id, data, parentId, type }) => ({
+        id,
+        data,
+        parentId,
+        type,
+      })),
+    [nodes]
+  );
+
+  useEffect(() => {
+    if (isManualEdit || !drawerSelectedCode) return;
+
+    const newCode = writeCode(nodes, edges, roles, security);
+    setCode(newCode);
+  }, [isManualEdit, relevantNodeData, edges, roles, security]);
+
+  const handleCodeEdit = async (newCode: string) => {
+    if (!newCode || !drawerSelectedCode) return;
+
+    setCode(newCode);
+
+    const {
+      roles: newRoles,
+      security: newSecurity,
+      nodes: newNodes,
+      edges: newEdges,
+      nodeId,
+      subId,
+    } = visualGen(newCode);
+
+    let rolesTreated = roles.map((r) => ({
+      label: r.label.trim(),
+      treated: false,
+    }));
+
+    newRoles.forEach((r) => {
+      const roleToChange = roles.find((rl) => rl.label === r.label);
+      if (roleToChange) {
+        rolesTreated = rolesTreated.map((role) =>
+          role.label === r.label ? { ...role, treated: true } : role
+        );
+
+        setRoles((prev) => prev.map((rl) => (rl.label === r.label ? r : rl)));
+      } else setRoles((prev) => [...prev, r]);
+    });
+
+    rolesTreated
+      .filter((r) => !r.treated)
+      .forEach((r) =>
+        setRoles((prev) => prev.filter((rl) => rl.label !== r.label))
+      );
+
+    if (newSecurity !== security) setSecurity(newSecurity);
+
+    const layoutedNodesEdges = await getLayoutedElements(newNodes, newEdges);
+    setNodes(layoutedNodesEdges.nodes);
+
+    /* const allNodes = nodes.filter(
+        (nd) => nd.parentId === n.parentId && nd.data.label === n.data.label
+      );
+
+      if (allNodes.length === 0) {
+        setNodes((prev) => [...prev, n]);
+        nodesTreated.push({ id: n.id, treated: true });
+      } else if (allNodes.length > 1) continue;
+      else {
+        const nodeToChange = allNodes[0];
+
+        nodesTreated = nodesTreated.map((node) =>
+          node.id === nodeToChange.id ? { ...node, treated: true } : node
+        );
+        setNodes((prev) =>
+          prev.map((nd) =>
+            nd.id === nodeToChange.id
+              ? {
+                  ...nodeToChange,
+                  width: nd.width,
+                  height: nd.height,
+                  parentId: nd.parentId,
+                  position: nd.position,
+                }
+              : nd
+          )
+        );
+      } 
+    }
+      
+    nodesTreated
+      .filter((n) => !n.treated)
+      .forEach((n) => setNodes((prev) => prev.filter((nd) => nd.id !== n.id)));
+    */
+
+    let edgesTreated = edges.map((e) => ({
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      type: e.type,
+      treated: false,
+    }));
+
+    newEdges.forEach((e) => {
+      console.log("Checking edge", e.source, e.target, e.type);
+      const edgeToChange = edges.find(
+        (ed) =>
+          ed.source === e.source && ed.target === e.target && ed.type === e.type
+      );
+
+      if (edgeToChange) {
+        edgesTreated = edgesTreated.map((edge) =>
+          edge.id === edgeToChange.id ? { ...edge, treated: true } : edge
+        );
+        setEdges((prev) =>
+          prev.map((ed) =>
+            ed.id === edgeToChange.id ? { ...e, id: ed.id } : ed
+          )
+        );
+      } else addEdge(e);
+    });
+
+    edgesTreated
+      .filter((e) => !e.treated)
+      .forEach((e) => setEdges((prev) => prev.filter((ed) => ed.id !== e.id)));
+
+    setIds({
+      nextNodeId: [nodeId],
+      nextGroupId: [0],
+      nextSubprocessId: [subId],
+    });
+  };
 
   const clearErrors = () => {
     const model = editorRef.current?.getModel();
@@ -164,7 +306,7 @@ export default function CodeMenu() {
     }
   };
 
-  const generateGraph = async () => {
+  /*const generateGraph = async () => {
     if (!code) return;
 
     const {
@@ -187,7 +329,7 @@ export default function CodeMenu() {
     setEdges(layoutedEdges);
     setIds([nodeId], [0], [subId]);
     log("Graph generated.");
-  };
+  };*/
 
   const compileCode = async () => {
     if (!code) return;
@@ -206,23 +348,34 @@ export default function CodeMenu() {
       await delay(DELAYS.FETCH_PROJECTIONS);
 
       // Fetch projections
-      /* const response = await fetch("/api/projections");
-      const projections: ChoreographyModel[] | CompileError[] =
-        await response.json(); */
+      //const response = await fetch("/api/projections");
+      //const projections: ChoreographyModel[] | CompileError[] =
+      //  await response.json();
 
-      const response = await fetch("/api/retrieve-file", {
+      let response = await fetch("/api/retrieve-file", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dir: "_out", name: "choreo.json" }),
       });
+
+      if (!response.ok) {
+        response = await fetch("/api/retrieve-file", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ dir: "_out", name: "compile_error.json" }),
+        });
+      }
+
       const projections = (await response.json()) as
         | ChoreographyModel[]
-        | CompileError[];
+        | CompileError;
 
       // Process each projection
-      for (const [index, proj] of projections.entries()) {
-        if ("compileError" in proj) treatErrors(proj);
-        else await processProjection(proj, index);
+      if ("compileError" in projections)
+        treatErrors(projections as CompileError);
+      else {
+        for (const [index, proj] of projections.entries())
+          await processProjection(proj, index);
       }
     } catch (error) {
       console.error("Compilation failed:", error);
@@ -230,7 +383,7 @@ export default function CodeMenu() {
     }
   };
 
-  const generateCode = async () => {
+  /*const generateCode = async () => {
     const { nodes: newNodes, edges: newEdges } = await clearProjections(false);
     await delay(DELAYS.CLEAR_PROJECTIONS);
 
@@ -249,7 +402,7 @@ export default function CodeMenu() {
 
     const actionHandler = actions[action as keyof typeof actions];
     if (actionHandler) actionHandler();
-  };
+  };*/
 
   return (
     <div
@@ -260,12 +413,32 @@ export default function CodeMenu() {
         className={`w-full h-full`}
         value={code}
         options={EDITOR_CONFIG_OPTIONS}
-        onChange={(newCode) => setCode(newCode || "")}
-        onMount={(editor: monacoEditor.editor.IStandaloneCodeEditor) =>
-          (editorRef.current = editor)
-        }
+        onChange={(newCode) => handleCodeEdit(newCode || "")}
+        onMount={(editor: monacoEditor.editor.IStandaloneCodeEditor) => {
+          editorRef.current = editor;
+
+          if (drawerSelectedCode) {
+            editor.onDidFocusEditorText(() => {
+              setIsManualEdit(true);
+            });
+
+            editor.onDidBlurEditorText(() => {
+              setIsManualEdit(false);
+            });
+          }
+        }}
       />
 
+      <div className="flex gap-2 w-full">
+        <Button
+          className="w-full"
+          key={"compile"}
+          onClick={() => compileCode()}
+        >
+          Compile
+        </Button>
+      </div>
+      {/*
       <div className="flex gap-2 w-full">
         {BUTTON_ACTIONS.map(({ label, action }) => (
           <Button
@@ -276,7 +449,7 @@ export default function CodeMenu() {
             {label}
           </Button>
         ))}
-      </div>
+      </div>*/}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { isNode } from "@xyflow/react";
+import { isEdge, isNode } from "@xyflow/react";
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
 import { ChevronRight, Code, Logs, Pencil } from "lucide-react";
@@ -9,6 +9,7 @@ import SubgraphMenu from "./drawer-menus/SubgraphMenu";
 import EdgeMenu from "./drawer-menus/EdgeMenu";
 import LogsMenu from "./drawer-menus/LogsMenu";
 import CodeMenu from "./drawer-menus/CodeMenu";
+import NodesMenu from "./drawer-menus/NodesMenu";
 
 const selector = (state: RFState) => ({
   selectedElement: state.selectedElement,
@@ -124,9 +125,15 @@ export default function Drawer() {
       ) : (
         <SubgraphMenu key={selectedElement.id} nest={selectedElement} />
       );
-    }
-
-    return <EdgeMenu key={selectedElement.id} edge={selectedElement} />;
+    } else if (isEdge(selectedElement))
+      return <EdgeMenu key={selectedElement.id} edge={selectedElement} />;
+    /* else
+      return (
+        <NodesMenu
+          key={selectedElement[0].id}
+          selectedNodes={selectedElement}
+        />
+      ); */
   };
 
   return (

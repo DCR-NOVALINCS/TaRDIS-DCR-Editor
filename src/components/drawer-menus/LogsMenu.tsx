@@ -63,7 +63,9 @@ export default function LogsMenu() {
             <LogItem
               key={`${log.time}-${index}`}
               log={log}
-              onRemove={() => setLogs(logs.filter((_, i) => i !== index))}
+              onRemove={() =>
+                setLogs((prev) => prev.filter((_, i) => i !== index))
+              }
             />
           ))
         ) : (

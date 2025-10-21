@@ -7,12 +7,13 @@ import {
   type OnNodesDelete,
   type XYPosition,
   applyNodeChanges,
+  isEdge,
   isNode,
 } from "@xyflow/react";
 import { StateCreator } from "zustand/vanilla";
 import { RFState } from "@/stores/store";
 import { delay } from "@/lib/utils";
-import { state, type EventType } from "@/lib/types";
+import { Setter, state, type EventType } from "@/lib/types";
 
 // Type definitions
 type NodeType = "event" | "nest" | "subprocess";
@@ -96,15 +97,14 @@ export type NodesState = {
   subgraphType: string;
 
   // Node operations
-  addNode(node: Node): string;
-  updateNode(id: string, updatedNode: Node): string;
-  updateNodeInfo(id: string, event: EventType): void;
-  setNodes(newNodes: Node[]): void;
+  addNode(...nodes: Node[]): void;
+  updateNode(id: string, updatedNode: Node | EventType): string;
+  setNodes: Setter<Node[]>;
   getNode(id: string): Node | undefined;
   getFamily(id: string): string[];
 
   // ID management
-  setIds(nodeId: number[], groupId: number[], subprocessId: number[]): void;
+  setIds: Setter<IdCounters>;
 
   // Type setters
   setEventType(type: string): void;
@@ -151,9 +151,9 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
     newId: string
   ): Promise<void> => {
     await delay(10);
-    set({
-      edges: get()
-        .edges.filter((edge) => (edge.data?.parent as string) !== id)
+    get().setEdges((prev) =>
+      prev
+        .filter((edge) => (edge.data?.parent as string) !== id)
         .map((edge) => {
           if (edge.source === id) return { ...edge, source: newId };
           else if (edge.target === id) {
@@ -161,8 +161,8 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
           }
 
           return edge;
-        }),
-    });
+        })
+    );
     get().saveState();
   };
 
@@ -174,11 +174,12 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
     const nextNestId = parseInt(currentNode.id.substring(1));
     const nexts = get().nextSubprocessId.slice(1);
 
-    set({
-      nextGroupId: [nextNestId, ...get().nextGroupId],
+    get().setIds((prev) => ({
+      nextNodeId: prev.nextNodeId,
+      nextGroupId: [nextNestId, ...prev.nextGroupId],
       nextSubprocessId:
-        nexts.length === 0 ? [get().nextSubprocessId[0] + 1] : nexts,
-    });
+        nexts.length === 0 ? [prev.nextSubprocessId[0] + 1] : nexts,
+    }));
 
     const { nestType, ...restOfData } = updatedNode.data;
     return {
@@ -199,10 +200,11 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
     const nextSubprocessId = parseInt(currentNode.id.substring(1));
     const nexts = get().nextGroupId.slice(1);
 
-    set({
-      nextGroupId: nexts.length === 0 ? [get().nextGroupId[0] + 1] : nexts,
-      nextSubprocessId: [nextSubprocessId, ...get().nextSubprocessId],
-    });
+    get().setIds((prev) => ({
+      nextNodeId: prev.nextNodeId,
+      nextGroupId: nexts.length === 0 ? [prev.nextGroupId[0] + 1] : nexts,
+      nextSubprocessId: [nextSubprocessId, ...prev.nextSubprocessId],
+    }));
 
     return {
       ...updatedNode,
@@ -216,6 +218,7 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
   };
 
   const handleParentChange = (updatedNode: Node): Node => {
+    console.log("Handling parent change for node:", updatedNode);
     if (!updatedNode.parentId) return updatedNode;
 
     const parentNode = get().getNode(updatedNode.parentId);
@@ -244,9 +247,9 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
 
     let childrenChanges: NodeChange[] = [];
 
-    changes.forEach((change) => {
+    for (const change of changes) {
       const node = get().getNode(change.id);
-      if (!node) return;
+      if (!node) continue;
 
       if (node.type === "nest" || node.type === "subprocess") {
         // Update children positions
@@ -266,53 +269,44 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
 
       // Update connected edges
       updateConnectedEdges(change.id);
-    });
+    }
 
     get().saveState();
     if (childrenChanges.length > 0) get().onNodesChange(childrenChanges);
   };
 
   const updateConnectedEdges = async (nodeId: string): Promise<void> => {
-    let edgesToUpdate: Edge[] = [];
-
-    get().edges.forEach((edge) => {
-      if (edge.source === nodeId || edge.target === nodeId) {
-        const removedEdge = get().deleteEdge(edge.id);
-        if (removedEdge) edgesToUpdate.push(removedEdge);
-      }
-    });
+    const edgesToUpdate = get().deleteEdge(
+      ...get()
+        .edges.filter(
+          (edge) => edge.source === nodeId || edge.target === nodeId
+        )
+        .map((edge) => edge.id)
+    );
 
     await delay(10);
 
-    set({
-      edges: [...get().edges, ...edgesToUpdate],
-    });
+    get().setEdges((prev) => [...prev, ...edgesToUpdate]);
   };
 
   const returnDeletedIds = (deletedNodes: Node[]): void => {
-    const nodeIds = deletedNodes
-      .filter((node) => node.type === "event")
-      .map((node) => parseInt(node.id.slice(1)))
-      .concat(get().nextNodeId)
-      .sort((a, b) => a - b);
-
-    const groupIds = deletedNodes
-      .filter((node) => node.type === "nest")
-      .map((node) => parseInt(node.id.slice(1)))
-      .concat(get().nextGroupId)
-      .sort((a, b) => a - b);
-
-    const subprocessIds = deletedNodes
-      .filter((node) => node.type === "subprocess")
-      .map((node) => parseInt(node.id.slice(1)))
-      .concat(get().nextSubprocessId)
-      .sort((a, b) => a - b);
-
-    set({
-      nextNodeId: nodeIds,
-      nextGroupId: groupIds,
-      nextSubprocessId: subprocessIds,
-    });
+    get().setIds((prev) => ({
+      nextNodeId: deletedNodes
+        .filter((node) => node.type === "event")
+        .map((node) => parseInt(node.id.slice(1)))
+        .concat(prev.nextNodeId)
+        .sort((a, b) => a - b),
+      nextGroupId: deletedNodes
+        .filter((node) => node.type === "nest")
+        .map((node) => parseInt(node.id.slice(1)))
+        .concat(prev.nextGroupId)
+        .sort((a, b) => a - b),
+      nextSubprocessId: deletedNodes
+        .filter((node) => node.type === "subprocess")
+        .map((node) => parseInt(node.id.slice(1)))
+        .concat(prev.nextSubprocessId)
+        .sort((a, b) => a - b),
+    }));
   };
 
   const handleCtrlDoubleClick = (node: Node): void => {
@@ -384,13 +378,13 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
 
   const updateParenting = async (updatedNode: Node): Promise<void> => {
     // Remove the node temporarily
-    get().setNodes(get().nodes.filter((node) => node.id !== updatedNode.id));
+    get().setNodes((prev) => prev.filter((node) => node.id !== updatedNode.id));
     await delay(10);
 
     if (updatedNode.type === "event") {
       // For events, just add back if not present
       if (!get().nodes.some((node) => node.id === updatedNode.id))
-        get().setNodes([...get().nodes, updatedNode]);
+        get().setNodes((prev) => [...prev, updatedNode]);
 
       return;
     }
@@ -402,8 +396,8 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
     const childrenIds = children.map((node) => node.id);
 
     // Update node order: parent first, then children
-    get().setNodes([
-      ...get().nodes.filter((node) => !childrenIds.includes(node.id)),
+    get().setNodes((prev) => [
+      ...prev.filter((node) => !childrenIds.includes(node.id)),
       updatedNode,
       ...children,
     ]);
@@ -431,125 +425,129 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
     subgraphType: "",
 
     // Node operations
-    addNode(node: Node): string {
-      const counters = {
+    addNode(...nodes: Node[]) {
+      const counters: IdCounters = {
         nextNodeId: get().nextNodeId,
         nextGroupId: get().nextGroupId,
         nextSubprocessId: get().nextSubprocessId,
       };
 
-      const { id, updatedCounters } = createNodeId(
-        node.type as NodeType,
-        counters
+      const nodesToAdd: Node[] = [];
+      for (const node of nodes) {
+        const { id, updatedCounters } = createNodeId(
+          node.type as NodeType,
+          counters
+        );
+
+        set(updatedCounters);
+
+        let nodeToAdd: Node;
+        if (node.type === "event") {
+          nodeToAdd = createEventNode(node, id);
+          const eventType = node.data.type === "i" ? "Input" : "Computation";
+          get().log(`${eventType} event added: ${id}.`);
+        } else {
+          nodeToAdd = createSubgraphNode(node, id);
+          const capitalizedType =
+            (node.type as string).charAt(0).toUpperCase() +
+            (node.type as string).slice(1);
+          get().log(`${capitalizedType} added: ${id}.`);
+        }
+
+        nodesToAdd.push(nodeToAdd);
+      }
+
+      get().setNodes((prev) => [
+        ...prev.map((nd) => ({ ...nd, selected: false })),
+        ...nodesToAdd,
+      ]);
+      get().setSelectedElement(
+        nodesToAdd.length === 1 ? nodesToAdd[0] : undefined
       );
+    },
 
-      // Update counters
-      set(updatedCounters);
+    updateNode(id: string, updatedNode: Node | EventType): string {
+      let finalNode = updatedNode;
+      if ("data" in updatedNode) {
+        const currentNode = get().getNode(id);
+        if (!currentNode) return id;
 
-      // Create the appropriate node type
-      let nodeToAdd: Node;
-      if (node.type === "event") {
-        nodeToAdd = createEventNode(node, id);
-        const eventType = node.data.type === "i" ? "Input" : "Computation";
-        get().log(`${eventType} event added: ${id}.`);
-      } else {
-        nodeToAdd = createSubgraphNode(node, id);
+        let nodeToUpdate = updatedNode;
+        let typeChanged = false;
+
+        // Handle node type conversions
+        if (currentNode.type !== updatedNode.type) {
+          nodeToUpdate = handleNodeTypeConversion(currentNode, updatedNode);
+          typeChanged = true;
+        }
+
+        // Handle parent changes
+        if (
+          updatedNode.parentId &&
+          updatedNode.parentId !== currentNode.parentId
+        )
+          nodeToUpdate = handleParentChange(nodeToUpdate);
+
+        // Update the node in state
+        get().setNodes((prev) =>
+          prev.map((node) => (node.id === id ? nodeToUpdate : node))
+        );
+        get().setSelectedElement(nodeToUpdate);
+
         const capitalizedType =
-          (node.type as string).charAt(0).toUpperCase() +
-          (node.type as string).slice(1);
-        get().log(`${capitalizedType} added: ${id}.`);
+          (nodeToUpdate.type as string).charAt(0).toUpperCase() +
+          (nodeToUpdate.type as string).slice(1);
+        get().log(`${capitalizedType} ${id} updated.`);
+
+        updateParenting(nodeToUpdate);
+
+        if (typeChanged) updateEdgesForNodeTypeChange(id, nodeToUpdate.id);
+        finalNode = nodeToUpdate;
+      } else {
+        get().setNodes((prev) =>
+          prev.map((node) => {
+            if (node.id !== id) return node;
+
+            const {
+              label,
+              name,
+              security,
+              initiators,
+              marking,
+              receivers,
+              input,
+              expression,
+              parent,
+            } = updatedNode;
+
+            finalNode = {
+              ...node,
+              data: {
+                ...node.data,
+                ...(label && { label }),
+                ...(name && { name }),
+                ...(security && { security }),
+                ...(initiators.length > 0 && { initiators }),
+                ...(marking && { marking }),
+                ...(receivers && { receivers }),
+                ...(input && { input }),
+                ...(expression && { expression }),
+              },
+              ...(parent && { parentId: parent }),
+            };
+
+            return finalNode;
+          })
+        );
       }
 
-      // Update state
-      set({
-        nodes: [
-          ...get().nodes.map((nd) => ({ ...nd, selected: false })),
-          nodeToAdd,
-        ],
-        selectedElement: nodeToAdd,
-      });
-
-      get().saveState();
-      return id;
+      return finalNode.id;
     },
 
-    updateNode(id: string, updatedNode: Node): string {
-      const currentNode = get().getNode(id);
-      if (!currentNode) return id;
-
-      let nodeToUpdate = updatedNode;
-      let typeChanged = false;
-
-      // Handle node type conversions
-      if (currentNode.type !== updatedNode.type) {
-        nodeToUpdate = handleNodeTypeConversion(currentNode, updatedNode);
-        typeChanged = true;
-      }
-
-      // Handle parent changes
-      if (updatedNode.parentId && updatedNode.parentId !== currentNode.parentId)
-        nodeToUpdate = handleParentChange(nodeToUpdate);
-
-      // Update the node in state
-      set({
-        nodes: get().nodes.map((node) =>
-          node.id === id ? nodeToUpdate : node
-        ),
-        selectedElement: nodeToUpdate,
-      });
-
-      const capitalizedType =
-        (nodeToUpdate.type as string).charAt(0).toUpperCase() +
-        (nodeToUpdate.type as string).slice(1);
-      get().log(`${capitalizedType} ${id} updated.`);
-
-      updateParenting(nodeToUpdate);
-
-      if (typeChanged) updateEdgesForNodeTypeChange(id, nodeToUpdate.id);
-      else get().saveState();
-
-      return nodeToUpdate.id;
-    },
-
-    updateNodeInfo(id: string, event: EventType): void {
-      set({
-        nodes: get().nodes.map((node) => {
-          if (node.id !== id) return node;
-
-          const {
-            label,
-            name,
-            security,
-            initiators,
-            marking,
-            receivers,
-            input,
-            expression,
-            parent,
-          } = event;
-
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              ...(label && { label }),
-              ...(name && { name }),
-              ...(security && { security }),
-              ...(initiators.length > 0 && { initiators }),
-              ...(marking && { marking }),
-              ...(receivers && { receivers }),
-              ...(input && { input }),
-              ...(expression && { expression }),
-            },
-            ...(parent && { parentId: parent }),
-          };
-        }),
-      });
-      get().saveState();
-    },
-
-    setNodes(newNodes: Node[]): void {
-      set({ nodes: newNodes });
+    setNodes: (updater) => {
+      set((state) => ({
+        nodes: typeof updater === "function" ? updater(state.nodes) : updater,
+      }));
       get().saveState();
     },
 
@@ -575,11 +573,22 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
     },
 
     // ID management
-    setIds(nodeId: number[], groupId: number[], subprocessId: number[]): void {
-      set({
-        nextNodeId: nodeId,
-        nextGroupId: groupId,
-        nextSubprocessId: subprocessId,
+    setIds: (updater) => {
+      set((state) => {
+        if (typeof updater === "function") {
+          const counters = updater(state);
+          return {
+            nextNodeId: counters.nextNodeId,
+            nextGroupId: counters.nextGroupId,
+            nextSubprocessId: counters.nextSubprocessId,
+          };
+        }
+
+        return {
+          nextNodeId: updater.nextNodeId,
+          nextGroupId: updater.nextGroupId,
+          nextSubprocessId: updater.nextSubprocessId,
+        };
       });
 
       get().saveState();
@@ -611,7 +620,6 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
 
       if (projection) {
         get().setCurrentProjection(projectionKey);
-        console.log(projectionKey);
         get().setNodes(projection.nodes);
         get().setEdges(projection.edges);
       }
@@ -619,9 +627,7 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
 
     // Event handlers
     onNodesChange(changes: NodeChange[]): void {
-      set({
-        nodes: applyNodeChanges(changes, get().nodes),
-      });
+      get().setNodes((prev) => applyNodeChanges(changes, prev));
 
       // Handle position changes and update children/edges
       handlePositionChanges(changes.filter((ch) => ch.type === "position"));
@@ -639,29 +645,60 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
 
       get().log(`Deleted nodes: ${deletedIds.join(", ")}.`);
 
-      // Clean up documentation
-      deletedNodes.forEach((node) => get().removeDocumentation(node.id));
-
       // Remove nodes and connected edges
-      set({
-        nodes: get().nodes.filter((node) => !deletedIds.includes(node.id)),
-        edges: get().edges.filter(
-          (edge) =>
+      get().setNodes((prev) =>
+        prev.filter((node) => {
+          if (deletedIds.includes(node.id)) {
+            get().removeDocumentation(node.id);
+            return false;
+          }
+          return true;
+        })
+      );
+      get().setEdges((prev) =>
+        prev.filter((edge) => {
+          if (
             !deletedIds.includes(edge.source) &&
             !deletedIds.includes(edge.target)
-        ),
-        selectedElement: undefined,
+          ) {
+            deletedIds.push(edge.id);
+            get().removeDocumentation(edge.id);
+            return true;
+          }
+          return false;
+        })
+      );
+      get().setSelectedElement((prev) => {
+        if (prev) {
+          if (isNode(prev) || isEdge(prev)) {
+            if (deletedIds.includes(prev.id)) return undefined;
+          } else if (prev.some((el) => deletedIds.includes(el.id)))
+            return undefined;
+        }
+        return prev;
       });
 
       // Return IDs to available pools
       returnDeletedIds(deletedNodes);
-      get().saveState();
     },
 
     onNodeClick(event: any, node: Node): void {
       event.preventDefault();
       console.log("Node clicked:", node);
-      get().setSelectedElement(node);
+
+      get().setSelectedElement((prev) => {
+        if (event.ctrlKey) {
+          if (isNode(prev))
+            if (prev.id !== node.id) return [prev, node];
+            else if (
+              Array.isArray(prev) &&
+              !prev.some((el) => el.id === node.id)
+            )
+              return [...prev, node];
+        }
+
+        return node;
+      });
     },
 
     onNodeDoubleClick(event: any, node: Node): void {

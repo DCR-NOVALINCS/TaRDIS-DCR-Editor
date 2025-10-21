@@ -416,7 +416,7 @@ export interface ChoregraphyInfo {
   roles: { role: string; label: string }[];
 }
 
-export type Element = Node | Edge | undefined;
+export type Element = Node | Edge | Node[] | undefined;
 
 export type ProjectionInfo = {
   nodes: Node[];
