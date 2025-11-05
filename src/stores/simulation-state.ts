@@ -149,6 +149,12 @@ const simulationStateSlice: StateCreator<RFState, [], [], SimulationState> = (
 
     if (!simulationMarking || !simulationMarking.executable) return;
 
+    nodeProperties.set(nodeId, {
+      ...simulationMarking,
+      executed: true,
+      pending: simulationMarking.pending ? false : simulationMarking.pending,
+    });
+
     const fromEdges = edges.filter((e) => e.source === nodeId);
     const includes: string[] = [],
       excludes: string[] = [],
@@ -211,7 +217,7 @@ const simulationStateSlice: StateCreator<RFState, [], [], SimulationState> = (
         milestones,
         executable:
           conditions.length === 0 && milestones.length === 0 && included,
-        executed: target === nodeId,
+        executed: targetMarking ? targetMarking.executed : target === nodeId,
         ...(spawned !== undefined && { spawned }),
       });
     }

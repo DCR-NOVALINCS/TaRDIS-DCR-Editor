@@ -76,13 +76,13 @@ function SimulationFlowWithoutProvider() {
     >
       <Controls showInteractive={false} />
       <Background variant={BackgroundVariant.Dots} />
-      <Panel position="top-left" style={{ width: "193px" }}>
+      <Panel position="top-left" style={{ width: "143px" }}>
         <Button
-          className="flex items-center justify-center gap-2 w-full"
+          className="flex items-center text-sm justify-center gap-2 w-full"
           onClick={onClickSimulationToggle}
         >
           Stop Simulation
-          <Pickaxe size={20} />
+          <Pickaxe size={18} />
         </Button>
       </Panel>
     </ReactFlow>

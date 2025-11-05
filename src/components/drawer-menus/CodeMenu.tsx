@@ -70,23 +70,79 @@ const EDITOR_CONFIG_OPTIONS = {
 ] as const;*/
 
 /**
- * `CodeMenu` is a React functional component that provides a code editor interface
- * for viewing, editing, generating, and downloading code within the application.
+ * React component that renders a `Monaco` editor bound to the application store and
+ * exposes code ↔ graph synchronization, compilation, and projection handling.
  *
- * Features:
- * - Displays a code editor (Monaco Editor) with Python-like syntax highlighting.
- * - Allows users to generate code based on the current application state (nodes, edges, roles, security).
- * - Enables users to download the current code as a `.txt` file.
- * - (Commented out) Option to save changes made in the editor back to the application's visual state.
+ * Main responsibilities:
+ * - Display and edit the choreography source code stored in the global store.
+ * - Keep generated code in sync with the visual graph (nodes/edges/roles/security)
+ *   unless the user is performing a manual edit inside the editor.
+ * - Parse edited code (via {@link visualGen `visualGen`}) and reconcile resulting `roles`, `security`,
+ *   `nodes` and `edges` with the in-memory graph. Layout computation for graph
+ *   elements uses {@link getLayoutedElements `getLayoutedElements`} (ELK) before updating the store.
+ * - Send the current code to the backend compilation endpoint and retrieve
+ *   generated projections or compile errors, converting compile errors to `Monaco`
+ *   markers for inline editor diagnostics.
+ * - Convert each returned choreography projection into a layouted graph and
+ *   store per-role projection info via {@link setProjectionInfo `setProjectionInfo`}.
+ * - Manage editor-level interactions such as marking manual edit state when the
+ *   editor is focused/blurred, and clearing/setting diagnostics via `Monaco` APIs.
  *
- * State Management:
- * - Utilizes a custom store via `useStore` to access and update code, event maps, and related data.
+ * Behavior and side-effects:
+ * - On graph changes, and when the editor is not in manual edit mode, the
+ *   component regenerates the code with {@link writeCode `writeCode(...)`} and writes it to the
+ *   store (using {@link setCode `setCode(...)`}).
+ * - {@link handleCodeEdit `handleCodeEdit(newCode)`}:
+ *   - Updates code in store.
+ *   - Calls {@link visualGen `visualGen(...)`} to obtain new roles, security metadata, nodes, edges,
+ *     and new id seeds.
+ *   - Reconciles roles (adds new, updates existing, removes old).
+ *   - Updates security if it has changed.
+ *   - Requests layouted positions for the new nodes/edges and replaces store
+ *     nodes/edges with the returned layouted graph.
+ *   - Reconciles existing edges with `newEdges` (update existing edges, add new,
+ *     remove obsolete).
+ *   - Updates id generators (next node, group, and subprocess ids).
+ * - {@link compileCode `compileCode()`}:
+ *   - POSTs the current code to `/api/code` to trigger compilation.
+ *   - Clears prior projections and polls for results by fetching files from
+ *     `/api/retrieve-file` (attempts `choreo.json` first, falls back to
+ *     `compile_error.json`).
+ *   - If a compile error object is returned, maps compile error stack traces
+ *     into `Monaco` markers (via {@link treatErrors `treatErrors`}).
+ *   - If projections are returned, processes each projection with
+ *     {@link processProjection `processProjection(...)`} which sets per-role projection info and logs
+ *     success messages.
+ * - {@link treatErrors `treatErrors(compileError)`}:
+ *   - Maps `compileError.compileError.stackTrace` entries to `Monaco` marker
+ *     objects. If an individual error lacks a location, it is represented as a
+ *     file-level error (position zeros).
+ * - {@link clearErrors `clearErrors()`}:
+ *   - Removes all Monaco markers for the current model.
+ * - {@link processProjection `processProjection(proj, index)`}:
+ *   - Clears diagnostics and switches the UI to the logs tab for the first
+ *     projection result, and logs typecheck/compile success. If the projection
+ *     contains events or relations, converts the projection to graph elements,
+ *     computes layout, stores projection info, and logs progress.
  *
- * UI:
- * - Responsive layout with labeled sections and styled buttons for user actions.
+ * Editor integration:
+ * - Uses Editor from `@monaco-editor/react` and stores a reference to the
+ *   `IStandaloneCodeEditor` in {@link editorRef `editorRef`} for direct model and marker manipulation.
+ * - Uses {@link useMonaco `useMonaco()`} to access the `Monaco` API for creating/clearing diagnostics.
+ * - While the editor is focused, {@link isManualEdit `isManualEdit`} is true and automatic code
+ *   regeneration from graph changes is suspended to avoid overwriting user edits.
+ *
+ * Performance / timing:
+ * - Some asynchronous operations use small delays to coordinate UI/async state
+ *   transitions.
+ *
+ * @see {@link DELAYS `DELAYS`} for delay constants used in async operations.
+ * @see {@link DRAWER_CONFIG `DRAWER_CONFIG`} for drawer UI configuration constants.
+ * @see {@link EDITOR_CONFIG_OPTIONS `EDITOR_CONFIG_OPTIONS`} for `Monaco` editor configuration.
+ * @see https://github.com/microsoft/monaco-editor for `Monaco` editor integration details.
  *
  * @component
- * @returns {JSX.Element} The rendered CodeMenu component.
+ * @returns JSX element with the rendered editor and compile button UI.
  */
 export default function CodeMenu() {
   const {
@@ -134,6 +190,12 @@ export default function CodeMenu() {
     setCode(newCode);
   }, [isManualEdit, relevantNodeData, edges, roles, security]);
 
+  /**
+   * Handles code editing events.
+   *
+   * @param newCode - The updated code string.
+   * @returns A promise that resolves when the code has been processed.
+   */
   const handleCodeEdit = async (newCode: string) => {
     if (!newCode || !drawerSelectedCode) return;
 
@@ -248,6 +310,9 @@ export default function CodeMenu() {
     });
   };
 
+  /**
+   * Clears all error markers from the editor.
+   */
   const clearErrors = () => {
     const model = editorRef.current?.getModel();
     if (!model || !monaco) return;
@@ -255,6 +320,11 @@ export default function CodeMenu() {
     monaco.editor.setModelMarkers(model, "owner", []);
   };
 
+  /**
+   * Treats compilation errors by displaying them in the editor.
+   *
+   * @param compileError - The compilation error object to process.
+   */
   const treatErrors = (compileError: CompileError) => {
     const model = editorRef.current?.getModel();
     if (!model || !monaco) return;
@@ -282,12 +352,21 @@ export default function CodeMenu() {
     monaco.editor.setModelMarkers(model, "owner", markers);
   };
 
+  /**
+   * Switches the drawer to the logs tab with appropriate width.
+   */
   const switchToLogsTab = () => {
     setDrawerSelectedCode(DRAWER_CONFIG.CODE_TAB);
     setDrawerSelectedLogs(DRAWER_CONFIG.LOGS_TAB);
     setDrawerWidth(DRAWER_CONFIG.WIDTH);
   };
 
+  /**
+   * Processes a choreography projection by updating the editor and state.
+   *
+   * @param proj - The choreography projection to process.
+   * @param index - The index of the projection in the list.
+   */
   const processProjection = async (proj: ChoreographyModel, index: number) => {
     if (index === 0) {
       clearErrors();
@@ -331,6 +410,11 @@ export default function CodeMenu() {
     log("Graph generated.");
   };*/
 
+  /**
+   * Compiles the code in the editor.
+   *
+   * @returns A promise that resolves when the compilation is complete.
+   */
   const compileCode = async () => {
     if (!code) return;
 

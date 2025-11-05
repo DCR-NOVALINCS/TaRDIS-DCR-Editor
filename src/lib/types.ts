@@ -139,8 +139,7 @@ export const reversedRelationsMap: { [rel: string]: string } = {
   "-->>": "spawn",
 };
 
-export const eventRegex =
-  /\(([^)]+)\)\s*\(([^)]+)\)\s*\[([^\]]+)\]\s*\[([^\]]+)\]/;
+export const eventRegex = /\((.*?)\)\s*\((.*?)\)\s*\[(.*?)\](?:\s*\[(.*?)\])?/;
 
 type EventRelation =
   | "condition"
@@ -438,9 +437,12 @@ export interface Parameter {
   type: string;
 }
 
-export interface SimpleRole {
+export interface SimplerRole {
   role: string;
   label: string;
+}
+
+export interface SimpleRole extends SimplerRole {
   types: Parameter[];
 }
 
@@ -456,3 +458,9 @@ export type State = {
 };
 
 export type Setter<T> = (value: T | ((prevState: T) => T)) => void;
+
+export interface RoleAdd {
+  role: string;
+  label: string;
+  types: FieldType[];
+}

@@ -19,18 +19,9 @@ const selector = (state: RFState) => ({
 });
 
 /**
- * EdgeMenu component provides a UI for editing the properties of an edge in a graph.
  *
- * @param {Edge} edge - The edge object to be edited, containing its id and data.
- *
- * Features:
- * - Displays the edge's identifier.
- * - Allows editing and saving of the edge's guard property.
- * - Displays and updates documentation associated with the edge.
- * - Uses a store for state management, including updating the edge and documentation.
- *
- * @remarks
- * This component assumes the presence of a global store (via `useStore`) for managing edges and their documentation.
+ * @param param0
+ * @returns
  */
 const EdgeMenu = ({ edge }: { edge: Edge }) => {
   const { updateEdge, documentation, addDocumentation, currentProjection } =

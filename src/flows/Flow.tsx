@@ -278,17 +278,17 @@ function FlowWithoutProvider() {
         position="top-left"
         style={{
           display: "flex",
-          width: currentProjection === "global" ? "600px" : "193px",
+          width: currentProjection === "global" ? "450px" : "150px",
           gap: 10,
           zIndex: 10,
         }}
       >
         <Button
-          className={`flex items-center justify-center gap-2 w-full`}
+          className={`flex items-center text-sm justify-center gap-2 w-full`}
           onClick={onClickSimulationToggle}
         >
           Start Simulation
-          <Pickaxe size={20} />
+          <Pickaxe size={18} />
         </Button>
         {currentProjection === "global" && (
           <>

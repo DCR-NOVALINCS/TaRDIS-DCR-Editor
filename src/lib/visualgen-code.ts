@@ -108,6 +108,7 @@ function genGraph(
   let nodes: Node[] = nds ? nds : [];
   for (const ev of result.part) {
     const match = eventRegex.exec(ev);
+    console.log("Matching event:", ev, match);
 
     if (match) {
       const eventInfo = match[1].replace(/\s/g, "") || "";

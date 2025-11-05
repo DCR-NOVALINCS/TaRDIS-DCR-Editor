@@ -2,7 +2,13 @@ import { useState } from "react";
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
 import { Workflow } from "lucide-react";
-import { FieldType, ProjectionInfo, simpleInputTypes } from "@/lib/types";
+import {
+  FieldType,
+  ProjectionInfo,
+  RoleAdd,
+  simpleInputTypes,
+  SimplerRole,
+} from "@/lib/types";
 import {
   Button,
   DrawerMenu,
@@ -32,6 +38,24 @@ const selector = (state: RFState) => ({
   clearProjections: state.clearProjections,
 });
 
+/**
+ * Renders and manages a small form that allows adding and removing parameters for a role.
+ *
+ * @param parameters - array of existing {@link FieldType `FieldType`} parameter objects to display.
+ * @param onAdd - callback invoked with a {@link FieldType `FieldType`} when the user adds a new parameter.
+ * @param onRemove - callback invoked with the index of the parameter to remove.
+ *
+ * @see {@link simpleInputTypes `simpleInputTypes`} for the list of allowed parameter types.
+ *
+ * @component
+ * @returns JSX element representing the parameter management UI.
+ *
+ * Behavior / Notes:
+ * - Maintains an internal controlled input state (`paramInput`) with shape `{ var: string; type: string }`.
+ * - Validates that the parameter `var` (name) is non-empty before calling `onAdd`.
+ * - Resets the internal input state to an empty name and the first available type after adding.
+ * - Renders a select for `type` using `simpleInputTypes` and a list of current parameters with remove buttons.
+ */
 const ParameterManager = ({
   parameters,
   onAdd,
@@ -46,6 +70,9 @@ const ParameterManager = ({
     type: simpleInputTypes[0],
   });
 
+  /**
+   * Handles the addition of a new parameter by validating input and invoking the {@link onAdd `onAdd`} callback.
+   */
   const handleAddParameter = () => {
     if (paramInput.var) {
       onAdd(paramInput);
@@ -104,23 +131,38 @@ const ParameterManager = ({
   );
 };
 
+/**
+ * UI for adding and removing roles. Supports specifying a role name, its label and arbitrary typed parameters.
+ *
+ * @param roles - current roles in the system (used to build the "remove" dropdown and to present a "-" option).
+ * @param addRole - callback invoked to add a role. Receives an object of type {@link RoleAdd `RoleAdd`}.
+ * @param removeRole - callback invoked to remove a role by its role name.
+ *
+ * @see {@link SimplerRole `SimplerRole`} for the role type used in the `roles` parameter.
+ *
+ * @component
+ * @returns JSX element representing the role management menu.
+ *
+ * Behavior / Notes:
+ * - Uses internal state `roleData` of type {@link RoleAdd `RoleAdd`} to accumulate the input for a new role.
+ * - `updateRoleName` auto-upcases the first character for the `label` when the role `name` is changed.
+ * - `handleAddRole` validates that both `name` and `label` exist and then calls `addRole`, resetting local state.
+ * - `handleRemoveRole` removes the role selected from a dropdown; the dropdown includes a sentinel "-" option.
+ * - Parameter editing for a role uses the {@link ParameterManager `ParameterManager`} component. Parameters are held locally until `Add Role` button is pressed.
+ */
 const RoleMenu = ({
   roles,
   addRole,
   removeRole,
 }: {
-  roles: { role: string; label: string }[];
-  addRole: (role: { role: string; label: string; types: FieldType[] }) => void;
+  roles: SimplerRole[];
+  addRole: (role: RoleAdd) => void;
   removeRole: (roleName: string) => void;
 }) => {
-  const [roleData, setRoleData] = useState<{
-    name: string;
-    label: string;
-    parameters: FieldType[];
-  }>({
-    name: "",
+  const [roleData, setRoleData] = useState<RoleAdd>({
+    role: "",
     label: "",
-    parameters: [],
+    types: [],
   });
 
   const roleOptions = [{ role: "-", label: "-" }, ...roles];
@@ -129,25 +171,36 @@ const RoleMenu = ({
     roleOptions[0].role
   );
 
-  const updateRoleName = (name: string) => {
+  /**
+   * Updates the role name in local state and auto-upcases the first character for the label.
+   *
+   * @param role - name of the role to set.
+   */
+  const updateRoleName = (role: string) => {
     setRoleData((prev) => ({
       ...prev,
-      name,
-      label: name.charAt(0).toUpperCase(),
+      role,
+      label: role.charAt(0).toUpperCase(),
     }));
   };
 
+  /**
+   * Handles adding a new role by validating input and invoking the {@link addRole `addRole`} callback.
+   */
   const handleAddRole = () => {
-    if (roleData.name && roleData.label) {
+    if (roleData.role && roleData.label) {
       addRole({
-        role: roleData.name,
+        role: roleData.role,
         label: roleData.label,
-        types: roleData.parameters,
+        types: roleData.types,
       });
-      setRoleData({ name: "", label: "", parameters: [] });
+      setRoleData({ role: "", label: "", types: [] });
     }
   };
 
+  /**
+   * Handles removing a role by invoking the {@link removeRole `removeRole`} callback with the selected role name.
+   */
   const handleRemoveRole = () => {
     if (selectedRoleForRemoval !== "-") {
       removeRole(selectedRoleForRemoval);
@@ -155,17 +208,27 @@ const RoleMenu = ({
     }
   };
 
-  const addParameter = (param: FieldType) => {
+  /**
+   * Adds a new parameter to the local role data.
+   *
+   * @param type - the {@link FieldType `FieldType`} parameter to add.
+   */
+  const addParameter = (type: FieldType) => {
     setRoleData((prev) => ({
       ...prev,
-      parameters: [...prev.parameters, param],
+      types: [...prev.types, type],
     }));
   };
 
+  /**
+   * Removes a parameter from the local role data by its index.
+   *
+   * @param index - index of the parameter to remove.
+   */
   const removeParameter = (index: number) => {
     setRoleData((prev) => ({
       ...prev,
-      parameters: prev.parameters.filter((_, i) => i !== index),
+      types: prev.types.filter((_, i) => i !== index),
     }));
   };
 
@@ -179,7 +242,7 @@ const RoleMenu = ({
 
         <FormInput
           label="Role"
-          value={roleData.name}
+          value={roleData.role}
           placeholder="Role name"
           required
           onChange={(e) => updateRoleName(e.target.value)}
@@ -196,7 +259,7 @@ const RoleMenu = ({
         />
 
         <ParameterManager
-          parameters={roleData.parameters}
+          parameters={roleData.types}
           onAdd={addParameter}
           onRemove={removeParameter}
         />
@@ -237,6 +300,25 @@ const RoleMenu = ({
   );
 };
 
+/**
+ * Displays a short summary of the choreography's roles and exposes clicks to navigate to role-specific projections.
+ *
+ * @param roles - array of roles of type {@link SimplerRole `SimplerRole`} to display.
+ * @param nodesCount - number of nodes/events in the global choreography (used in summary text).
+ * @param projectionInfo - map from role label to {@link ProjectionInfo `ProjectionInfo`}; presence of an entry indicates the role has its own projection.
+ * @param currentProjection - Optional currently displayed projection id (e.g. "global" or a role label).
+ * @param onRoleClick - Callback invoked with a role label when a clickable role is selected.
+ * @param seeGlobalClick - Optional callback triggered when the `See Global Choreography` button is shown and clicked.
+ *
+ * @component
+ * @returns a short descriptive summary and a list of role names in JSX element format. Roles which have an entry in {@link projectionInfo `projectionInfo`} are rendered as clickable
+ * (hover/underline) and trigger {@link onRoleClick `onRoleClick`} when selected.
+ *
+ * Behavior / Notes:
+ * - When `currentProjection !== "global"`, the component shows a "See Global Projection" button.
+ * - Default for `seeGlobalClick = () => {}` is used so callers can omit the prop without extra conditional checks.
+ *   This no-op default ensures clicking the button (if shown) is safe even when no handler is supplied.
+ */
 const RoleList = ({
   roles,
   nodesCount,
@@ -245,13 +327,21 @@ const RoleList = ({
   onRoleClick,
   seeGlobalClick = () => {},
 }: {
-  roles: { role: string; label: string }[];
+  roles: SimplerRole[];
   nodesCount: number;
   projectionInfo: Map<string, ProjectionInfo>;
   currentProjection?: string;
   onRoleClick: (roleLabel: string) => void;
   seeGlobalClick?: () => void;
 }) => {
+  /**
+   * Returns a short human-readable sentence describing the number of roles.
+   *
+   * Note: This function reads {@link currentProjection `currentProjection`} from the surrounding scope.
+   *
+   * @param count - the number of roles to describe.
+   * @returns a localized sentence describing the role count and projection context.
+   */
   const getRoleCountText = (count: number) => {
     const more = currentProjection !== "global" ? "more" : "";
     return count === 1
@@ -294,7 +384,7 @@ const RoleList = ({
       </div>
       {currentProjection !== "global" && (
         <Button variant="primary" onClick={seeGlobalClick} className="w-full">
-          See Global Projection
+          See Global Choreography
         </Button>
       )}
     </>
@@ -302,18 +392,38 @@ const RoleList = ({
 };
 
 /**
- * Renders the main menu for managing choreography metadata, roles, and security in the TaRDIS DCR Editor.
+ * Top-level menu component for managing choreography metadata, documentation, security lattice and roles in the TaRDIS DCR Editor.
  *
- * This component provides:
- * - Display of current choreography information (number of events, roles).
- * - Editing of global documentation and security properties.
- * - Management of roles, including adding and removing roles with parameters.
- * - (Commented out) Management of participants associated with roles.
+ * Renders:
+ * - {@link DrawerMenu `DrawerMenu`} container with a label and workflow icon.
+ * - Global documentation editor when the current projection is "global".
+ * - {@link RoleList `RoleList`} showing roles and projection navigation.
+ * - When in the global projection:
+ *   - A security lattice textarea bound to the store's {@link security `security`} value.
+ *   - Buttons to open the {@link RoleMenu `RoleMenu`} and to reset choreography information.
+ * - {@link RoleMenu `RoleMenu`} (add/remove roles) when the role menu toggle is open.
  *
- * Uses state from a global store via `useStore` and provides a UI for interacting with choreography data.
+ * Store interactions / side effects:
+ * - Reads and mutates application state via the `useStore(selector, shallow)` hook. Selected store actions and values:
+ *   - {@link getChoreographyInfo `getChoreographyInfo`} to derive nodesCount and roles.
+ *   - {@link security `security`} and {@link setSecurity `setSecurity`} to edit the security lattice.
+ *   - {@link addRole `addRole`} / {@link removeRole `removeRole`} to manage roles.
+ *   - {@link documentation `documentation`} / {@link addDocumentation `addDocumentation`} to edit global documentation.
+ *   - {@link projectionInfo `projectionInfo`} / {@link currentProjection `currentProjection`} to navigate and present role projections.
+ *   - {@link changeNodes} to switch the displayed projection by supplying a source projection and a role label.
+ *   - {@link setCurrentProjection `setCurrentProjection`}, {@link setIds `setIds`}, {@link setRoles `setRoles`}, {@link setSelectedElement `setSelectedElement`}, {@link setNodes `setNodes`}, {@link setEdges `setEdges`}, {@link setCode `setCode`}, {@link clearProjections `clearProjections`}, {@link setSecurity `setSecurity`}
+ *     are used by {@link resetInfo `resetInfo`} to return the editor to an initial/global empty state. Concretely, {@link resetInfo `resetInfo`}:
+ *     - sets projection to `"global"`,
+ *     - resets next id counters (`nextNodeId`, `nextGroupId`, `nextSubprocessId`) to `[0]`,
+ *     - clears roles, selected element, nodes, edges and code,
+ *     - clears the security string and clears projections via {@link clearProjections `clearProjections(true)`}.
+ *
+ * Usage:
+ * - This component is the primary entry point for users to inspect choreography-wide information and to perform administrative actions
+ *   (edit documentation, security lattice, add/remove roles, reset the editor).
  *
  * @component
- * @returns {JSX.Element} The rendered choreography menu UI.
+ * @returns JSX element representing the choreography drawer menu.
  */
 export default function ChoreographyMenu() {
   const {
@@ -346,15 +456,30 @@ export default function ChoreographyMenu() {
 
   const key = "global";
 
+  /**
+   * Handles a click on a role name by changing the displayed projection to that role's projection.
+   *
+   * @see {@link changeNodes `changeNodes`} for the projection switching logic.
+   *
+   * @param roleLabel - role label corresponding to the projection to switch to.
+   */
   const handleRoleClick = (roleLabel: string) => {
     const sourceProjection = currentProjection || key;
     changeNodes(sourceProjection, roleLabel);
   };
 
+  /**
+   * Handles clicking the `See Global Choreography` button by switching to the global projection.
+   *
+   * @see {@link changeNodes `changeNodes`} for the projection switching logic.
+   */
   const handleGlobalProjectionClick = () => {
     changeNodes(currentProjection, key);
   };
 
+  /**
+   * Resets the choreography information in the editor to an initial/global empty state.
+   */
   const resetInfo = () => {
     setCurrentProjection("global");
     setIds({ nextNodeId: [0], nextGroupId: [0], nextSubprocessId: [0] });

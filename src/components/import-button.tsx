@@ -111,11 +111,11 @@ const ImportButton = ({ reactFlow }: { reactFlow: ReactFlowInstance }) => {
   return (
     <>
       <Button
-        className="flex items-center justify-center gap-2 w-full"
+        className="flex items-center justify-center gap-2 w-full text-sm"
         onClick={() => setOpen(true)}
       >
         Import File
-        <FolderInput size={20} />
+        <FolderInput size={18} />
       </Button>
       <Modal open={open} onClose={() => setOpen(false)}>
         <div className="flex flex-col gap-4 mt-10">
