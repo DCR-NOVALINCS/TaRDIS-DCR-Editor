@@ -31,15 +31,6 @@ import { Pickaxe } from "lucide-react";
 import ImportButton from "../components/import-button";
 import ExportButton from "../components/export-button";
 
-type History = {
-  nodes: Node[];
-  edges: Edge[];
-  nextNodeId: number[];
-  nextGroupId: number[];
-  nextSubprocessId: number[];
-  history?: History;
-};
-
 const selector = (state: RFState) => ({
   nodes: state.nodes,
   edges: state.edges,
@@ -67,6 +58,8 @@ const selector = (state: RFState) => ({
   onClickSimulationToggle: state.onClickSimulationToggle,
   currentProjection: state.currentProjection,
   edgesTypes: state.edgesTypes,
+  history: state.history,
+  setHistory: state.setHistory,
 });
 
 const nodeOrigin: NodeOrigin = [0.5, 0.5];
@@ -127,19 +120,14 @@ function FlowWithoutProvider() {
     onClickSimulationToggle,
     currentProjection,
     edgesTypes,
+    history,
+    setHistory,
   } = useStore(selector, shallow);
 
   const flowRef = useRef<HTMLDivElement>(null);
 
   const { screenToFlowPosition } = useReactFlow();
 
-  const [history, setHistory] = useState<History>({
-    nodes,
-    edges,
-    nextNodeId,
-    nextGroupId,
-    nextSubprocessId,
-  });
   const [toCopyNodes, setToCopyNodes] = useState<Node[]>([]);
   const [keyPressOn, setKeyPressOn] = useState(true);
 
@@ -160,16 +148,6 @@ function FlowWithoutProvider() {
         if (event.ctrlKey) {
           event.preventDefault();
           switch (event.key.toLowerCase()) {
-            case "s":
-              setHistory((prev) => ({
-                nodes,
-                edges,
-                nextNodeId,
-                nextGroupId,
-                nextSubprocessId,
-                history: prev,
-              }));
-              break;
             case "c":
               setToCopyNodes(nodes.filter((nd) => nd.selected));
               break;
@@ -189,6 +167,9 @@ function FlowWithoutProvider() {
             case "z":
               setNodes([]);
               break;
+            case "y":
+              setNodes([]);
+              break;
           }
         }
       };
@@ -203,14 +184,30 @@ function FlowWithoutProvider() {
           event.preventDefault();
           switch (event.key.toLowerCase()) {
             case "z":
-              setNodes(history.nodes);
-              setEdges(history.edges);
-              setIds({
-                nextNodeId: history.nextNodeId,
-                nextGroupId: history.nextGroupId,
-                nextSubprocessId: history.nextSubprocessId,
-              });
-              if (history.history) setHistory(history.history);
+              const previous = history.previousHistory;
+              if (previous) {
+                setHistory(previous);
+                setNodes(previous.nodes);
+                setEdges(previous.edges);
+                setIds({
+                  nextNodeId: previous.nextNodeId,
+                  nextGroupId: previous.nextGroupId,
+                  nextSubprocessId: previous.nextSubprocessId,
+                });
+              }
+              break;
+            case "y":
+              const next = history.nextHistory;
+              if (next) {
+                setHistory(next);
+                setNodes(next.nodes);
+                setEdges(next.edges);
+                setIds({
+                  nextNodeId: next.nextNodeId,
+                  nextGroupId: next.nextGroupId,
+                  nextSubprocessId: next.nextSubprocessId,
+                });
+              }
               break;
           }
         }

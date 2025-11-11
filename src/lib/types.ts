@@ -470,3 +470,13 @@ export interface RoleAdd {
   label: string;
   types: FieldType[];
 }
+
+export type History = {
+  nodes: Node[];
+  edges: Edge[];
+  nextNodeId: number[];
+  nextGroupId: number[];
+  nextSubprocessId: number[];
+  previousHistory?: History;
+  nextHistory?: History;
+};

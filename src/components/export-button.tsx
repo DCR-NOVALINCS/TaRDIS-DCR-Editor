@@ -186,7 +186,8 @@ export default function ExportButton() {
    * based on the selected file type.
    */
   const onClick = () => {
-    switch (type) {
+    const newType = isGlobalProjection() ? type : "PNG";
+    switch (newType) {
       case "JSON":
         jsonDownload(name);
         break;

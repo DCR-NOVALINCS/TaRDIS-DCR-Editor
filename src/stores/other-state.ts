@@ -8,6 +8,7 @@ import {
   state,
   Setter,
   GLOBAL_PROJECTION,
+  History,
 } from "@/lib/types";
 import type { Edge, Node } from "@xyflow/react";
 import { cloneMap, delay } from "@/lib/utils";
@@ -101,6 +102,12 @@ export type OtherState = {
   /** Removes documentation by its ID */
   removeDocumentation(id: string): void;
 
+  /* ----------- HISTORY STATE ------------- */
+  /** History state for undo/redo functionality */
+  history: History;
+  /** Sets the history state */
+  setHistory(history: History): void;
+
   /* ----------- SELECTED ELEMENT ------------ */
   /** The currently selected element in the UI */
   selectedElement: Element;
@@ -181,6 +188,21 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
     (state.documentation as Map<string, string>) ??
     new Map<string, string>([[APP_CONFIG.DEFAULTS.GLOBAL_ID, ""]]),
   selectedElement: undefined,
+  history: {
+    nodes: state.nodes,
+    edges: state.edges,
+    nextNodeId: state.nextNodeId,
+    nextGroupId: state.nextGroupId,
+    nextSubprocessId: state.nextSubprocessId,
+  },
+  setHistory(newHistory: History): void {
+    set({
+      history: {
+        ...newHistory,
+        previousHistory: { ...get().history, nextHistory: newHistory },
+      },
+    });
+  },
   security: state.security ?? "",
   code: state.code,
   logs: [],
@@ -366,9 +388,20 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
       nextNodeId,
       nextGroupId,
       nextSubprocessId,
-      projectionInfo,
-      documentation,
+      history,
+      setHistory,
     } = get();
+
+    /* const newHistory: History = {
+      nodes,
+      edges,
+      nextNodeId,
+      nextGroupId,
+      nextSubprocessId,
+      previousHistory: history,
+    };
+    setHistory(newHistory);
+    console.log(newHistory); */
 
     const data = JSON.stringify({
       nodes,
