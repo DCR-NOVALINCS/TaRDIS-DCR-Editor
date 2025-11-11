@@ -4,7 +4,9 @@ const CONDITION_COLOR = "#FF8000";
 
 /**
  * SVG icon for a condition model.
- * @returns A React component that renders a condition model icon.
+ *
+ * @component
+ * @returns a React component that renders a condition model icon.
  */
 export function ConditionModel() {
   return (
@@ -17,9 +19,12 @@ export function ConditionModel() {
 }
 
 /**
- * Condition relation component.
- * @param relationProps - The properties of the relation.
- * @returns A React component that renders a condition relation.
+ * Condition relation component with alternative marker.
+ *
+ * @param relationProps - the properties of the relation.
+ *
+ * @component
+ * @returns a React component that renders a condition relation.
  */
 export function NewCondition(relationProps: RelationProperties) {
   return (
@@ -56,8 +61,11 @@ export function NewCondition(relationProps: RelationProperties) {
 
 /**
  * Condition relation component.
- * @param relationProps - The properties of the relation.
- * @returns A React component that renders a condition relation.
+ *
+ * @param relationProps - the properties of the relation.
+ *
+ * @component
+ * @returns a React component that renders a condition relation.
  */
 export default function Condition(relationProps: RelationProperties) {
   return (

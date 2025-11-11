@@ -4,11 +4,10 @@ import {
   useInternalNode,
   useReactFlow,
 } from "@xyflow/react";
-
 import { useRef, useState } from "react";
-
 import { getEdgeParams } from "@/lib/utils";
 import useStore, { RFState } from "@/stores/store";
+import { shallow } from "zustand/shallow";
 
 const selector = (state: RFState) => ({
   simulationFlow: state.simulationFlow,
@@ -23,26 +22,66 @@ export interface RelationProperties extends EdgeProps {
 }
 
 /**
- * Renders a customizable edge (relation) between two nodes in a flow diagram.
+ * Renders a customizable relation (edge) between two nodes using the {@link BaseEdge `BaseEdge`} component
+ * from ReactFlow. The component supports both a fully custom SVG path (via the
+ * `relationPath` prop) and a computed polyline path that can be interactively edited
+ * when the edge is selected and the editor is not in simulation mode.
  *
- * The `BaseRelation` component supports both custom and default edge paths, and allows
- * interactive manipulation of edge control points when the edge is selected and not in simulation mode.
+ * @param relationPath - optional explicit SVG path to use for the edge. When provided, the computed path
+ * logic and path control points are skipped.
+ * @param ...props - all the other props from {@link EdgeProps `EdgeProps`} (id, source, target, markerStart, markerEnd, selected, style, ...)
+ * are forwarded to the underlying {@link BaseEdge `BaseEdge`}.
  *
- * - If a `relationPath` is provided, it renders the edge using that path.
- * - Otherwise, it computes a default path between the source and target nodes, supporting both normal and self-loop edges.
- * - When selected (and not in simulation mode), draggable control points are rendered for interactive editing.
- * - Supports adding new points by double-clicking on a control point.
- * - Supports dragging points with mouse, and axis-locked dragging with the Shift key.
+ * Behavior summary:
+ * - If `relationPath` is provided, it is used directly as the edge path and the edge
+ *   is rendered with a stroke width of 2 (merged with any provided `style`).
+ * - Otherwise, source and target nodes are resolved through {@link useInternalNode `useInternalNode`}, and
+ *   {@link getEdgeParams `getEdgeParams`} is used to compute anchor points and {@link targetPos `targetPos`}.
+ *   - For self-referential edges (`source === target`), a predefined loop path composed
+ *     of several control points is created; the exact initial points depend on the
+ *     {@link edgesTypes `edgesTypes`} value from the global store.
+ *   - For normal edges, an initial three-point polyline is created: [source, mid, target],
+ *     where the mid point is offset according to the target position (left/right/top/bottom)
+ *     to provide a nicer curvature/handle placement.
  *
- * @param relationPath Optional custom SVG path string for the edge.
- * @param props Additional properties describing the relation, including source/target node IDs, markers, selection state, and style.
- * @returns A React component rendering the edge and, if applicable, its draggable control points.
+ * Interactive editing:
+ * - The computed points are stored in component state and converted into an SVG path
+ *   string (`M x y L x y ...`).
+ * - When `selected` is true and {@link simulationFlow `simulationFlow`} from the store is false, the component
+ *   renders draggable control points (SVG circles) for manipulating the path.
+ *   - Double-clicking a control point inserts a duplicate point after it (useful for
+ *     creating a new bend).
+ *   - Dragging a control point updates the corresponding point in flow coordinates via
+ *     {@link screenToFlowPosition `screenToFlowPosition`} from {@link useReactFlow `useReactFlow`}.
+ *   - If the Shift key is held while dragging and all points share the same X or Y,
+ *     the drag will snap all points to the dragged coordinate along that axis (constraining
+ *     movement to a single axis).
+ *   - For edges with only a single control point, dragging replaces the single point
+ *     with a duplicated point at the drag location (creating a two-point segment).
+ * - Pointer event handling (mouse down/up/leave/move) is used to implement the drag
+ *   interactions; `pointerEvents: "all"` is set on the circles and `tabIndex` is provided
+ *   for keyboard focusability.
+ *
+ * Side effects / hooks used:
+ * - {@link useInternalNode `useInternalNode(source/target)`} to resolve node positions/anchors.
+ * - {@link screenToFlowPosition `screenToFlowPosition`} to convert screen coordinates to flow coordinates.
+ * - {@link useStore `useStore(selector)`} to read {@link simulationFlow `simulationFlow`} and {@link edgesTypes `edgesTypes`} from the global store.
+ *
+ * Notes:
+ * - The component always enforces a stroke width of 2 by default; caller `style` is merged.
+ * - The live edge path is stored in a ref and recomputed on each render from the `points`
+ *   state to minimize unnecessary re-renders of the path string.
+ *
+ * @component
+ * @returns a JSX fragment containing:
+ * - The primary {@link BaseEdge `BaseEdge`} rendering the relation path.
+ * - Optional SVG circle handles for interactive editing when applicable.
  */
 export default function BaseRelation({
   relationPath,
   ...props
 }: RelationProperties) {
-  const { simulationFlow, edgesTypes } = useStore(selector);
+  const { simulationFlow, edgesTypes } = useStore(selector, shallow);
   const { id, source, target, markerStart, markerEnd, selected, style } = props;
 
   if (relationPath) {

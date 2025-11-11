@@ -4,7 +4,9 @@ const RESPONSE_COLOR = "#007FFF";
 
 /**
  * SVG icon for a response model.
- * @returns A React component that renders a response model icon.
+ *
+ * @component
+ * @returns a React component that renders a response model icon.
  */
 export const ResponseModel = () => {
   return (
@@ -17,9 +19,12 @@ export const ResponseModel = () => {
 };
 
 /**
- * Response relation component.
- * @param relationProps - The properties of the relation.
- * @returns A React component that renders a response relation.
+ * Response relation component with alternative marker.
+ *
+ * @param relationProps - the properties of the relation.
+ *
+ * @component
+ * @returns a React component that renders a response relation.
  */
 export function NewResponse(relationProps: RelationProperties) {
   return (
@@ -79,8 +84,11 @@ export function NewResponse(relationProps: RelationProperties) {
 
 /**
  * Response relation component.
- * @param relationProps - The properties of the relation.
- * @returns A React component that renders a response relation.
+ *
+ * @param relationProps - the properties of the relation.
+ *
+ * @component
+ * @returns a React component that renders a response relation.
  */
 export default function Response(relationProps: RelationProperties) {
   return (

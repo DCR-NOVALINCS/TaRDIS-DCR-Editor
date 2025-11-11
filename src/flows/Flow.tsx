@@ -11,13 +11,9 @@ import {
   Edge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-
 import { shallow } from "zustand/shallow";
-
 import useStore, { RFState } from "../stores/store";
-
-import { useEffect, useMemo, useRef, useState } from "react";
-
+import { useEffect, useRef, useState } from "react";
 import Condition, { NewCondition } from "../dcr-related/edges/Condition";
 import Response, { NewResponse } from "../dcr-related/edges/Response";
 import Include, { NewInclude } from "../dcr-related/edges/Include";
@@ -25,7 +21,6 @@ import Exclude, { NewExclude } from "../dcr-related/edges/Exclude";
 import Milestone, { NewMilestone } from "../dcr-related/edges/Milestone";
 import Spawn, { NewSpawn } from "../dcr-related/edges/Spawn";
 import CustomConnectionLine from "../dcr-related/edges/ConnectionLine";
-
 import BaseEvent from "../dcr-related/nodes/BaseEvent";
 import Nest from "../dcr-related/nodes/Nest";
 import Subprocess from "../dcr-related/nodes/Subprocess";
@@ -72,8 +67,6 @@ const selector = (state: RFState) => ({
   onClickSimulationToggle: state.onClickSimulationToggle,
   currentProjection: state.currentProjection,
   edgesTypes: state.edgesTypes,
-  selectedElement: state.selectedElement,
-  setSelectedElement: state.setSelectedElement,
 });
 
 const nodeOrigin: NodeOrigin = [0.5, 0.5];
@@ -134,8 +127,6 @@ function FlowWithoutProvider() {
     onClickSimulationToggle,
     currentProjection,
     edgesTypes,
-    selectedElement,
-    setSelectedElement,
   } = useStore(selector, shallow);
 
   const flowRef = useRef<HTMLDivElement>(null);
@@ -152,8 +143,19 @@ function FlowWithoutProvider() {
   const [toCopyNodes, setToCopyNodes] = useState<Node[]>([]);
   const [keyPressOn, setKeyPressOn] = useState(true);
 
+  /**
+   * Key press listener component to handle keyboard shortcuts.
+   *
+   * @component
+   * @returns a react component that listens for key presses and performs actions accordingly.
+   */
   const KeyPressListener = () => {
     useEffect(() => {
+      /**
+       * Handles key down events for keyboard shortcuts.
+       *
+       * @param event - the keyboard event.
+       */
       const handleKeyDown = (event: KeyboardEvent) => {
         if (event.ctrlKey) {
           event.preventDefault();
@@ -191,6 +193,11 @@ function FlowWithoutProvider() {
         }
       };
 
+      /**
+       * Handles key up events for keyboard shortcuts.
+       *
+       * @param event - the keyboard event.
+       */
       const handleKeyUp = (event: KeyboardEvent) => {
         if (event.ctrlKey) {
           event.preventDefault();
@@ -278,7 +285,7 @@ function FlowWithoutProvider() {
         position="top-left"
         style={{
           display: "flex",
-          width: currentProjection === "global" ? "450px" : "150px",
+          width: currentProjection === "global" ? "450px" : "296px",
           gap: 10,
           zIndex: 10,
         }}
@@ -293,9 +300,9 @@ function FlowWithoutProvider() {
         {currentProjection === "global" && (
           <>
             <ImportButton reactFlow={reactFlow} />
-            <ExportButton />
           </>
         )}
+        <ExportButton />
       </Panel>
     </ReactFlow>
   );

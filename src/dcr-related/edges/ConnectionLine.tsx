@@ -22,11 +22,12 @@ const selector = (state: RFState) => ({
 /**
  * Renders a custom connection line between nodes based on the current relation type.
  *
+ * @param props - the properties required to render the connection line, including node references, positions, and coordinates.
+ *
  * This component selects and renders a specific edge component (`Condition`, `Response`, `Include`, `Exclude`, `Milestone`, or `Spawn`)
- * according to the `relationType` value from the store. It computes the edge path using the provided source and target coordinates,
+ * according to the {@link relationType `relationType`} value from the store. It computes the edge path using the provided source and target coordinates,
  * and passes all relevant properties to the selected edge component.
  *
- * @param props - The properties required to render the connection line, including node references, positions, and coordinates.
  * @returns The appropriate edge component for the current relation type, or `undefined` if the relation type is not recognized.
  */
 export default function CustomConnectionLine(

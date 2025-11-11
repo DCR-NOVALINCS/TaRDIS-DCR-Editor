@@ -21,10 +21,36 @@ const selector = (state: RFState) => ({
   updateNode: state.updateNode,
   documentation: state.documentation,
   addDocumentation: state.addDocumentation,
-  currentProjection: state.currentProjection,
+  isGlobalProjection: state.isGlobalProjection,
 });
 
-// Input Configuration Component
+/**
+ * Renders a controlled form section for configuring an input value.
+ *
+ * @param input - the current input configuration object (of type {@link InputType `InputType`}). The component
+ * reads `input.type` to determine which controls to show and to set the value of the select.
+ * @param setInput - state setter for the input object (`React.Dispatch<React.SetStateAction<InputType>>`).
+ *   Used to update the input object when the type select changes or when nested managers update it.
+ * @param recordField - the currently selected/edited record field (of type {@link FieldType `FieldType`}). Passed
+ *   through to the {@link RecordFieldManager `RecordFieldManager`} when editing record-type inputs.
+ * @param setRecordField - state setter for the recordField (`React.Dispatch<React.SetStateAction<FieldType>>`).
+ *   Used to update the {@link recordField `recordField`} state from the {@link RecordFieldManager `RecordFieldManager`}.
+ * @param disabled - when true, all interactive controls in this section are disabled/read-only.
+ *
+ * This component displays:
+ * - A label for the input section.
+ * - A select control to choose the input type (options derived from a shared {@link inputTypes `inputTypes`} list).
+ * - When the selected input type is `"Record"`, a {@link RecordFieldManager `RecordFieldManager`} is rendered to manage nested
+ *   record fields.
+ *
+ * @remarks
+ * - This is a controlled component, so callers must provide and manage the input and {@link recordField `recordField`} state.
+ * - The shapes of {@link InputType `InputType`} and {@link FieldType `FieldType`} are external to this component and should be documented
+ *   where they are defined.
+ *
+ * @component
+ * @returns a JSX Element containing the input configuration UI.
+ */
 const InputConfiguration = ({
   input,
   setInput,
@@ -37,30 +63,28 @@ const InputConfiguration = ({
   recordField: FieldType;
   setRecordField: React.Dispatch<React.SetStateAction<FieldType>>;
   disabled: boolean;
-}) => {
-  const inputTypeOptions = inputTypes.map((type) => ({
-    value: type,
-    label: type,
-  }));
-
-  return (
+}) => (
+  <>
+    {/* INPUT CONFIGURATION SECTION */}
     <div className="flex flex-col gap-4">
       <label className="col-span-3 flex justify-center font-bold">
         Input Values
       </label>
 
+      {/* INPUT TYPE SELECT */}
       <FormField label="Type" newClassName={true} className="grid grid-cols-3">
         <FormSelect
           value={input.type}
           onChange={(e) =>
             setInput((prev) => ({ ...prev, type: e.target.value }))
           }
-          options={inputTypeOptions}
+          options={inputTypes.map((type) => ({ value: type, label: type }))}
           className="col-span-1"
           disabled={disabled}
         />
       </FormField>
 
+      {/* RECORD FIELD MANAGER */}
       {input.type === "Record" && (
         <RecordFieldManager
           input={input}
@@ -71,10 +95,28 @@ const InputConfiguration = ({
         />
       )}
     </div>
-  );
-};
+  </>
+);
 
-// Computation Expression Component
+/**
+ * Renders a compact UI for editing a node's computation expression.
+ *
+ * @param expression - The current computation expression text to display in the `textarea`.
+ * @param setExpression - State setter callback invoked with the new expression when the `textarea` value changes.
+ * @param disabled - If true, disables user interaction with the `textarea`.
+ *
+ * This controlled component displays a centered section label ("Computation Expression")
+ * and a monospace `textarea` bound to the provided {@link expression `expression`} value. User edits are
+ * propagated via the {@link setExpression `setExpression`} callback. When {@link disabled `disabled`} is true the `textarea`
+ * is rendered in a read-only/disabled state.
+ *
+ * @remarks
+ * - This component is purely presentational and performs no side effects other than calling {@link setExpression `setExpression`}.
+ * - It is intended to be used in contexts where the parent manages the expression state (i.e., a controlled component).
+ *
+ * @component
+ * @returns A JSX component containing a label and a controlled `textarea` for editing the computation expression.
+ */
 const ComputationExpression = ({
   expression,
   setExpression,
@@ -97,6 +139,61 @@ const ComputationExpression = ({
   </>
 );
 
+/**
+ * Renders the properties panel for editing a node's metadata and behavioral settings.
+ * This is a controlled presentational component: all values are received via props and any
+ * user changes are propagated through the provided setter callbacks.
+ *
+ * The component displays and manages:
+ * - Initiators and Receivers as comma-separated `textareas` which are converted to string arrays.
+ *   The conversion capitalizes the first letter of each entry.
+ * - Node type (input "i" or computation "c") via a select control.
+ * - Label and Event name `textareas` (spaces replaced with underscores on change).
+ * - Marking flags ("pending" and "included") as checkboxes toggling the provided marking state.
+ * - Parent selection populated from the supplied nodes list (filters nodes of type "nest" or "subprocess"),
+ *   plus a "-" option representing no parent.
+ * - Security label as a `textarea`.
+ * - If the node is an input (`type === "i"`), renders the {@link InputConfiguration `InputConfiguration`} section allowing selection of
+ *   input type and nested record field management. Otherwise renders a computation expression `textarea`.
+ *
+ * The component respects the `disabled` prop: when true all interactive controls are rendered read-only/disabled.
+ *
+ * @param initiators - current initiators array displayed and edited as a comma-separated `textarea`.
+ * @param setInitiators - setter to update the initiators array.
+ * @param receivers - current receivers array displayed and edited as a comma-separated `textarea`.
+ * @param setReceivers - setter to update the receivers array.
+ * @param type - current node type string (expected "i" for input or "c" for computation).
+ * @param setType - setter to update the node type.
+ * @param label - current display label for the node.
+ * @param setLabel - setter to update the node label.
+ * @param name - current event name for the node.
+ * @param setName - setter to update the event name.
+ * @param marking - current marking object of type {@link MarkingType `MarkingType`}.
+ * @param setMarking - setter to update the marking object.
+ * @param parent - current parent node id (empty string for no parent).
+ * @param setParent - setter to update the parent id.
+ * @param security - current security label for the node.
+ * @param setSecurity - setter to update the security label.
+ * @param input - current input configuration for input nodes (of type {@link InputType `InputType`}).
+ * @param setInput - setter to update the input configuration.
+ * @param expression - current computation expression string (used when `type !== "i"`).
+ * @param setExpression - setter to update the computation expression.
+ * @param recordField - current record field being edited (used by {@link RecordFieldManager `RecordFieldManager`} when `input.type === "Record"`).
+ * @param setRecordField - setter to update the record field state.
+ * @param nodes - array of all nodes in the editor; used to build the Parent select options.
+ * @param disabled - when true, disables all interactive controls making the panel read-only.
+ *
+ * @remarks
+ * - The component intentionally performs small, deterministic transformations on input:
+ *   - Comma-separated text in initiators/receivers is split into array items and each item is capitalized.
+ *   - Spaces in label and name are replaced with underscores on input.
+ * - Parent options are derived from the `nodes` prop and include an explicit empty/`-` option.
+ * - The component does not perform side effects like persisting changes itself; it relies on the parent
+ *   to react to prop setter calls and persist updates as needed.
+ *
+ * @component
+ * @returns a JSX Element that renders the node properties UI.
+ */
 const NodeProperties = ({
   initiators,
   setInitiators,
@@ -148,7 +245,6 @@ const NodeProperties = ({
   nodes: Node[];
   disabled: boolean;
 }) => {
-  // Helper functions for array transformations
   const handleArrayChange = (
     value: string,
     setter: React.Dispatch<React.SetStateAction<string[]>>
@@ -172,7 +268,7 @@ const NodeProperties = ({
 
   return (
     <div className="flex flex-col p-3 gap-2 overflow-y-auto h-full">
-      {/* Basic Properties */}
+      {/* BASIC PROPERTIES */}
       <FormField label="Initiators">
         <FormTextarea
           value={initiators.join(", ")}
@@ -183,6 +279,7 @@ const NodeProperties = ({
         />
       </FormField>
 
+      {/* RECEIVERS FIELD */}
       <FormField label="Receivers">
         <FormTextarea
           value={receivers.join(", ")}
@@ -192,6 +289,7 @@ const NodeProperties = ({
         />
       </FormField>
 
+      {/* TYPE FIELD */}
       <FormField label="Type">
         <FormSelect
           value={type}
@@ -201,6 +299,7 @@ const NodeProperties = ({
         />
       </FormField>
 
+      {/* LABEL FIELD */}
       <FormField label="Label">
         <FormTextarea
           value={label}
@@ -211,6 +310,7 @@ const NodeProperties = ({
         />
       </FormField>
 
+      {/* NAME FIELD */}
       <FormField label="Event">
         <FormTextarea
           value={name}
@@ -221,7 +321,7 @@ const NodeProperties = ({
         />
       </FormField>
 
-      {/* Marking Section */}
+      {/* MARKING SECTION */}
       <div className="grid grid-cols-3 gap-5">
         <label>Marking</label>
         <FormCheckbox
@@ -242,6 +342,7 @@ const NodeProperties = ({
         />
       </div>
 
+      {/* PARENT SELECT */}
       <FormField label="Parent">
         <FormSelect
           value={parent}
@@ -251,6 +352,7 @@ const NodeProperties = ({
         />
       </FormField>
 
+      {/* SECURITY FIELD */}
       <FormField label="Security">
         <FormTextarea
           value={security}
@@ -261,7 +363,7 @@ const NodeProperties = ({
         />
       </FormField>
 
-      {/* Type-specific sections */}
+      {/* INPUT CONFIGURATION */}
       {type === "i" && input ? (
         <InputConfiguration
           input={input}
@@ -282,24 +384,45 @@ const NodeProperties = ({
 };
 
 /**
- * Renders a menu for editing the properties of a given node in the editor.
+ * Renders the properties editor for a single flow editor node and synchronizes edits
+ * back to the global store when the current projection is "global".
  *
- * The `NodeMenu` component provides a user interface for viewing and modifying
- * various properties of a node, such as initiators, receivers, type, label, event name,
- * marking status, parent, security, and input or computation expression details.
- * It also allows editing of node-specific documentation and supports dynamic input types,
- * including record fields for input nodes.
+ * The component manages a local, controlled form state derived from the provided node's data
+ * (initiators, receivers, type, label, name, marking, parent, security, input/expression).
+ * When running in the global choreography it diffs the local state against the store and debounced
+ * updates the store via {@link updateNode `updateNode`} to avoid rapid UI flashing. When not in the global choreography
+ * the form is rendered in a read-only/disabled mode.
  *
- * @param {Node} node - The node object whose properties are being edited.
+ * @param node the Node instance (from ReactFlow) to display/edit. The node's data shape is
+ * expected to include fields like initiators, receivers, type, label, name, marking,
+ * input (for input nodes) or expression (for computation nodes), and security.
  *
- * Features:
- * - Displays and allows editing of node documentation.
- * - Supports editing of initiators, receivers, type (input or computation), label, event name, marking, parent, and security.
- * - For input nodes, allows configuration of input type and record fields.
- * - For computation nodes, allows editing of the computation expression.
- * - Provides a save button to persist changes to the node.
+ * @see {@link inputTypes `inputTypes`} for the list of valid input types for the record typed input events.
  *
- * @returns {JSX.Element} The rendered node menu component.
+ * Behavior / responsibilities:
+ * - Initializes local state from `node.data` and `node.parentId`.
+ * - Renders documentation editing ({@link FormDocumentation `FormDocumentation`}) only for global projection.
+ * - Renders a comprehensive properties panel ({@link NodeProperties `NodeProperties`}) that includes:
+ *   - Initiators and Receivers (as comma-separated `textarea` -> `string[]`),
+ *   - Node type (input vs computation),
+ *   - Label and Event name (spaces replaced with underscores on edit),
+ *   - Marking checkboxes (pending, included),
+ *   - Parent selection (populated by nodes of type "nest" or "subprocess" plus a "-" option),
+ *   - Security label,
+ *   - Input configuration for input nodes or computation expression otherwise.
+ * - When in global choreography, computes a new data object and:
+ *   - Uses {@link shallowEqual `shallowEqual`} to avoid store writes when nothing changed.
+ *   - Debounces calls to {@link updateNode `updateNode`} (10ms) and sets parent-related flags
+ *     (`parentId`, `expandParent`, `extent: "parent"`) when a parent is selected.
+ *   - Cleans up the debounce timer on unmount to prevent leaks.
+ *
+ * Implementation notes:
+ * - Reads required store selectors: {@link nodes `nodes`}, {@link updateNode `updateNode`}, {@link documentation `documentation`}, {@link addDocumentation `addDocumentation`}, {@link currentProjection `currentProjection`}.
+ * - Uses a ref ({@link debounceTimeout `debounceTimeout`}) for debouncing the update effect.
+ * - The component is purely presentational with respect to persisting changes; persistence is
+ *   accomplished by calling {@link updateNode `updateNode`} provided by the external store.
+ *
+ * @returns a JSX element containing the drawer menu UI for editing the supplied node.
  */
 const NodeMenu = ({ node }: { node: Node }) => {
   const {
@@ -307,11 +430,10 @@ const NodeMenu = ({ node }: { node: Node }) => {
     updateNode,
     documentation,
     addDocumentation,
-    currentProjection,
+    isGlobalProjection,
   } = useStore(selector, shallow);
   const { id, data, parentId } = node;
 
-  // State management
   const [initiators, setInitiators] = useState(data.initiators as string[]);
   const [receivers, setReceivers] = useState(
     data.receivers ? (data.receivers as string[]) : [""]
@@ -324,19 +446,18 @@ const NodeMenu = ({ node }: { node: Node }) => {
   const [security, setSecurity] = useState(data.security as string);
   const [input, setInput] = useState(data.input as InputType);
   const [expression, setExpression] = useState(
-    (data.expression as string) ?? ""
+    data.expression ? (data.expression as string) : ""
   );
   const [recordField, setRecordField] = useState<FieldType>({
     var: "",
     type: inputTypes[0],
   });
 
-  const isGlobalProjection = currentProjection === "global";
-
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!isGlobalProjection) return;
+    if (!isGlobalProjection()) return;
+
     const storeNode = nodes.find((n) => n.id === id);
     if (!storeNode) return;
 
@@ -351,11 +472,9 @@ const NodeMenu = ({ node }: { node: Node }) => {
       security,
     };
 
-    // Only update if data actually changed
     if (shallowEqual(storeNode.data, newData) && storeNode.parentId === parent)
       return;
 
-    // Debounce the update to avoid rapid flashing
     if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
     debounceTimeout.current = setTimeout(() => {
       updateNode(id, {
@@ -371,11 +490,9 @@ const NodeMenu = ({ node }: { node: Node }) => {
       });
     }, 10);
 
-    // Cleanup on unmount
     return () => {
       if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     initiators,
     receivers,
@@ -420,13 +537,14 @@ const NodeMenu = ({ node }: { node: Node }) => {
 
   return (
     <DrawerMenu>
+      {/* DRAWER NODE MENU */}
       <DrawerMenuLabel>
         <SquareMousePointer size={40} />
         Node {id}
       </DrawerMenuLabel>
 
-      {/* Documentation */}
-      {isGlobalProjection && (
+      {/* DOCUMENTATION */}
+      {isGlobalProjection() && (
         <FormDocumentation
           documentation={documentation.get(id)}
           onChange={(e) => addDocumentation(id, e.target.value)}
@@ -434,7 +552,7 @@ const NodeMenu = ({ node }: { node: Node }) => {
         />
       )}
 
-      {/* Node Properties */}
+      {/* NODE PROPERTIES */}
       <NodeProperties
         initiators={initiators}
         setInitiators={setInitiators}
@@ -459,17 +577,8 @@ const NodeMenu = ({ node }: { node: Node }) => {
         recordField={recordField}
         setRecordField={setRecordField}
         nodes={nodes}
-        disabled={!isGlobalProjection}
+        disabled={!isGlobalProjection()}
       />
-
-      {/* Save Button */}
-      {/* isGlobalProjection && (
-        <div className="flex justify-center m-2">
-          <Button onClick={handleSaveChanges} className="min-h-8 w-full">
-            Save Changes
-          </Button>
-        </div>
-      )} */}
     </DrawerMenu>
   );
 };

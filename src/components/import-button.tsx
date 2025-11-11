@@ -22,6 +22,35 @@ const selector = (state: RFState) => ({
   setSelectedElement: state.setSelectedElement,
 });
 
+/**
+ * Renders a button and modal UI that allows the user to import a graph either
+ * from a serialized JSON export or from a ReGraDa code file (`.tardisdcr`).
+ *
+ * @param reactFlow - {@link ReactFlowInstance `ReactFlowInstance`} used to perform view operations (`fitView`).
+ *
+ * Behavior and side-effects:
+ * - Opens a modal to pick a file when the "Import File" button is clicked.
+ * - Accepts a single file via an `<input type="file">` control.
+ * - For files ending with "`.json`":
+ *   - Parses the file text with JSON.parse and expects an object containing:
+ *     `nodes`, `edges`, `security`, `roles`, `code`, `nextNodeId`, `nextGroupId`, `nextSubprocessId`.
+ *   - Calls {@link changeClearSet `changeClearSet`} with the parsed state to update the global store.
+ * - For files ending with "`.tardisdcr`":
+ *   - Reads file text and passes it to {@link treatCode `treatCode`} which:
+ *     - Calls {@link visualGen `visualGen`} with the code to produce nodes, edges, roles, etc.
+ *     - Calls {@link getLayoutedElements `getLayoutedElements`} to compute layouted nodes/edges.
+ *     - Calls {@link changeClearSet `changeClearSet`} with the generated/layouted state.
+ * - {@link changeClearSet `changeClearSet`}:
+ *   - Clears projections ({@link clearProjections `clearProjections(true)`}) and waits briefly.
+ *   - Updates global store: roles, security, nodes, code, edges, ids.
+ *   - Sets projection info (`"global"`) and clears selected element.
+ *   - Waits briefly and fits the ReactFlow view (`reactFlow.fitView`).
+ * - Logs import actions via {@link log `log(...)`} and closes the import modal on successful
+ *   import initiation.
+ *
+ * @component
+ * @returns a JSX Element with the import button and modal interface.
+ */
 const ImportButton = ({ reactFlow }: { reactFlow: ReactFlowInstance }) => {
   const {
     setNodes,
@@ -39,6 +68,11 @@ const ImportButton = ({ reactFlow }: { reactFlow: ReactFlowInstance }) => {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | undefined>(undefined);
 
+  /**
+   * Clears the current graph state and sets the new state.
+   *
+   * @param state - the new state to set, including nodes, edges, security, roles, code, and IDs.
+   */
   const changeClearSet = async (state: State) => {
     clearProjections(true);
     await delay(10);
@@ -59,6 +93,11 @@ const ImportButton = ({ reactFlow }: { reactFlow: ReactFlowInstance }) => {
     reactFlow.fitView({ maxZoom: 1 });
   };
 
+  /**
+   * Processes and imports graph code in ReGraDa format.
+   *
+   * @param code - the ReGraDa code to process and import
+   */
   const treatCode = async (code: string) => {
     setCode(code);
     const {
@@ -85,6 +124,9 @@ const ImportButton = ({ reactFlow }: { reactFlow: ReactFlowInstance }) => {
     log("Graph generated using code import.");
   };
 
+  /**
+   * Handles the import action when the user clicks the import button.
+   */
   const onClick = () => {
     if (file) {
       file.text().then((text) => {
@@ -110,6 +152,7 @@ const ImportButton = ({ reactFlow }: { reactFlow: ReactFlowInstance }) => {
 
   return (
     <>
+      {/* IMPORT BUTTON */}
       <Button
         className="flex items-center justify-center gap-2 w-full text-sm"
         onClick={() => setOpen(true)}
@@ -117,6 +160,8 @@ const ImportButton = ({ reactFlow }: { reactFlow: ReactFlowInstance }) => {
         Import File
         <FolderInput size={18} />
       </Button>
+
+      {/* IMPORT MODAL */}
       <Modal open={open} onClose={() => setOpen(false)}>
         <div className="flex flex-col gap-4 mt-10">
           <h1 className="font-bold text-lg flex items-center justify-center gap-2 absolute top-3 left-3">
@@ -135,6 +180,8 @@ const ImportButton = ({ reactFlow }: { reactFlow: ReactFlowInstance }) => {
               className="border-2 rounded-sm w-40 h-8 px-1 text-[12px]"
             ></input>
           </div>
+
+          {/* IMPORT BUTTONS */}
           <div className="flex gap-2">
             <Button className="w-full" onClick={onClick}>
               Import

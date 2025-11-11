@@ -4,7 +4,9 @@ const EXCLUDE_COLOR = "#FF0000";
 
 /**
  * SVG icon for a exclude model.
- * @returns A React component that renders a exclude model icon.
+ *
+ * @component
+ * @returns a React component that renders a exclude model icon.
  */
 export const ExcludeModel = () => {
   return (
@@ -25,6 +27,14 @@ export const ExcludeModel = () => {
   );
 };
 
+/**
+ * Self exclude relation component with alternative marker.
+ *
+ * @param relationProps - the properties of the relation.
+ *
+ * @component
+ * @returns a React component that renders a self exclude relation.
+ */
 export function SelfNewExclude(relationProps: RelationProperties) {
   return (
     <>
@@ -70,9 +80,12 @@ export function SelfNewExclude(relationProps: RelationProperties) {
 }
 
 /**
- * Exclude relation component.
- * @param relationProps - The properties of the relation.
- * @returns A React component that renders a exclude relation.
+ * Exclude relation component with alternative marker.
+ *
+ * @param relationProps - the properties of the relation.
+ *
+ * @component
+ * @returns a React component that renders a exclude relation.
  */
 export function NewExclude(relationProps: RelationProperties) {
   return (
@@ -132,8 +145,11 @@ export function NewExclude(relationProps: RelationProperties) {
 
 /**
  * Exclude relation component.
- * @param relationProps - The properties of the relation.
- * @returns A React component that renders a exclude relation.
+ *
+ * @param relationProps - the properties of the relation.
+ *
+ * @component
+ * @returns a React component that renders a exclude relation.
  */
 export default function Exclude(relationProps: RelationProperties) {
   return (

@@ -63,11 +63,6 @@ npm install
 npm run dev
 ```
 
-### Notes
-
-- `npm run dev` (project default) starts backend and frontend concurrently (project-specific).
-- If you only want to run frontend/backend separately inspect package.json scripts in the root and `src/backend`.
-
 ## Project structure (high level)
 
 - `src/`

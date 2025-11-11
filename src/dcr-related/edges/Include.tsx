@@ -4,7 +4,9 @@ const INCLUDE_COLOR = "#4DA850";
 
 /**
  * SVG icon for a include model.
- * @returns A React component that renders a include model icon.
+ *
+ * @component
+ * @returns a React component that renders a include model icon.
  */
 export const IncludeModel = () => {
   return (
@@ -26,9 +28,12 @@ export const IncludeModel = () => {
 };
 
 /**
- * Include relation component.
- * @param relationProps - The properties of the relation.
- * @returns A React component that renders a include relation.
+ * Include relation component with alternative marker.
+ *
+ * @param relationProps - the properties of the relation.
+ *
+ * @component
+ * @returns a React component that renders a include relation.
  */
 export function NewInclude(relationProps: RelationProperties) {
   return (
@@ -88,8 +93,11 @@ export function NewInclude(relationProps: RelationProperties) {
 
 /**
  * Include relation component.
- * @param relationProps - The properties of the relation.
- * @returns A React component that renders a include relation.
+ *
+ * @param relationProps - the properties of the relation.
+ *
+ * @component
+ * @returns a React component that renders a include relation.
  */
 export default function Include(relationProps: RelationProperties) {
   return (

@@ -7,9 +7,10 @@ import {
   type Element,
   state,
   Setter,
+  GLOBAL_PROJECTION,
 } from "@/lib/types";
 import type { Edge, Node } from "@xyflow/react";
-import { cloneMap, delay, generateJsonData } from "@/lib/utils";
+import { cloneMap, delay } from "@/lib/utils";
 
 /**
  * Configuration constants for the application state
@@ -137,6 +138,7 @@ export type OtherState = {
   currentProjection: string;
   /** Sets the current projection ID */
   setCurrentProjection(id: string): void;
+  isGlobalProjection(): boolean;
 
   /* -------------- DRAWER PROPS ------------- */
   /** Drawer open state */
@@ -175,14 +177,21 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
   get
 ) => ({
   /* ------------ INITIAL STATE -------------- */
-  documentation: new Map<string, string>([[APP_CONFIG.DEFAULTS.GLOBAL_ID, ""]]),
+  documentation:
+    (state.documentation as Map<string, string>) ??
+    new Map<string, string>([[APP_CONFIG.DEFAULTS.GLOBAL_ID, ""]]),
   selectedElement: undefined,
   security: state.security ?? "",
   code: state.code,
   logs: [],
-  projectionInfo: new Map<string, ProjectionInfo>([
-    [APP_CONFIG.DEFAULTS.GLOBAL_ID, { nodes: state.nodes, edges: state.edges }],
-  ]),
+  projectionInfo:
+    (state.projectionInfo as Map<string, ProjectionInfo>) ??
+    new Map<string, ProjectionInfo>([
+      [
+        APP_CONFIG.DEFAULTS.GLOBAL_ID,
+        { nodes: state.nodes, edges: state.edges },
+      ],
+    ]),
   currentProjection: APP_CONFIG.DEFAULTS.GLOBAL_ID,
   drawerOpen: false,
   drawerSelectedLogs: false,
@@ -287,6 +296,9 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
   setCurrentProjection(id: string): void {
     set({ currentProjection: id });
   },
+  isGlobalProjection(): boolean {
+    return get().currentProjection === GLOBAL_PROJECTION;
+  },
 
   /* -------------- DRAWER PROPS ------------- */
   setDrawerOpen(open: boolean): void {
@@ -354,21 +366,20 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
       nextNodeId,
       nextGroupId,
       nextSubprocessId,
+      projectionInfo,
+      documentation,
     } = get();
 
-    const data = JSON.stringify(
-      generateJsonData(
-        true,
-        nodes,
-        edges,
-        security,
-        roles,
-        code,
-        nextNodeId,
-        nextGroupId,
-        nextSubprocessId
-      )
-    );
+    const data = JSON.stringify({
+      nodes,
+      edges,
+      security,
+      roles,
+      code,
+      nextNodeId,
+      nextGroupId,
+      nextSubprocessId,
+    });
 
     get().setProjectionInfo("global", { nodes, edges });
 

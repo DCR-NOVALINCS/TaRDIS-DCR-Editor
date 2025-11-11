@@ -4,7 +4,9 @@ const MILESTONE_COLOR = "#FF00FF";
 
 /**
  * SVG icon for a milestone model.
- * @returns A React component that renders a milestone model icon.
+ *
+ * @component
+ * @returns a React component that renders a milestone model icon.
  */
 export const MilestoneModel = () => {
   return (
@@ -21,9 +23,12 @@ export const MilestoneModel = () => {
 };
 
 /**
- * Milestone relation component.
- * @param relationProps - The properties of the relation.
- * @returns A React component that renders a milestone relation.
+ * Milestone relation component with alternative marker.
+ *
+ * @param relationProps - the properties of the relation.
+ *
+ * @component
+ * @returns a React component that renders a milestone relation.
  */
 export function NewMilestone(relationProps: RelationProperties) {
   return (
@@ -55,8 +60,11 @@ export function NewMilestone(relationProps: RelationProperties) {
 
 /**
  * Milestone relation component.
- * @param relationProps - The properties of the relation.
- * @returns A React component that renders a milestone relation.
+ *
+ * @param relationProps - the properties of the relation.
+ *
+ * @component
+ * @returns a React component that renders a milestone relation.
  */
 export default function Milestone(relationProps: RelationProperties) {
   return (

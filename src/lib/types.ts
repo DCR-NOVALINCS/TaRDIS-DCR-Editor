@@ -118,6 +118,7 @@ export const initialState: {
   security: "Public flows P",
 };
 
+export const GLOBAL_PROJECTION = "global";
 export const simpleInputTypes = ["Integer", "String", "Boolean"];
 export const inputTypes = [...simpleInputTypes, "Record", "Unit"]; // "Reference" type not considered yet
 
@@ -455,6 +456,11 @@ export type State = {
   nextNodeId: number[];
   nextGroupId: number[];
   nextSubprocessId: number[];
+};
+
+export type FullState = State & {
+  projectionInfo: Map<string, ProjectionInfo>;
+  documentation: Map<string, string>;
 };
 
 export type Setter<T> = (value: T | ((prevState: T) => T)) => void;

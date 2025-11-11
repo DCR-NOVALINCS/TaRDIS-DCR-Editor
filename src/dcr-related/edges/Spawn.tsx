@@ -4,6 +4,8 @@ const SPAWN_COLOR = "#6255AC";
 
 /**
  * SVG icon for a spawn model.
+ *
+ * @component
  * @returns A React component that renders a spawn model icon.
  */
 export const SpawnModel = () => {
@@ -17,9 +19,12 @@ export const SpawnModel = () => {
 };
 
 /**
- * Spawn relation component.
- * @param relationProps - The properties of the relation.
- * @returns A React component that renders a spawn relation.
+ * Spawn relation component with alternative marker.
+ *
+ * @param relationProps - the properties of the relation.
+ *
+ * @component
+ * @returns a React component that renders a spawn relation.
  */
 export function NewSpawn(relationProps: RelationProperties) {
   return (
@@ -79,8 +84,11 @@ export function NewSpawn(relationProps: RelationProperties) {
 
 /**
  * Spawn relation component.
- * @param relationProps - The properties of the relation.
- * @returns A React component that renders a spawn relation.
+ *
+ * @param relationProps - the properties of the relation.
+ *
+ * @component
+ * @returns a React component that renders a spawn relation.
  */
 export default function Spawn(relationProps: RelationProperties) {
   return (
