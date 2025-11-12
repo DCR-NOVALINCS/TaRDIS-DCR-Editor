@@ -24,7 +24,7 @@ const selector = (state: RFState) => ({
   isGlobalProjection: state.isGlobalProjection,
 });
 
-const fileTypes = ["-", "JSON", "SVG", "ReGraDa"];
+const fileTypes = ["-", "JSON", "PNG", "ReGraDa"];
 const WIDTH = 1920;
 const HEIGHT = 1080;
 
@@ -129,7 +129,7 @@ export default function ExportButton() {
    *
    * @param name - the desired filename (without extension)
    */
-  const svgDownload = (name: string) => {
+  const pngDownload = (name: string) => {
     const nodesBounds = reactFlow.getNodesBounds(nodes);
     const viewport = getViewportForBounds(
       nodesBounds,
@@ -154,7 +154,7 @@ export default function ExportButton() {
       }).then((dataUrl) => {
         const a = document.createElement("a");
 
-        a.setAttribute("download", `${name}.svg`);
+        a.setAttribute("download", `${name}.png`);
         a.setAttribute("href", dataUrl);
         a.click();
       });
@@ -192,13 +192,13 @@ export default function ExportButton() {
    * based on the selected file type.
    */
   const onClick = () => {
-    const newType = isGlobalProjection() ? type : "SVG";
+    const newType = isGlobalProjection() ? type : "PNG";
     switch (newType) {
       case "JSON":
         jsonDownload(name);
         break;
-      case "SVG":
-        svgDownload(name);
+      case "PNG":
+        pngDownload(name);
         break;
       case "ReGraDa":
         codeDownload(name);
@@ -242,7 +242,7 @@ export default function ExportButton() {
               Type
             </label>
             <select
-              value={isGlobalProjection() ? type : "SVG"}
+              value={isGlobalProjection() ? type : "PNG"}
               onChange={(e) => setType(e.target.value)}
               className="border-2 w-40 h-8 rounded-sm font-mono"
               disabled={!isGlobalProjection()}
