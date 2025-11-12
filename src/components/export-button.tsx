@@ -131,6 +131,7 @@ export default function ExportButton() {
    */
   const pngDownload = (name: string) => {
     const nodesBounds = reactFlow.getNodesBounds(nodes);
+    const otherViewport = reactFlow.getViewport();
     const viewport = getViewportForBounds(
       nodesBounds,
       WIDTH,
@@ -142,14 +143,14 @@ export default function ExportButton() {
 
     const element = document.querySelector(".react-flow__viewport");
     if (element) {
-      toSvg(element as HTMLElement, {
+      toPng(element as HTMLElement, {
         backgroundColor: "#FFFFFF",
         width: WIDTH,
         height: HEIGHT,
         style: {
           width: String(WIDTH),
           height: String(HEIGHT),
-          transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+          transform: `translate(${otherViewport.x}px, ${otherViewport.y}px) scale(${otherViewport.zoom})`,
         },
       }).then((dataUrl) => {
         const a = document.createElement("a");
