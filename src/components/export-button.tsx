@@ -1,7 +1,11 @@
 import { Button, Modal } from "@/lib/reusable-comps";
 import useStore, { RFState } from "@/stores/store";
-import { getNodesBounds, getViewportForBounds } from "@xyflow/react";
-import { toPng } from "html-to-image";
+import {
+  useReactFlow,
+  getNodesBounds,
+  getViewportForBounds,
+} from "@xyflow/react";
+import { toPng, toSvg } from "html-to-image";
 import { FolderOutput } from "lucide-react";
 import { useState } from "react";
 import { shallow } from "zustand/shallow";
@@ -20,7 +24,7 @@ const selector = (state: RFState) => ({
   isGlobalProjection: state.isGlobalProjection,
 });
 
-const fileTypes = ["-", "JSON", "PNG", "ReGraDa"];
+const fileTypes = ["-", "JSON", "SVG", "ReGraDa"];
 const WIDTH = 1920;
 const HEIGHT = 1080;
 
@@ -81,6 +85,8 @@ export default function ExportButton() {
     isGlobalProjection,
   } = useStore(selector, shallow);
 
+  const reactFlow = useReactFlow();
+
   /**
    * Triggers a download of the current graph data as a JSON file.
    *
@@ -123,8 +129,8 @@ export default function ExportButton() {
    *
    * @param name - the desired filename (without extension)
    */
-  const pngDownload = (name: string) => {
-    const nodesBounds = getNodesBounds(nodes);
+  const svgDownload = (name: string) => {
+    const nodesBounds = reactFlow.getNodesBounds(nodes);
     const viewport = getViewportForBounds(
       nodesBounds,
       WIDTH,
@@ -136,7 +142,7 @@ export default function ExportButton() {
 
     const element = document.querySelector(".react-flow__viewport");
     if (element) {
-      toPng(element as HTMLElement, {
+      toSvg(element as HTMLElement, {
         backgroundColor: "#FFFFFF",
         width: WIDTH,
         height: HEIGHT,
@@ -148,7 +154,7 @@ export default function ExportButton() {
       }).then((dataUrl) => {
         const a = document.createElement("a");
 
-        a.setAttribute("download", `${name}.png`);
+        a.setAttribute("download", `${name}.svg`);
         a.setAttribute("href", dataUrl);
         a.click();
       });
@@ -186,13 +192,13 @@ export default function ExportButton() {
    * based on the selected file type.
    */
   const onClick = () => {
-    const newType = isGlobalProjection() ? type : "PNG";
+    const newType = isGlobalProjection() ? type : "SVG";
     switch (newType) {
       case "JSON":
         jsonDownload(name);
         break;
-      case "PNG":
-        pngDownload(name);
+      case "SVG":
+        svgDownload(name);
         break;
       case "ReGraDa":
         codeDownload(name);
@@ -236,7 +242,7 @@ export default function ExportButton() {
               Type
             </label>
             <select
-              value={isGlobalProjection() ? type : "PNG"}
+              value={isGlobalProjection() ? type : "SVG"}
               onChange={(e) => setType(e.target.value)}
               className="border-2 w-40 h-8 rounded-sm font-mono"
               disabled={!isGlobalProjection()}
