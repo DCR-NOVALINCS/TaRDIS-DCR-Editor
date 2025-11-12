@@ -74,7 +74,7 @@
  * - Add structured error responses (JSON) for consistency with API consumers.
  */
 import express from "express";
-import { exec } from "child_process";
+import { exec, spawn } from "child_process";
 import cors from "cors";
 import fs from "fs";
 import path from "path";
@@ -97,14 +97,28 @@ app.post("/code", (req, res) => {
     } else console.log("File written successfully: regrada.tardisdcr");
   });
 
-  const command =
-    process.platform === "win32"
-      ? "type regrada.tardisdcr | node compiler.js"
-      : "cat regrada.tardisdcr | node compiler.js";
+  const child = spawn("node", ["compiler.js"]);
 
-  exec(command, (error, stdout, sterr) => {
-    console.log(error, sterr, stdout);
-    return res.status(200).send(`CODE:\n\n${code}\n\nOUTPUT:\n\n${stdout}`);
+  const fileStream = fs.createReadStream("regrada.tardisdcr");
+  fileStream.pipe(child.stdin);
+
+  let output = "";
+  let errorOutput = "";
+
+  child.stdout.on("data", (data) => {
+    output += data;
+  });
+
+  child.stderr.on("data", (data) => {
+    errorOutput += data;
+  });
+
+  child.on("close", (codeExit) => {
+    if (codeExit !== 0) {
+      console.error("Compiler process exited with code:", codeExit);
+      return res.status(500).send(`Compiler error:\n\n${errorOutput}`);
+    }
+    return res.status(200).send(`CODE:\n\n${code}\n\nOUTPUT:\n\n${output}`);
   });
 });
 
