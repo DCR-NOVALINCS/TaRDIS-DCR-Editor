@@ -33,6 +33,7 @@ const selector = (state: RFState) => ({
   log: state.log,
   setIds: state.setIds,
   drawerSelectedCode: state.drawerSelectedCode,
+  isGlobalProjection: state.isGlobalProjection,
 });
 
 const DELAYS = {
@@ -165,6 +166,7 @@ export default function CodeMenu() {
     log,
     setIds,
     drawerSelectedCode,
+    isGlobalProjection,
   } = useStore(selector, shallow);
 
   const editorRef = useRef<monacoEditor.editor.IStandaloneCodeEditor>(null);
@@ -436,10 +438,11 @@ export default function CodeMenu() {
       //const projections: ChoreographyModel[] | CompileError[] =
       //  await response.json();
 
+      const name = "choreo.json";
       let response = await fetch("/api/retrieve-file", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dir: "_out", name: "choreo.json" }),
+        body: JSON.stringify({ dir: "_out", name }),
       });
 
       if (!response.ok) {
@@ -460,6 +463,21 @@ export default function CodeMenu() {
       else {
         for (const [index, proj] of projections.entries())
           await processProjection(proj, index);
+
+        const blob = new Blob([JSON.stringify(projections)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.setAttribute("download", name);
+        a.setAttribute("href", url);
+
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        URL.revokeObjectURL(url);
       }
     } catch (error) {
       console.error("Compilation failed:", error);
@@ -493,25 +511,27 @@ export default function CodeMenu() {
       className="w-[calc(100%-4px)] overflow-y-auto p-2 flex flex-col items-center justify-center gap-2 select-none"
       style={{ height: "calc(100vh - 50px)" }}
     >
-      <Editor
-        className={`w-full h-full`}
-        value={code}
-        options={EDITOR_CONFIG_OPTIONS}
-        onChange={(newCode) => handleCodeEdit(newCode || "")}
-        onMount={(editor: monacoEditor.editor.IStandaloneCodeEditor) => {
-          editorRef.current = editor;
+      {isGlobalProjection() && (
+        <Editor
+          className={`w-full h-full`}
+          value={code}
+          options={EDITOR_CONFIG_OPTIONS}
+          onChange={(newCode) => handleCodeEdit(newCode || "")}
+          onMount={(editor: monacoEditor.editor.IStandaloneCodeEditor) => {
+            editorRef.current = editor;
 
-          if (drawerSelectedCode) {
-            editor.onDidFocusEditorText(() => {
-              setIsManualEdit(true);
-            });
+            if (drawerSelectedCode) {
+              editor.onDidFocusEditorText(() => {
+                setIsManualEdit(true);
+              });
 
-            editor.onDidBlurEditorText(() => {
-              setIsManualEdit(false);
-            });
-          }
-        }}
-      />
+              editor.onDidBlurEditorText(() => {
+                setIsManualEdit(false);
+              });
+            }
+          }}
+        />
+      )}
 
       <div className="flex gap-2 w-full">
         <Button

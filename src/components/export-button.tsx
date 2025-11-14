@@ -6,6 +6,7 @@ import {
   getViewportForBounds,
 } from "@xyflow/react";
 import { toPng, toSvg } from "html-to-image";
+import { Options } from "html-to-image/lib/types";
 import { FolderOutput } from "lucide-react";
 import { useState } from "react";
 import { shallow } from "zustand/shallow";
@@ -24,7 +25,8 @@ const selector = (state: RFState) => ({
   isGlobalProjection: state.isGlobalProjection,
 });
 
-const fileTypes = ["-", "JSON", "PNG", "ReGraDa"];
+const imageTypes = ["-", "PNG", "SVG"];
+const fileTypes = [...imageTypes, "JSON", "ReGraDa"];
 const WIDTH = 1920;
 const HEIGHT = 1080;
 
@@ -87,6 +89,22 @@ export default function ExportButton() {
 
   const reactFlow = useReactFlow();
 
+  const elementDownload = (
+    name: string,
+    dataUrl: string,
+    extension: string
+  ) => {
+    const a = document.createElement("a");
+    a.setAttribute("download", `${name}.${extension}`);
+    a.setAttribute("href", dataUrl);
+
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    URL.revokeObjectURL(dataUrl);
+  };
+
   /**
    * Triggers a download of the current graph data as a JSON file.
    *
@@ -111,17 +129,9 @@ export default function ExportButton() {
     );
 
     const blob = new Blob([jsonString], { type: "application/json" });
-
     const url = URL.createObjectURL(blob);
 
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${name}.json`;
-    document.body.appendChild(a);
-    a.click();
-
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    elementDownload(name, url, "json");
   };
 
   /**
@@ -129,36 +139,53 @@ export default function ExportButton() {
    *
    * @param name - the desired filename (without extension)
    */
-  const pngDownload = (name: string) => {
+  const imageDownload = async (type: "PNG" | "SVG", name: string) => {
     const nodesBounds = reactFlow.getNodesBounds(nodes);
-    const otherViewport = reactFlow.getViewport();
     const viewport = getViewportForBounds(
       nodesBounds,
-      WIDTH,
-      HEIGHT,
+      nodesBounds.width,
+      nodesBounds.height,
       0.5,
       1,
       0
     );
 
-    const element = document.querySelector(".react-flow__viewport");
-    if (element) {
-      toPng(element as HTMLElement, {
-        backgroundColor: "#FFFFFF",
-        width: WIDTH,
-        height: HEIGHT,
-        style: {
-          width: String(WIDTH),
-          height: String(HEIGHT),
-          transform: `translate(${otherViewport.x}px, ${otherViewport.y}px) scale(${otherViewport.zoom})`,
-        },
-      }).then((dataUrl) => {
-        const a = document.createElement("a");
+    const monacoLinks = Array.from(
+      document.querySelectorAll('link[href*="monaco-editor"]')
+    );
 
-        a.setAttribute("download", `${name}.png`);
-        a.setAttribute("href", dataUrl);
-        a.click();
-      });
+    monacoLinks.forEach((l) => l.parentNode?.removeChild(l));
+
+    const viewportElement = document.querySelector(".react-flow__viewport");
+    if (viewportElement) {
+      try {
+        const options: Options = {
+          cacheBust: true,
+          filter: (node) => {
+            const tag = node.tagName?.toLowerCase();
+            return !["link", "script", "style", "iframe"].includes(tag);
+          },
+          quality: 1,
+          width: nodesBounds.width,
+          height: nodesBounds.height,
+          style: {
+            width: String(nodesBounds.width),
+            height: String(nodesBounds.height),
+            transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+          },
+        };
+
+        const dataUrl =
+          type === "PNG"
+            ? await toPng(viewportElement as HTMLElement, options)
+            : await toSvg(viewportElement as HTMLElement, options);
+
+        elementDownload(name, dataUrl, type.toLowerCase());
+      } catch (error) {
+        console.error("Error generating PNG:", error);
+      } finally {
+        monacoLinks.forEach((l) => document.head.appendChild(l));
+      }
     }
   };
 
@@ -173,15 +200,7 @@ export default function ExportButton() {
     const blob = new Blob([code], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
 
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${name}.tardisdcr`;
-
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-
-    URL.revokeObjectURL(url);
+    elementDownload(name, url, "tardisdcr");
   };
 
   const [open, setOpen] = useState(false);
@@ -193,13 +212,15 @@ export default function ExportButton() {
    * based on the selected file type.
    */
   const onClick = () => {
-    const newType = isGlobalProjection() ? type : "PNG";
-    switch (newType) {
+    switch (type) {
       case "JSON":
         jsonDownload(name);
         break;
       case "PNG":
-        pngDownload(name);
+        imageDownload("PNG", name);
+        break;
+      case "SVG":
+        imageDownload("SVG", name);
         break;
       case "ReGraDa":
         codeDownload(name);
@@ -207,6 +228,8 @@ export default function ExportButton() {
       default:
         break;
     }
+
+    onClose();
   };
 
   /**
@@ -243,12 +266,11 @@ export default function ExportButton() {
               Type
             </label>
             <select
-              value={isGlobalProjection() ? type : "PNG"}
+              value={type}
               onChange={(e) => setType(e.target.value)}
               className="border-2 w-40 h-8 rounded-sm font-mono"
-              disabled={!isGlobalProjection()}
             >
-              {fileTypes.map((opt, i) => (
+              {(isGlobalProjection() ? fileTypes : imageTypes).map((opt, i) => (
                 <option key={i} value={opt}>
                   {opt}
                 </option>

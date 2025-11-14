@@ -66,10 +66,11 @@ export const EventModel = ({
  * - Handles are conditionally rendered based on connection and simulation state.
  * - Marking state controls the display of pending and excluded indicators.
  */
-export default function BaseEvent({ id, data, ...props }: NodeProps) {
+export default function BaseEvent(nodeProps: NodeProps) {
   const { simulationFlow, nodeProperties } = useStore(selector, shallow);
+  const { id } = nodeProps;
   const { initiators, receivers, type, label, name, marking, interactionType } =
-    data as {
+    nodeProps.data as {
       initiators: string[];
       receivers: string[];
       type: string;
@@ -123,7 +124,7 @@ export default function BaseEvent({ id, data, ...props }: NodeProps) {
     <>
       {/* BASE EVENT */}
       <BaseNode
-        {...props}
+        {...nodeProps}
         className={`flex flex-col h-[100px] w-[100px] border-2 ${borderColor} ${borderDashed} bg-[#FFF9DD] rounded-[4px] text-[10px] text-black relative`}
         draggable={false}
       >

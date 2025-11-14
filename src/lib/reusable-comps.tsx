@@ -1,5 +1,6 @@
 import { FieldType, InputType, simpleInputTypes } from "@/lib/types";
 import { X } from "lucide-react";
+import { useEffect } from "react";
 
 export const DrawerMenu = ({ children }: { children: React.ReactNode }) => (
   <div className="flex flex-col mr-4 w-[calc(100%-6px)] h-[94vh] overflow-y-auto select-none">
@@ -331,6 +332,15 @@ export const Modal = ({
   onClose: () => void;
   children: React.ReactNode;
 }) => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
     <div
       onClick={onClose}

@@ -296,7 +296,7 @@ function FlowWithoutProvider() {
         </Button>
         {currentProjection === "global" && (
           <>
-            <ImportButton reactFlow={reactFlow} />
+            <ImportButton />
           </>
         )}
         <ExportButton />

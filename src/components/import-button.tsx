@@ -4,7 +4,7 @@ import { delay } from "@/lib/utils";
 import { getLayoutedElements } from "@/lib/elk";
 import { visualGen } from "@/lib/visualgen-code";
 import useStore, { RFState } from "@/stores/store";
-import { ReactFlowInstance } from "@xyflow/react";
+import { ReactFlowInstance, useReactFlow } from "@xyflow/react";
 import { FolderInput } from "lucide-react";
 import { useState } from "react";
 import { shallow } from "zustand/shallow";
@@ -51,7 +51,7 @@ const selector = (state: RFState) => ({
  * @component
  * @returns a JSX Element with the import button and modal interface.
  */
-const ImportButton = ({ reactFlow }: { reactFlow: ReactFlowInstance }) => {
+export default function ImportButton() {
   const {
     setNodes,
     setEdges,
@@ -65,6 +65,7 @@ const ImportButton = ({ reactFlow }: { reactFlow: ReactFlowInstance }) => {
     setSelectedElement,
   } = useStore(selector, shallow);
 
+  const reactFlow = useReactFlow();
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | undefined>(undefined);
 
@@ -198,6 +199,4 @@ const ImportButton = ({ reactFlow }: { reactFlow: ReactFlowInstance }) => {
       </Modal>
     </>
   );
-};
-
-export default ImportButton;
+}

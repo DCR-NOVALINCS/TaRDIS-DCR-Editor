@@ -77,19 +77,17 @@ export interface RelationProperties extends EdgeProps {
  * - The primary {@link BaseEdge `BaseEdge`} rendering the relation path.
  * - Optional SVG circle handles for interactive editing when applicable.
  */
-export default function BaseRelation({
-  relationPath,
-  ...props
-}: RelationProperties) {
+export default function BaseRelation(relationProps: RelationProperties) {
   const { simulationFlow, edgesTypes } = useStore(selector, shallow);
-  const { id, source, target, markerStart, markerEnd, selected, style } = props;
+  const { id, source, target, markerStart, markerEnd, selected, style } =
+    relationProps;
 
-  if (relationPath) {
+  if (relationProps.relationPath) {
     return (
       <BaseEdge
-        {...props}
+        {...relationProps}
         id={id}
-        path={relationPath}
+        path={relationProps.relationPath}
         markerStart={markerStart}
         markerEnd={markerEnd}
         style={{ strokeWidth: 2, ...style }}
@@ -154,7 +152,7 @@ export default function BaseRelation({
     <>
       {/* BASE RELATION */}
       <BaseEdge
-        {...props}
+        {...relationProps}
         id={id}
         path={edgePath.current}
         markerStart={markerStart}
