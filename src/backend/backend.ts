@@ -97,7 +97,7 @@ app.post("/code", (req, res) => {
     } else console.log("File written successfully: regrada.tardisdcr");
   });
 
-  const child = spawn("node", ["compiler.js"]);
+  const child = spawn("node", ["main_compiler.js"]);
 
   const fileStream = fs.createReadStream("regrada.tardisdcr");
   fileStream.pipe(child.stdin);

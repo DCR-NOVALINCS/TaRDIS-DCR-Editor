@@ -158,7 +158,7 @@ function genGraph(
         .split("->");
 
       nodes.push({
-        id: `e${++nodeId}`,
+        id: `e${nodeId++}`,
         type: "event",
         data: {
           initiators: initiators.split(","),

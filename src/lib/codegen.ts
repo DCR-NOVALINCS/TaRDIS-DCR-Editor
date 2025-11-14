@@ -234,7 +234,10 @@ function createRelationsForEdge({
         source: sourceNode.label,
         target: targetNode.label,
         type,
-        parent: sourceNode.parent,
+        parent:
+          sourceNode.parent === "global"
+            ? targetNode.parent
+            : sourceNode.parent,
         ...(guard && { guard }),
       },
     ];
@@ -249,7 +252,8 @@ function createRelationsForEdge({
       source: sourceNode.label,
       target: targetNode.label,
       type,
-      parent: sourceNode.parent,
+      parent:
+        sourceNode.parent === "global" ? targetNode.parent : sourceNode.parent,
       ...(guard && { guard }),
     });
   } else if (isSourceEvent && !isTargetEvent) {

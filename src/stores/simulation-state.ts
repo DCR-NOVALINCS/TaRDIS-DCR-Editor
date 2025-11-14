@@ -147,7 +147,12 @@ const simulationStateSlice: StateCreator<RFState, [], [], SimulationState> = (
     const nodeProperties = cloneMap(get().nodeProperties);
     const simulationMarking = nodeProperties.get(nodeId);
 
-    if (!simulationMarking || !simulationMarking.executable) return;
+    if (
+      !simulationMarking ||
+      !simulationMarking.executable ||
+      simulationMarking.executed
+    )
+      return;
 
     nodeProperties.set(nodeId, {
       ...simulationMarking,
