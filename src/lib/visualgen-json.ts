@@ -168,7 +168,7 @@ function processInitRecv(
         `#${param.name} as ${firstChar}`
       );
       firstChar = nextChar(firstChar);
-    } else hasParam.set(param.name, `#${param.name}`);
+    } else hasParam.set(param.name, param.name);
   });
 
   secondMapped = secondMapped.map((sec) => {

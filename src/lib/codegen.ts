@@ -198,6 +198,29 @@ function findNode(
   );
 }
 
+function isDescendantOf(
+  nodeId: string,
+  ancestorId: string,
+  nests: NestType[],
+  subprocesses: SubprocessType[]
+): boolean {
+  let currentId = nodeId;
+
+  while (currentId && currentId !== "global") {
+    // Find the parent of the current node
+    const nest = nests.find((n) => n.id === currentId);
+    const subprocess = subprocesses.find((s) => s.id === currentId);
+
+    const parent = nest?.parent || subprocess?.parent;
+
+    if (parent === ancestorId) return true;
+
+    currentId = parent || "";
+  }
+
+  return false;
+}
+
 /**
  * Creates relations for a single edge
  */
@@ -226,6 +249,44 @@ function createRelationsForEdge({
 }): RelationType[] {
   const relations: RelationType[] = [];
 
+  function getEdgeParent(
+    sourceParent: string | undefined,
+    targetParent: string | undefined
+  ): string {
+    // If either parent is undefined, return "global"
+    if (!sourceParent || !targetParent) return "global";
+
+    // If one is global, use the other
+    if (sourceParent === "global") return targetParent;
+    if (targetParent === "global") return sourceParent;
+
+    // If they're the same, return that parent
+    if (sourceParent === targetParent) return sourceParent;
+
+    // Check if sourceParent is a descendant of targetParent
+    const isSourceDescendantOfTarget = isDescendantOf(
+      sourceParent,
+      targetParent,
+      nests,
+      subprocesses
+    );
+
+    // Check if targetParent is a descendant of sourceParent
+    const isTargetDescendantOfSource = isDescendantOf(
+      targetParent,
+      sourceParent,
+      nests,
+      subprocesses
+    );
+
+    // Return the one that is deeper in the hierarchy (the descendant)
+    if (isSourceDescendantOfTarget) return sourceParent;
+    if (isTargetDescendantOfSource) return targetParent;
+
+    // If neither is a descendant of the other, default to sourceParent
+    return sourceParent;
+  }
+
   // Handle spawn relations specially
   if (type === "spawn")
     return [
@@ -234,10 +295,7 @@ function createRelationsForEdge({
         source: sourceNode.label,
         target: targetNode.label,
         type,
-        parent:
-          sourceNode.parent === "global"
-            ? targetNode.parent
-            : sourceNode.parent,
+        parent: getEdgeParent(sourceNode.parent, targetNode.parent),
         ...(guard && { guard }),
       },
     ];
@@ -252,8 +310,7 @@ function createRelationsForEdge({
       source: sourceNode.label,
       target: targetNode.label,
       type,
-      parent:
-        sourceNode.parent === "global" ? targetNode.parent : sourceNode.parent,
+      parent: getEdgeParent(sourceNode.parent, targetNode.parent),
       ...(guard && { guard }),
     });
   } else if (isSourceEvent && !isTargetEvent) {
@@ -272,7 +329,7 @@ function createRelationsForEdge({
           source: sourceNode.label,
           target: event.label,
           type,
-          parent: child.parent,
+          parent: getEdgeParent(sourceNode.parent, child.parent),
           ...(guard && { guard }),
         });
       });
@@ -293,7 +350,7 @@ function createRelationsForEdge({
           source: event.label,
           target: targetNode.label,
           type,
-          parent: child.parent,
+          parent: getEdgeParent(child.parent, targetNode.parent),
           ...(guard && { guard }),
         });
       });
@@ -322,7 +379,7 @@ function createRelationsForEdge({
               source: sourceEvent.label,
               target: targetEvent.label,
               type,
-              parent: sourceChild.parent,
+              parent: getEdgeParent(sourceChild.parent, targetChild.parent),
               ...(guard && { guard }),
             });
           });
