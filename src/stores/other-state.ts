@@ -10,7 +10,7 @@ import {
   GLOBAL_PROJECTION,
   History,
 } from "@/lib/types";
-import type { Edge, Node } from "@xyflow/react";
+import { BackgroundVariant, Edge, Node } from "@xyflow/react";
 import { cloneMap, delay } from "@/lib/utils";
 
 /**
@@ -177,6 +177,15 @@ export type OtherState = {
   setEdgesTypes(type: "old" | "new"): void;
 
   saveState(): Promise<void>;
+
+  backgroundVariant: BackgroundVariant;
+  setBackgroundVariant(variant: BackgroundVariant): void;
+
+  minimapEnabled: boolean;
+  setMinimapEnabled(enabled: boolean): void;
+
+  snapToGridEnabled: boolean;
+  setSnapToGridEnabled(enabled: boolean): void;
 };
 
 const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
@@ -388,8 +397,6 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
       nextNodeId,
       nextGroupId,
       nextSubprocessId,
-      history,
-      setHistory,
     } = get();
 
     /* const newHistory: History = {
@@ -423,6 +430,21 @@ const otherStateSlice: StateCreator<RFState, [], [], OtherState> = (
     })
       .then((res) => res.text())
       .then(console.log);
+  },
+
+  backgroundVariant: BackgroundVariant.Dots,
+  setBackgroundVariant(variant: BackgroundVariant): void {
+    set({ backgroundVariant: variant });
+  },
+
+  minimapEnabled: false,
+  setMinimapEnabled(enabled: boolean): void {
+    set({ minimapEnabled: enabled });
+  },
+
+  snapToGridEnabled: true,
+  setSnapToGridEnabled(enabled: boolean): void {
+    set({ snapToGridEnabled: enabled });
   },
 });
 

@@ -2,7 +2,7 @@ import { Button, Modal } from "@/lib/reusable-comps";
 import { State } from "@/lib/types";
 import { delay } from "@/lib/utils";
 import { getLayoutedElements } from "@/lib/elk";
-import { visualGen } from "@/lib/visualgen-code";
+import { visualGen } from "@/lib/gens/visualgen-code";
 import useStore, { RFState } from "@/stores/store";
 import { ReactFlowInstance, useReactFlow } from "@xyflow/react";
 import { FolderInput } from "lucide-react";

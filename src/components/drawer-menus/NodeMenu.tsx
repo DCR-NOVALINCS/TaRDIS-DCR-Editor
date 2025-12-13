@@ -3,7 +3,7 @@ import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
 import { SquareMousePointer } from "lucide-react";
 import { Node } from "@xyflow/react";
-import { FieldType, InputType, inputTypes, MarkingType } from "@/lib/types";
+import { inputTypes } from "@/lib/types";
 import {
   DrawerMenu,
   DrawerMenuLabel,
@@ -15,6 +15,7 @@ import {
   RecordFieldManager,
 } from "@/lib/reusable-comps";
 import { shallowEqual } from "@/lib/utils";
+import { Field, Input, Marking } from "@/lib/gens/data-types/codegen-types";
 
 const selector = (state: RFState) => ({
   nodes: state.nodes,
@@ -27,13 +28,13 @@ const selector = (state: RFState) => ({
 /**
  * Renders a controlled form section for configuring an input value.
  *
- * @param input - the current input configuration object (of type {@link InputType `InputType`}). The component
+ * @param input - the current input configuration object (of type {@link Input `Input`}). The component
  * reads `input.type` to determine which controls to show and to set the value of the select.
- * @param setInput - state setter for the input object (`React.Dispatch<React.SetStateAction<InputType>>`).
+ * @param setInput - state setter for the input object (`React.Dispatch<React.SetStateAction<Input>>`).
  *   Used to update the input object when the type select changes or when nested managers update it.
- * @param recordField - the currently selected/edited record field (of type {@link FieldType `FieldType`}). Passed
+ * @param recordField - the currently selected/edited record field (of type {@link Field `Field`}). Passed
  *   through to the {@link RecordFieldManager `RecordFieldManager`} when editing record-type inputs.
- * @param setRecordField - state setter for the recordField (`React.Dispatch<React.SetStateAction<FieldType>>`).
+ * @param setRecordField - state setter for the recordField (`React.Dispatch<React.SetStateAction<Field>>`).
  *   Used to update the {@link recordField `recordField`} state from the {@link RecordFieldManager `RecordFieldManager`}.
  * @param disabled - when true, all interactive controls in this section are disabled/read-only.
  *
@@ -45,7 +46,7 @@ const selector = (state: RFState) => ({
  *
  * @remarks
  * - This is a controlled component, so callers must provide and manage the input and {@link recordField `recordField`} state.
- * - The shapes of {@link InputType `InputType`} and {@link FieldType `FieldType`} are external to this component and should be documented
+ * - The shapes of {@link Input `Input`} and {@link Field `Field`} are external to this component and should be documented
  *   where they are defined.
  *
  * @component
@@ -58,10 +59,10 @@ const InputConfiguration = ({
   setRecordField,
   disabled,
 }: {
-  input: InputType;
-  setInput: React.Dispatch<React.SetStateAction<InputType>>;
-  recordField: FieldType;
-  setRecordField: React.Dispatch<React.SetStateAction<FieldType>>;
+  input: Input;
+  setInput: React.Dispatch<React.SetStateAction<Input>>;
+  recordField: Field;
+  setRecordField: React.Dispatch<React.SetStateAction<Field>>;
   disabled: boolean;
 }) => (
   <>
@@ -168,13 +169,13 @@ const ComputationExpression = ({
  * @param setLabel - setter to update the node label.
  * @param name - current event name for the node.
  * @param setName - setter to update the event name.
- * @param marking - current marking object of type {@link MarkingType `MarkingType`}.
+ * @param marking - current marking object of type {@link Marking `Marking`}.
  * @param setMarking - setter to update the marking object.
  * @param parent - current parent node id (empty string for no parent).
  * @param setParent - setter to update the parent id.
  * @param security - current security label for the node.
  * @param setSecurity - setter to update the security label.
- * @param input - current input configuration for input nodes (of type {@link InputType `InputType`}).
+ * @param input - current input configuration for input nodes (of type {@link Input `Input`}).
  * @param setInput - setter to update the input configuration.
  * @param expression - current computation expression string (used when `type !== "i"`).
  * @param setExpression - setter to update the computation expression.
@@ -230,18 +231,18 @@ const NodeProperties = ({
   setLabel: React.Dispatch<React.SetStateAction<string>>;
   name: string;
   setName: React.Dispatch<React.SetStateAction<string>>;
-  marking: MarkingType;
-  setMarking: React.Dispatch<React.SetStateAction<MarkingType>>;
+  marking: Marking;
+  setMarking: React.Dispatch<React.SetStateAction<Marking>>;
   parent: string;
   setParent: React.Dispatch<React.SetStateAction<string>>;
   security: string;
   setSecurity: React.Dispatch<React.SetStateAction<string>>;
-  input: InputType;
-  setInput: React.Dispatch<React.SetStateAction<InputType>>;
+  input: Input;
+  setInput: React.Dispatch<React.SetStateAction<Input>>;
   expression: string;
   setExpression: React.Dispatch<React.SetStateAction<string>>;
-  recordField: FieldType;
-  setRecordField: React.Dispatch<React.SetStateAction<FieldType>>;
+  recordField: Field;
+  setRecordField: React.Dispatch<React.SetStateAction<Field>>;
   nodes: Node[];
   disabled: boolean;
 }) => {
@@ -441,14 +442,14 @@ const NodeMenu = ({ node }: { node: Node }) => {
   const [type, setType] = useState(data.type as string);
   const [label, setLabel] = useState(data.label as string);
   const [name, setName] = useState(data.name as string);
-  const [marking, setMarking] = useState(data.marking as MarkingType);
+  const [marking, setMarking] = useState(data.marking as Marking);
   const [parent, setParent] = useState(parentId as string);
   const [security, setSecurity] = useState(data.security as string);
-  const [input, setInput] = useState(data.input as InputType);
+  const [input, setInput] = useState(data.input as Input);
   const [expression, setExpression] = useState(
     data.expression ? (data.expression as string) : ""
   );
-  const [recordField, setRecordField] = useState<FieldType>({
+  const [recordField, setRecordField] = useState<Field>({
     var: "",
     type: inputTypes[0],
   });

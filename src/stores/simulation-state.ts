@@ -1,8 +1,9 @@
 import { StateCreator } from "zustand/vanilla";
 import { RFState } from "./store";
 import { Edge, Node } from "@xyflow/react";
-import { MarkingType, SimulationMarkingType } from "@/lib/types";
+import { SimulationMarkingType } from "@/lib/types";
 import { cloneMap, delay } from "@/lib/utils";
+import { Marking } from "@/lib/gens/data-types/codegen-types";
 
 export type SimulationState = {
   /* ------------ SIMULATION FLOW ------------ */
@@ -75,7 +76,7 @@ const simulationStateSlice: StateCreator<RFState, [], [], SimulationState> = (
     const simNodes: Node[] = [];
     for (const event of events) {
       const { id, data, parentId } = event;
-      const { included, pending } = data.marking as MarkingType;
+      const { included, pending } = data.marking as Marking;
 
       const toEdges = simEdges.filter((e) => e.target === id);
       let conditions: string[] = [],
@@ -87,7 +88,7 @@ const simulationStateSlice: StateCreator<RFState, [], [], SimulationState> = (
         const sourceNode = nodes.find((n) => n.id === source);
 
         if (!sourceNode) continue;
-        const sourceMarking = sourceNode.data.marking as MarkingType;
+        const sourceMarking = sourceNode.data.marking as Marking;
 
         switch (type) {
           case "condition":

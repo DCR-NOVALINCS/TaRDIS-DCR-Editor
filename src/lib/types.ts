@@ -1,12 +1,13 @@
 import { Edge, Node } from "@xyflow/react";
 import { setState } from "./utils";
+import { Field, Marking, Role } from "./gens/data-types/codegen-types";
 
 export const state = await setState();
 
 export const initialState: {
   nodes: Node[];
   edges: Edge[];
-  roles: SimpleRole[];
+  roles: Role[];
   security: string;
 } = {
   nodes: [
@@ -107,12 +108,12 @@ export const initialState: {
     {
       role: "Prosumer",
       label: "P",
-      types: [{ var: "id", type: "Integer" }],
+      fields: [{ var: "id", type: "Integer" }],
     },
     {
       role: "Public",
       label: "Public",
-      types: [],
+      fields: [],
     },
   ],
   security: "Public flows P",
@@ -122,201 +123,14 @@ export const GLOBAL_PROJECTION = "global";
 export const simpleInputTypes = ["Integer", "String", "Boolean"];
 export const inputTypes = [...simpleInputTypes, "Record", "Unit"]; // "Reference" type not considered yet
 
-export const relationsMap: { [rel: string]: string } = {
-  condition: "-->*",
-  response: "*-->",
-  include: "-->+",
-  exclude: "-->%",
-  milestone: "--><>",
-  spawn: "-->>",
-};
+export type NodeType = "event" | "nest" | "subprocess";
+export type EventSubtype = "i" | "c";
 
-export const reversedRelationsMap: { [rel: string]: string } = {
-  "-->*": "condition",
-  "*-->": "response",
-  "-->+": "include",
-  "-->%": "exclude",
-  "--><>": "milestone",
-  "-->>": "spawn",
-};
-
-export const eventRegex = /\((.*?)\)\s*\((.*?)\)\s*\[(.*?)\](?:\s*\[(.*?)\])?/;
-
-type EventRelation =
-  | "condition"
-  | "response"
-  | "include"
-  | "exclude"
-  | "milestone";
-
-type BoolOperation =
-  | "equals"
-  | "and"
-  | "notEquals"
-  | "or"
-  | "intGreaterThan"
-  | "intLessThan"
-  | "intAdd";
-
-type BasicType = "array" | "int" | "string" | "bool" | "void" | "float";
-
-type ValueType = BasicType | { recordType: { fields: Field[] } };
-
-interface Field {
-  name: string;
-  type: { valueType: ValueType };
+export interface IdCounters {
+  nextNodeId: number[];
+  nextGroupId: number[];
+  nextSubprocessId: number[];
 }
-
-interface Param {
-  name: string;
-  type?: { valueType: ValueType };
-  value?: Value;
-}
-
-export interface Role {
-  label: string;
-  params: Param[];
-}
-
-interface EventRef {
-  eventRef: { value: string };
-}
-
-interface PropBasedExprSimple {
-  propBasedExpr: PropBasedExpr;
-  prop: string;
-}
-
-interface PropBasedExprComplex {
-  propDeref: PropBasedExprSimple;
-}
-
-export type PropBasedExpr =
-  | PropBasedExprSimple
-  | PropBasedExprComplex
-  | EventRef;
-
-export interface BinaryOp {
-  expr1: Expression;
-  expr2: Expression;
-  op: BoolOperation;
-}
-
-type Value =
-  | { intLit: { value: number } }
-  | { stringLit: { value: string } }
-  | { boolLit: { value: boolean } }
-  | { floatLit: { value: number } }
-  | { record: { fields: { name: string; value: Expression }[] } }
-  | PropBasedExpr;
-
-export type Expression =
-  | { binaryOp: BinaryOp }
-  | { propDeref: PropBasedExpr }
-  | Value;
-
-export type DataType =
-  | { valueType: ValueType }
-  | { recordType: { fields: Field[] } };
-
-interface CommonEventData {
-  endpointElementUID: string;
-  choreoElementUID: string;
-  id: string;
-  label: string;
-  dataType: DataType;
-  marking: { isPending: boolean; isIncluded: boolean };
-  instantiationConstraint?: Expression;
-  ifcConstraint?: Expression;
-}
-
-interface ComputationEvent {
-  computationEvent: {
-    common: CommonEventData;
-    dataExpr: Expression;
-    receivers: RoleExpr[];
-  };
-}
-
-interface InputEvent {
-  inputEvent: {
-    common: CommonEventData;
-    receivers: RoleExpr[];
-  };
-}
-
-interface ReceiveEvent {
-  receiveEvent: {
-    common: CommonEventData;
-    initiators: RoleExpr[];
-  };
-}
-
-type Event = InputEvent | ReceiveEvent | ComputationEvent;
-
-interface RoleExprSimple {
-  roleLabel: string;
-  params: Param[];
-}
-
-interface RoleExprComplex {
-  roleExpr: RoleExprSimple;
-}
-
-interface InitiatorExpr {
-  initiatorExpr: {
-    eventId: string;
-  };
-}
-
-interface ReceiverExpr {
-  receiverExpr: {
-    eventId: string;
-  };
-}
-
-export type RoleExpr =
-  | RoleExprSimple
-  | RoleExprComplex
-  | InitiatorExpr
-  | ReceiverExpr;
-
-interface ControlFlowRelation {
-  controlFlowRelation: {
-    relationCommon: {
-      endpointElementUID: string;
-      sourceId: string;
-      instantiationConstraint?: Expression;
-    };
-    targetId: string;
-    relationType: EventRelation;
-  };
-}
-
-interface SpawnRelation {
-  spawnRelation: {
-    relationCommon: {
-      endpointElementUID: string;
-      sourceId: string;
-      instantiationConstraint: Expression;
-    };
-    triggerId: string;
-    graph: ChoreographyGraph;
-  };
-}
-
-type Relation = ControlFlowRelation | SpawnRelation;
-
-export interface ChoreographyGraph {
-  events: Event[];
-  relations: Relation[];
-}
-
-export interface ChoreographyModel {
-  role: Role;
-  graph: ChoreographyGraph;
-}
-
 export interface StackTraceElement {
   location?: {
     from: { line: number; column: number };
@@ -331,18 +145,7 @@ export interface CompileError {
   };
 }
 
-export type FieldType = { var: string; type: string };
-
-export type InputType =
-  | { type: string }
-  | { type: "Record"; record: FieldType[] };
-
-export type MarkingType = {
-  included: boolean;
-  pending: boolean;
-};
-
-export type SimulationMarkingType = MarkingType & {
+export type SimulationMarkingType = Marking & {
   conditions: string[];
   milestones: string[];
   executable: boolean;
@@ -350,47 +153,6 @@ export type SimulationMarkingType = MarkingType & {
   isParentSub: boolean;
   spawned?: boolean;
 };
-
-export type EventType = {
-  id: string;
-  label: string;
-  name: string;
-  security: string;
-  input?: InputType;
-  expression?: string;
-  initiators: string[];
-  receivers?: string[];
-  marking: MarkingType;
-  parent?: string;
-};
-
-export type SubprocessType = {
-  id: string;
-  label: string;
-  marking: MarkingType;
-  parent?: string;
-};
-
-export type NestType = SubprocessType & {
-  nestType: string;
-};
-
-export interface RelationType {
-  id: string;
-  source: string;
-  target: string;
-  type: string;
-  parent?: string;
-  guard?: string;
-}
-
-export interface Process {
-  events: EventType[];
-  relations: RelationType[];
-  nests?: NestType[];
-  subprocesses?: SubprocessType[];
-  parentProcess: string;
-}
 
 export interface TempEdge {
   source: string;
@@ -423,35 +185,16 @@ export type ProjectionInfo = {
   edges: Edge[];
 };
 
-export interface Input {
-  var: string;
-  input: string;
-}
-
-export interface Participant {
-  role: string;
-  inputs: Input[];
-}
-
-export interface Parameter {
-  var: string;
-  type: string;
-}
-
-export interface SimplerRole {
+export interface RepresentativeRole {
   role: string;
   label: string;
-}
-
-export interface SimpleRole extends SimplerRole {
-  types: Parameter[];
 }
 
 export type State = {
   nodes: Node[];
   edges: Edge[];
   security: string;
-  roles: SimpleRole[];
+  roles: Role[];
   code: string;
   nextNodeId: number[];
   nextGroupId: number[];
@@ -468,7 +211,7 @@ export type Setter<T> = (value: T | ((prevState: T) => T)) => void;
 export interface RoleAdd {
   role: string;
   label: string;
-  types: FieldType[];
+  fields: Field[];
 }
 
 export type History = {

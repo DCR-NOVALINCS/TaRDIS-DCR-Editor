@@ -1,15 +1,13 @@
 import { useState } from "react";
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
-import { Workflow } from "lucide-react";
+import { Settings, Workflow, X } from "lucide-react";
 import {
-  FieldType,
   GLOBAL_PROJECTION,
-  Parameter,
   ProjectionInfo,
+  RepresentativeRole,
   RoleAdd,
   simpleInputTypes,
-  SimplerRole,
 } from "@/lib/types";
 import {
   Button,
@@ -18,6 +16,8 @@ import {
   FormDocumentation,
   FormInput,
 } from "@/lib/reusable-comps";
+import { Field } from "@/lib/gens/data-types/codegen-types";
+import Flow from "@/flows/Flow";
 
 const selector = (state: RFState) => ({
   getChoreographyInfo: state.getChoreographyInfo,
@@ -44,8 +44,8 @@ const selector = (state: RFState) => ({
 /**
  * Renders and manages a small form that allows adding and removing parameters for a role.
  *
- * @param parameters - array of existing {@link FieldType `FieldType`} parameter objects to display.
- * @param onAdd - callback invoked with a {@link FieldType `FieldType`} when the user adds a new parameter.
+ * @param parameters - array of existing {@link Field `Field`} parameter objects to display.
+ * @param onAdd - callback invoked with a {@link Field `Field`} when the user adds a new parameter.
  * @param onRemove - callback invoked with the index of the parameter to remove.
  *
  * @see {@link simpleInputTypes `simpleInputTypes`} for the list of allowed parameter types.
@@ -64,11 +64,11 @@ const ParameterManager = ({
   onAdd,
   onRemove,
 }: {
-  parameters: FieldType[];
-  onAdd: (param: FieldType) => void;
+  parameters: Field[];
+  onAdd: (param: Field) => void;
   onRemove: (index: number) => void;
 }) => {
-  const [paramInput, setParamInput] = useState<Parameter>({
+  const [paramInput, setParamInput] = useState<Field>({
     var: "",
     type: simpleInputTypes[0],
   });
@@ -146,7 +146,7 @@ const ParameterManager = ({
  * @param addRole - callback invoked to add a role. Receives an object of type {@link RoleAdd `RoleAdd`}.
  * @param removeRole - callback invoked to remove a role by its role name.
  *
- * @see {@link SimplerRole `SimplerRole`} for the role type used in the `roles` parameter.
+ * @see {@link RepresentativeRole `RepresentativeRole`} for the role type used in the `roles` parameter.
  *
  * Behavior / Notes:
  * - Uses internal state `roleData` of type {@link RoleAdd `RoleAdd`} to accumulate the input for a new role.
@@ -163,14 +163,14 @@ const RoleMenu = ({
   addRole,
   removeRole,
 }: {
-  roles: SimplerRole[];
+  roles: RepresentativeRole[];
   addRole: (role: RoleAdd) => void;
   removeRole: (roleName: string) => void;
 }) => {
   const [roleData, setRoleData] = useState<RoleAdd>({
     role: "",
     label: "",
-    types: [],
+    fields: [],
   });
 
   const roleOptions = [{ role: "-", label: "-" }, ...roles];
@@ -200,9 +200,9 @@ const RoleMenu = ({
       addRole({
         role: roleData.role,
         label: roleData.label,
-        types: roleData.types,
+        fields: roleData.fields,
       });
-      setRoleData({ role: "", label: "", types: [] });
+      setRoleData({ role: "", label: "", fields: [] });
     }
   };
 
@@ -219,12 +219,12 @@ const RoleMenu = ({
   /**
    * Adds a new parameter to the local role data.
    *
-   * @param type - the {@link FieldType `FieldType`} parameter to add.
+   * @param type - the {@link Field `Field`} parameter to add.
    */
-  const addParameter = (type: FieldType) => {
+  const addParameter = (type: Field) => {
     setRoleData((prev) => ({
       ...prev,
-      types: [...prev.types, type],
+      fields: [...prev.fields, type],
     }));
   };
 
@@ -236,7 +236,7 @@ const RoleMenu = ({
   const removeParameter = (index: number) => {
     setRoleData((prev) => ({
       ...prev,
-      types: prev.types.filter((_, i) => i !== index),
+      types: prev.fields.filter((_, i) => i !== index),
     }));
   };
 
@@ -270,7 +270,7 @@ const RoleMenu = ({
 
         {/* PARAMETER MANAGER */}
         <ParameterManager
-          parameters={roleData.types}
+          parameters={roleData.fields}
           onAdd={addParameter}
           onRemove={removeParameter}
         />
@@ -316,7 +316,7 @@ const RoleMenu = ({
 /**
  * Displays a short summary of the choreography's roles and exposes clicks to navigate to role-specific projections.
  *
- * @param roles - array of roles of type {@link SimplerRole `SimplerRole`} to display.
+ * @param roles - array of roles of type {@link RepresentativeRole `RepresentativeRole`} to display.
  * @param nodesCount - number of nodes/events in the global choreography (used in summary text).
  * @param projectionInfo - map from role label to {@link ProjectionInfo `ProjectionInfo`}; presence of an entry indicates the role has its own projection.
  * @param currentProjection - optional currently displayed projection id (e.g. `"global"` or a role label).
@@ -343,7 +343,7 @@ const RoleList = ({
   isGlobalProjection,
   seeGlobalClick = () => {},
 }: {
-  roles: SimplerRole[];
+  roles: RepresentativeRole[];
   nodesCount: number;
   projectionInfo: Map<string, ProjectionInfo>;
   currentProjection?: string;

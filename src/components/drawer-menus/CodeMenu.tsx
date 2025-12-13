@@ -1,4 +1,4 @@
-import { writeCode } from "@/lib/codegen";
+import { writeCode } from "@/lib/gens/codegen";
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
 
@@ -6,12 +6,14 @@ import Editor, { useMonaco } from "@monaco-editor/react";
 import * as monacoEditor from "monaco-editor";
 import { getLayoutedElements } from "@/lib/elk";
 
-import { visualGen } from "@/lib/visualgen-code";
+import { visualGen } from "@/lib/gens/visualgen-code";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/lib/reusable-comps";
-import { ChoreographyModel, CompileError } from "@/lib/types";
-import { processChoregraphyModel } from "@/lib/visualgen-json";
+import { ChoreographyModel } from "@/lib/gens/data-types/visualgen-types";
+import { CompileError } from "@/lib/types";
+import { processChoregraphyModel } from "@/lib/gens/visualgen-json";
 import { delay } from "@/lib/utils";
+import { Ban, Check, Loader, Play } from "lucide-react";
 
 const selector = (state: RFState) => ({
   nodes: state.nodes,
@@ -174,6 +176,8 @@ export default function CodeMenu() {
 
   const [isManualEdit, setIsManualEdit] = useState(false);
 
+  const [compileIcon, setCompileIcon] = useState(<Play />);
+
   const relevantNodeData = useMemo(
     () =>
       nodes.map(({ id, data, parentId, type }) => ({
@@ -202,6 +206,8 @@ export default function CodeMenu() {
     if (!newCode || !drawerSelectedCode) return;
 
     setCode(newCode);
+    clearErrors();
+    setCompileIcon(<Play />);
 
     const {
       roles: newRoles,
@@ -372,7 +378,7 @@ export default function CodeMenu() {
   const processProjection = async (proj: ChoreographyModel, index: number) => {
     if (index === 0) {
       clearErrors();
-      switchToLogsTab();
+      //switchToLogsTab();
       log("Typecheck and compilation succeeded.");
     }
 
@@ -420,6 +426,8 @@ export default function CodeMenu() {
   const compileCode = async () => {
     if (!code) return;
 
+    setCompileIcon(<Loader color="blue" />);
+
     try {
       // Send code for compilation
       await fetch("/api/code", {
@@ -458,9 +466,10 @@ export default function CodeMenu() {
         | CompileError;
 
       // Process each projection
-      if ("compileError" in projections)
+      if ("compileError" in projections) {
         treatErrors(projections as CompileError);
-      else {
+        setCompileIcon(<Ban color="red" />);
+      } else {
         for (const [index, proj] of projections.entries())
           await processProjection(proj, index);
 
@@ -478,10 +487,13 @@ export default function CodeMenu() {
         document.body.removeChild(a);
 
         URL.revokeObjectURL(url);
+
+        setCompileIcon(<Check color="green" />);
       }
     } catch (error) {
       console.error("Compilation failed:", error);
       log("Compilation failed. Please check your code.");
+      setCompileIcon(<Ban color="red" />);
     }
   };
 
@@ -533,14 +545,11 @@ export default function CodeMenu() {
         />
       )}
 
-      <div className="flex gap-2 w-full">
-        <Button
-          className="w-full"
-          key={"compile"}
-          onClick={() => compileCode()}
-        >
+      <div className="flex items-center gap-2 w-full">
+        <Button className="w-1/3" key={"compile"} onClick={() => compileCode()}>
           Compile
         </Button>
+        {compileIcon}
       </div>
       {/*
       <div className="flex gap-2 w-full">

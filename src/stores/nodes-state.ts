@@ -13,17 +13,8 @@ import {
 import { StateCreator } from "zustand/vanilla";
 import { RFState } from "@/stores/store";
 import { delay } from "@/lib/utils";
-import { Setter, state, type EventType } from "@/lib/types";
-
-// Type definitions
-type NodeType = "event" | "nest" | "subprocess";
-type EventSubtype = "i" | "c"; // input or computation
-
-interface IdCounters {
-  nextNodeId: number[];
-  nextGroupId: number[];
-  nextSubprocessId: number[];
-}
+import { EventSubtype, IdCounters, NodeType, Setter, state } from "@/lib/types";
+import { Event } from "@/lib/gens/data-types/codegen-types";
 
 // Node factory functions
 const createNodeId = (
@@ -98,7 +89,7 @@ export type NodesState = {
 
   // Node operations
   addNode(...nodes: Node[]): void;
-  updateNode(id: string, updatedNode: Node | EventType): string;
+  updateNode(id: string, updatedNode: Node | Event): string;
   setNodes: Setter<Node[]>;
   getNode(id: string): Node | undefined;
   getFamily(id: string): string[];
@@ -466,7 +457,7 @@ const nodesStateSlice: StateCreator<RFState, [], [], NodesState> = (
       );
     },
 
-    updateNode(id: string, updatedNode: Node | EventType): string {
+    updateNode(id: string, updatedNode: Node | Event): string {
       let finalNode = updatedNode;
       if ("data" in updatedNode) {
         const currentNode = get().getNode(id);

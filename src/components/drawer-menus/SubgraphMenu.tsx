@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Group } from "lucide-react";
 import { Node } from "@xyflow/react";
 import useStore, { RFState } from "@/stores/store";
-import { MarkingType } from "@/lib/types";
 import {
   DrawerMenu,
   DrawerMenuLabel,
@@ -13,6 +12,7 @@ import {
   FormTextarea,
 } from "@/lib/reusable-comps";
 import { shallowEqual } from "@/lib/utils";
+import { Marking } from "@/lib/gens/data-types/codegen-types";
 
 const selector = (state: RFState) => ({
   nodes: state.nodes,
@@ -86,7 +86,7 @@ const SubgraphMenu = ({ nest }: { nest: Node }) => {
 
   const [type, setType] = useState(nest.type as string);
   const [label, setLabel] = useState(data.label as string);
-  const [marking, setMarking] = useState(data.marking as MarkingType);
+  const [marking, setMarking] = useState(data.marking as Marking);
   const [nestType, setNestType] = useState(data.nestType as string);
   const [parent, setParent] = useState(parentId as string);
 
@@ -187,7 +187,7 @@ const SubgraphMenu = ({ nest }: { nest: Node }) => {
    *
    * @param field - The field to toggle.
    */
-  const toggleMarking = (field: keyof MarkingType) => {
+  const toggleMarking = (field: keyof Marking) => {
     setMarking((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 

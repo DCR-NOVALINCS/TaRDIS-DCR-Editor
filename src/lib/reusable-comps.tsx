@@ -1,6 +1,7 @@
-import { FieldType, InputType, simpleInputTypes } from "@/lib/types";
+import { simpleInputTypes } from "@/lib/types";
 import { X } from "lucide-react";
 import { useEffect } from "react";
+import { Field, Input } from "./gens/data-types/codegen-types";
 
 export const DrawerMenu = ({ children }: { children: React.ReactNode }) => (
   <div className="flex flex-col mr-4 w-[calc(100%-6px)] h-[94vh] overflow-y-auto select-none">
@@ -227,16 +228,16 @@ export const RecordFieldManager = ({
   setRecordField,
   disabled = false,
 }: {
-  input: InputType;
-  setInput: React.Dispatch<React.SetStateAction<InputType>>;
-  recordField: FieldType;
-  setRecordField: React.Dispatch<React.SetStateAction<FieldType>>;
+  input: Input;
+  setInput: React.Dispatch<React.SetStateAction<Input>>;
+  recordField: Field;
+  setRecordField: React.Dispatch<React.SetStateAction<Field>>;
   disabled?: boolean;
 }) => {
   const handleAddField = () => {
     if (recordField.var && input.type === "Record") {
       setInput((prev) => {
-        const recordInput = prev as { type: "Record"; record: FieldType[] };
+        const recordInput = prev as { type: "Record"; record: Field[] };
         return {
           ...recordInput,
           record: [...(recordInput.record ?? []), recordField],
@@ -248,7 +249,7 @@ export const RecordFieldManager = ({
 
   const handleRemoveField = (index: number) => {
     setInput((prev) => {
-      const recordInput = prev as { type: "Record"; record: FieldType[] };
+      const recordInput = prev as { type: "Record"; record: Field[] };
       return {
         ...recordInput,
         record: recordInput.record.filter((_, i) => i !== index),

@@ -9,7 +9,6 @@ import { Node } from "@xyflow/react";
 import useStore, { RFState } from "@/stores/store";
 import { shallow } from "zustand/shallow";
 import { useEffect, useRef, useState } from "react";
-import { shallowEqual } from "@/lib/utils";
 
 const selector = (state: RFState) => ({
   nodes: state.nodes,

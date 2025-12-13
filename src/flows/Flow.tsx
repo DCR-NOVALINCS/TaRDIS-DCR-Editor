@@ -1,14 +1,15 @@
 import {
   ReactFlow,
   Controls,
+  ControlButton,
   Background,
   NodeOrigin,
   ReactFlowProvider,
   useReactFlow,
   BackgroundVariant,
-  type Node,
+  Node,
   Panel,
-  Edge,
+  MiniMap,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { shallow } from "zustand/shallow";
@@ -27,9 +28,10 @@ import Subprocess from "../dcr-related/nodes/Subprocess";
 import { Button } from "../lib/reusable-comps";
 import Drawer from "../components/drawer";
 import ToolPallete from "../components/tool-pallete";
-import { Pickaxe } from "lucide-react";
+import { Pickaxe, Settings, Settings2 } from "lucide-react";
 import ImportButton from "../components/import-button";
 import ExportButton from "../components/export-button";
+import SettingsButton from "@/components/settings-button";
 
 const selector = (state: RFState) => ({
   nodes: state.nodes,
@@ -60,6 +62,9 @@ const selector = (state: RFState) => ({
   edgesTypes: state.edgesTypes,
   history: state.history,
   setHistory: state.setHistory,
+  backgroundVariant: state.backgroundVariant,
+  minimapEnabled: state.minimapEnabled,
+  snapToGridEnabled: state.snapToGridEnabled,
 });
 
 const nodeOrigin: NodeOrigin = [0.5, 0.5];
@@ -96,9 +101,6 @@ function FlowWithoutProvider() {
   const {
     nodes,
     edges,
-    nextNodeId,
-    nextGroupId,
-    nextSubprocessId,
     setIds,
     setNodes,
     addNode,
@@ -122,6 +124,9 @@ function FlowWithoutProvider() {
     edgesTypes,
     history,
     setHistory,
+    backgroundVariant,
+    minimapEnabled,
+    snapToGridEnabled,
   } = useStore(selector, shallow);
 
   const flowRef = useRef<HTMLDivElement>(null);
@@ -253,13 +258,13 @@ function FlowWithoutProvider() {
       onEdgeDoubleClick={onEdgeDoubleClick}
       onEdgesDelete={onEdgesDelete}
       onDragOver={onDragOver}
-      onDrop={(event: any) => onDrop(event, screenToFlowPosition)}
+      onDrop={(event) => onDrop(event, screenToFlowPosition)}
       onConnect={onConnect}
       onPaneClick={onPaneClick}
       connectionLineComponent={CustomConnectionLine}
       connectionLineContainerStyle={{ zIndex: 20000 }}
       selectNodesOnDrag={true}
-      snapToGrid={true}
+      snapToGrid={snapToGridEnabled}
       fitView={true}
       fitViewOptions={{ maxZoom: 1 }}
       maxZoom={5}
@@ -272,10 +277,14 @@ function FlowWithoutProvider() {
       onPaneMouseLeave={() => setKeyPressOn(false)}
       deleteKeyCode={["Backspace", "Delete"]}
       className="select-none"
+      colorMode="light"
     >
       {keyPressOn && <KeyPressListener />}
-      <Controls showInteractive={false} />
-      <Background variant={BackgroundVariant.Dots} />
+      <Controls showInteractive={false}>
+        <SettingsButton />
+      </Controls>
+      {minimapEnabled && <MiniMap />}
+      <Background variant={backgroundVariant} />
       {currentProjection === "global" && <ToolPallete />}
       <Drawer />
       <Panel

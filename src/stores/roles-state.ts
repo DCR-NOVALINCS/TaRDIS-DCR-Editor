@@ -1,6 +1,7 @@
 import { StateCreator } from "zustand/vanilla";
 import { RFState } from "./store";
-import { Setter, SimpleRole, state } from "@/lib/types";
+import { Setter, state } from "@/lib/types";
+import { Role } from "@/lib/gens/data-types/codegen-types";
 
 const fixRole = (role: string) => {
   return role.charAt(0).toUpperCase() + role.slice(1);
@@ -30,10 +31,10 @@ const fixRole = (role: string) => {
  */
 export type RolesState = {
   /* ------------ ROLE OPERATIONS ------------ */
-  roles: SimpleRole[];
-  addRole(role: SimpleRole): void;
+  roles: Role[];
+  addRole(role: Role): void;
   removeRole(role: string): void;
-  setRoles: Setter<SimpleRole[]>;
+  setRoles: Setter<Role[]>;
 };
 
 const rolesStateSlice: StateCreator<RFState, [], [], RolesState> = (
@@ -42,7 +43,7 @@ const rolesStateSlice: StateCreator<RFState, [], [], RolesState> = (
 ) => ({
   /* ------------ ROLE OPERATIONS ------------ */
   roles: state.roles ?? [],
-  addRole(...roles: SimpleRole[]) {
+  addRole(...roles: Role[]) {
     for (const role of roles)
       get().log(`Added a new role ${role.role} with label ${role.label}.`);
 
