@@ -3,6 +3,7 @@ import {
   BackgroundVariant,
   Controls,
   EdgeTypes,
+  MiniMap,
   NodeOrigin,
   NodeTypes,
   Panel,
@@ -23,12 +24,16 @@ import Spawn from "../dcr-related/edges/Spawn";
 import BaseEvent from "@/dcr-related/nodes/BaseEvent";
 import Nest from "@/dcr-related/nodes/Nest";
 import Subprocess from "@/dcr-related/nodes/Subprocess";
+import SettingsButton from "@/components/settings-button";
 
 const selector = (state: RFState) => ({
   nodes: state.simNodes,
   edges: state.edges,
   onNodeClick: state.onNodeClickSimulation,
   onClickSimulationToggle: state.onClickSimulationToggle,
+  backgroundVariant: state.backgroundVariant,
+  minimapEnabled: state.minimapEnabled,
+  snapToGridEnabled: state.snapToGridEnabled,
 });
 
 const nodeOrigin: NodeOrigin = [0.5, 0.5];
@@ -49,10 +54,15 @@ const nodeTypes: NodeTypes = {
 };
 
 function SimulationFlowWithoutProvider() {
-  const { nodes, edges, onNodeClick, onClickSimulationToggle } = useStore(
-    selector,
-    shallow
-  );
+  const {
+    nodes,
+    edges,
+    onNodeClick,
+    onClickSimulationToggle,
+    backgroundVariant,
+    minimapEnabled,
+    snapToGridEnabled,
+  } = useStore(selector, shallow);
 
   const flowRef = useRef<HTMLDivElement>(null);
 
@@ -73,9 +83,13 @@ function SimulationFlowWithoutProvider() {
       minZoom={0}
       zoomOnDoubleClick={false}
       elementsSelectable={false}
+      snapToGrid={snapToGridEnabled}
     >
-      <Controls showInteractive={false} />
-      <Background variant={BackgroundVariant.Dots} />
+      <Controls showInteractive={false}>
+        <SettingsButton />
+      </Controls>
+      <Background variant={backgroundVariant} />
+      {minimapEnabled && <MiniMap />}
       <Panel position="top-left" style={{ width: "143px" }}>
         <Button
           className="flex items-center text-sm justify-center gap-2 w-full"
